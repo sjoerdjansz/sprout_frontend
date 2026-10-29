@@ -1,11 +1,16 @@
-<script setup>
+<script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { api } from '@/lib/api'
+import BaseButton from '@/components/BaseButton.vue'
+import { api, ApiError } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
-/** @type {import('vue').Ref<'checking' | 'connected' | 'unreachable'>} */
-const connection = ref('checking')
+const auth = useAuthStore()
 
-async function checkConnection() {
+type Connection = 'checking' | 'connected' | 'unreachable'
+
+const connection = ref<Connection>('checking')
+
+async function checkConnection(): Promise<void> {
   connection.value = 'checking'
 
   try {
@@ -16,14 +21,37 @@ async function checkConnection() {
   }
 }
 
-onMounted(checkConnection)
+async function loadUser(): Promise<void> {
+  try {
+    await auth.fetchUser()
+  } catch (caught) {
+    // A 401 signs you out (App.vue then shows the login screen) and an unreachable API is
+    // already reported by the connection check, so there's nothing more to show here.
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+  }
+}
+
+onMounted(() => {
+  void checkConnection()
+
+  if (auth.user === null) {
+    void loadUser()
+  }
+})
 </script>
 
 <template>
   <main class="mx-auto flex min-h-svh max-w-190 flex-col justify-center gap-8 px-4 py-12">
-    <div>
-      <h1 class="font-display text-display text-ink">Sprout</h1>
-      <p class="mt-2 text-body-lg text-ink-muted">Learn it. Keep it.</p>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h1 class="font-display text-display text-ink">
+          {{ auth.user ? `Hi, ${auth.user.name}` : 'Sprout' }}
+        </h1>
+        <p class="mt-2 text-body-lg text-ink-muted">Learn it. Keep it.</p>
+      </div>
+      <BaseButton variant="secondary" data-test="logout" @click="auth.logout()">Log out</BaseButton>
     </div>
 
     <section
@@ -43,6 +71,7 @@ onMounted(checkConnection)
         </p>
         <button
           type="button"
+          data-test="retry"
           class="rounded-md bg-primary px-5 py-2.5 text-body-strong text-on-primary shadow-xs transition duration-150 ease-default hover:bg-primary-hover active:translate-y-px"
           @click="checkConnection"
         >
