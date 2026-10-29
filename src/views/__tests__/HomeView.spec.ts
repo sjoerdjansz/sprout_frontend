@@ -13,7 +13,7 @@ describe('HomeView', () => {
   })
 
   it('shows that the API is connected', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ status: 'ok' }))
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ status: 'ok' }))
     vi.stubGlobal('fetch', fetchMock)
 
     const wrapper = mount(HomeView)
@@ -27,12 +27,15 @@ describe('HomeView', () => {
   })
 
   it('tells you what to do when the API is unreachable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockRejectedValue(new TypeError('Failed to fetch')),
+    )
 
     const wrapper = mount(HomeView)
     await flushPromises()
 
     expect(wrapper.text()).toContain("Can't reach the Sprout API.")
-    expect(wrapper.get('button').text()).toBe('Try again')
+    expect(wrapper.get('[data-test="retry"]').text()).toBe('Try again')
   })
 })

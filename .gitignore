@@ -39,3 +39,6 @@ __screenshots__/
 *.timestamp-*-*.mjs
 
 CLAUDE.md
+# Local AI/agent context, kept out of the repo (shared docs live in ../)
+/CLAUDE.md
+/VISION.md
