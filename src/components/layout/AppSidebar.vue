@@ -3,6 +3,7 @@ import SproutLogo from '@/components/SproutLogo.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import SidebarNavLink from '@/components/layout/SidebarNavLink.vue'
 import StreakNudge from '@/components/layout/StreakNudge.vue'
+import ThemeToggle from '@/components/layout/ThemeToggle.vue'
 
 const { userName, userInitials } = defineProps<{
   userName: string
@@ -16,7 +17,10 @@ const emit = defineEmits<{
 
 <template>
   <nav aria-label="Main" class="flex flex-col gap-1 border-r border-line px-4 py-6">
-    <SproutLogo class="px-2 pb-6" />
+    <div class="flex items-center justify-between gap-2 pb-6 pl-2">
+      <SproutLogo />
+      <ThemeToggle />
+    </div>
 
     <SidebarNavLink icon="house" :to="{ name: 'home' }">Dashboard</SidebarNavLink>
     <SidebarNavLink icon="network">Knowledge map</SidebarNavLink>
