@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { ApiError } from '@/lib/api'
-import TopicForm, {
+import TopicFormDialog, {
   type TopicFormMode,
   type TopicFormValues,
-} from '@/components/knowledgeMap/TopicForm.vue'
+} from '@/components/knowledgeMap/TopicFormDialog.vue'
 
 const emptyValues: TopicFormValues = {
   title: '',
@@ -18,9 +18,9 @@ const emptyValues: TopicFormValues = {
 function mountForm(
   mode: TopicFormMode,
   initialValues: TopicFormValues = emptyValues,
-  extraProps: { saving?: boolean; error?: ApiError | null; framed?: boolean } = {},
+  extraProps: { saving?: boolean; error?: ApiError | null } = {},
 ): VueWrapper {
-  return mount(TopicForm, {
+  return mount(TopicFormDialog, {
     props: {
       ...extraProps,
       mode,
@@ -37,7 +37,12 @@ function mountForm(
   })
 }
 
-describe('TopicForm', () => {
+describe('TopicFormDialog', () => {
+  beforeAll(() => {
+    // jsdom doesn't implement showModal.
+    HTMLDialogElement.prototype.showModal = vi.fn<() => void>()
+  })
+
   it("can't be saved without a name", async () => {
     const wrapper = mountForm('add-topic')
 
@@ -50,7 +55,7 @@ describe('TopicForm', () => {
   it('asks a new topic for its category and saves trimmed values', async () => {
     const wrapper = mountForm('add-topic')
 
-    expect(wrapper.get('[data-test="form-title"]').text()).toBe('New topic')
+    expect(wrapper.get('h2').text()).toBe('New topic')
     expect(wrapper.find('[data-test="main-topic"]').exists()).toBe(false)
 
     await wrapper.get('[data-test="name"]').setValue('  Astronomy ')
@@ -92,7 +97,7 @@ describe('TopicForm', () => {
   it('lets you move a subtopic to another main topic', async () => {
     const wrapper = mountForm('edit-subtopic', { ...emptyValues, title: 'Chlorophyll' })
 
-    expect(wrapper.get('[data-test="form-title"]').text()).toBe('Edit subtopic')
+    expect(wrapper.get('h2').text()).toBe('Edit subtopic')
     expect(wrapper.get('[data-test="save"]').text()).toBe('Save changes')
 
     await wrapper.get('[data-test="main-topic"]').setValue('2')
@@ -104,9 +109,9 @@ describe('TopicForm', () => {
   it('closes without saving', async () => {
     const wrapper = mountForm('add-subtopic')
 
-    await wrapper.get('[data-test="close-form"]').trigger('click')
+    await wrapper.get('[data-test="dialog-close"]').trigger('click')
 
-    expect(wrapper.emitted('cancel')).toHaveLength(1)
+    expect(wrapper.emitted('close')).toHaveLength(1)
     expect(wrapper.emitted('save')).toBeUndefined()
   })
 
@@ -133,12 +138,5 @@ describe('TopicForm', () => {
         .get('[data-test="form-error"]')
         .text(),
     ).toBe('Connect your AI key to start learning.')
-  })
-
-  it('leaves its own title and close button to a dialog', () => {
-    const wrapper = mountForm('edit-subtopic', emptyValues, { framed: false })
-
-    expect(wrapper.find('[data-test="form-title"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="close-form"]').exists()).toBe(false)
   })
 })

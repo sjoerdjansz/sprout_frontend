@@ -4,9 +4,9 @@ import BaseButton from '@/components/BaseButton.vue'
 import BaseTabs, { type TabItem } from '@/components/BaseTabs.vue'
 import BaseToast from '@/components/BaseToast.vue'
 import FormError from '@/components/FormError.vue'
+import TopicFormDialog from '@/components/knowledgeMap/TopicFormDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DeleteSubtopicDialog from '@/components/subtopic/DeleteSubtopicDialog.vue'
-import EditSubtopicDialog from '@/components/subtopic/EditSubtopicDialog.vue'
 import FlashcardsPanel from '@/components/subtopic/FlashcardsPanel.vue'
 import QuestionsPanel from '@/components/subtopic/QuestionsPanel.vue'
 import SessionsPanel from '@/components/subtopic/SessionsPanel.vue'
@@ -46,12 +46,18 @@ const {
 } = useSubtopicMaterial(subtopic, actions)
 const cardEditor = useFlashcardEditor(actions)
 const { generating, generate } = useGenerateMaterial(actions, showToast)
-const edit = useEditSubtopic(actions, showToast)
+const edit = useEditSubtopic(subtopic, actions, showToast)
 const deletion = useDeleteSubtopic(() => id, undo)
 
 // The editor's and dialogs' refs, top-level so the template unwraps them.
 const { editing: editingCard, saving: savingCard, error: cardError } = cardEditor
-const { isOpen: isEditOpen, saving: savingEdit, error: editError, topicOptions } = edit
+const {
+  isOpen: isEditOpen,
+  saving: savingEdit,
+  error: editError,
+  initialValues: editValues,
+  topicOptions,
+} = edit
 const { isOpen: isDeleteOpen, deleting: deletingSubtopic, error: deleteError } = deletion
 
 const userInitials = computed<string>(() => initials(auth.user?.name ?? ''))
@@ -157,9 +163,11 @@ watch(tab, () => {
         />
       </section>
 
-      <EditSubtopicDialog
-        v-if="isEditOpen"
-        :subtopic="subtopic"
+      <TopicFormDialog
+        v-if="isEditOpen && editValues !== null"
+        mode="edit-subtopic"
+        :initial-values="editValues"
+        :category-options="[]"
         :topic-options="topicOptions"
         :saving="savingEdit"
         :error="editError"

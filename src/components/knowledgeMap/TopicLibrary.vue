@@ -29,7 +29,7 @@ const emit = defineEmits<{
 <template>
   <section
     aria-label="Topics"
-    class="flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-sm rail:min-h-0 rail:flex-[3_1_0]"
+    class="flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-sm"
   >
     <LibraryToolbar
       v-model:query="query"
@@ -40,7 +40,7 @@ const emit = defineEmits<{
       @add-topic="emit('addTopic')"
     />
 
-    <div class="flex-auto bg-canvas p-4 rail:min-h-0 rail:overflow-y-auto">
+    <div class="flex-auto bg-canvas p-4">
       <div
         v-if="libraryIsEmpty"
         class="flex flex-col items-center gap-2.5 rounded-lg bg-surface-tint px-6 py-7 text-center"

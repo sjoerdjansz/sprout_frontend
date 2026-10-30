@@ -1,12 +1,11 @@
 /*
  * The knowledge map's rules: when a subtopic counts as mastered or slipping, what needs your
- * attention, what to practise next, and which topics a search shows. Kept apart from the
+ * attention, and which topics a search shows. Kept apart from the
  * components so they stay presentational and the rules are easy to test.
  */
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
 import { dueLabel } from '@/lib/dueDate'
-import { practiceMode, practiceModes, type PracticeMode } from '@/lib/practiceModes'
 import type {
   AddedMaterial,
   Category,
@@ -107,20 +106,6 @@ export function subtopicLevel(subtopic: Subtopic): Level {
   return subtopic.mastery >= growingFrom ? levels.growing : levels.seedling
 }
 
-export function topicLevel(topic: Topic): Level {
-  if (topic.subtopics.length === 0) {
-    return levels.new
-  }
-  if (topic.subtopics.some((subtopic) => subtopic.slipping)) {
-    return levels.slipping
-  }
-  if (topic.subtopics.every(isMastered)) {
-    return levels.mastered
-  }
-
-  return averageMastery(topic) >= growingFrom ? levels.growing : levels.seedling
-}
-
 export interface Caption {
   text: string
   tone: 'subtle' | 'sun' | 'sprout'
@@ -212,57 +197,6 @@ export function librarySummary(topics: Topic[]): string {
   ].join(' · ')
 }
 
-export interface PracticeSuggestion {
-  mode: PracticeMode
-  /** Finishes "Suggested: Flashcards — …" */
-  reason: string
-}
-
-/**
- * For a subtopic: train its weakest facet that isn't holding yet, untried facets first. For a
- * whole topic: review what's due, otherwise go deeper with the tutor.
- */
-export function suggestPractice(topic: Topic, subtopic: Subtopic | null): PracticeSuggestion {
-  if (subtopic === null) {
-    const due = dueCards(topic)
-
-    return due > 0
-      ? {
-          mode: practiceMode('cards'),
-          reason: `${pluralize(due, 'card')} ${due === 1 ? 'is' : 'are'} due across ${topic.title}.`,
-        }
-      : { mode: practiceMode('open'), reason: 'nothing is due, so go deeper.' }
-  }
-
-  // Untried facets count as -1, so they come before any practised one.
-  const weakest = facets
-    .filter((facet) => !subtopic.facets[facet.key].holding)
-    .sort(
-      (first, second) =>
-        (subtopic.facets[first.key].percent ?? -1) - (subtopic.facets[second.key].percent ?? -1),
-    )[0]
-
-  if (weakest === undefined) {
-    return {
-      mode: practiceMode('open'),
-      reason: 'all three facets are holding, so go deeper.',
-    }
-  }
-
-  const mode = practiceModes.find((candidate) => candidate.facet === weakest.key)
-  if (mode === undefined) {
-    throw new Error(`No practice mode trains ${weakest.key}.`)
-  }
-
-  return {
-    mode,
-    reason:
-      subtopic.facets[weakest.key].percent === null
-        ? 'you haven’t tried this facet yet.'
-        : 'your weakest facet.',
-  }
-}
-
 export interface TopicAppearance {
   icon: IconName
   tint: Tint
@@ -289,23 +223,4 @@ export function topicAppearance(topic: Topic): TopicAppearance {
     icon: categoryIcons[topic.category.name.toLowerCase()] ?? 'book-open',
     tint: tints[topic.id % tints.length] ?? 'mint',
   }
-}
-
-export interface LibrarySelection {
-  kind: 'topic' | 'subtopic'
-  id: number
-}
-
-/**
- * What the knowledge map opens on: the first subtopic that needs your attention, so you see why
- * straight away; otherwise the first topic. Null for an empty library.
- */
-export function firstSelection(topics: Topic[]): LibrarySelection | null {
-  const urgent = topics.flatMap((topic) => topic.subtopics).find(needsAttention)
-  if (urgent !== undefined) {
-    return { kind: 'subtopic', id: urgent.id }
-  }
-  const firstTopic = topics[0]
-
-  return firstTopic === undefined ? null : { kind: 'topic', id: firstTopic.id }
 }

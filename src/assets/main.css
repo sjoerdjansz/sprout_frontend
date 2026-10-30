@@ -104,9 +104,6 @@
   --text-code--line-height: 20px;
   --text-code--font-weight: 400;
 
-  /* From here a page's side panel (rail) sits next to the content instead of below it. */
-  --breakpoint-rail: 1100px;
-
   /* 4px base: p-4 = 16px, matching space-4 */
   --spacing: 4px;
 

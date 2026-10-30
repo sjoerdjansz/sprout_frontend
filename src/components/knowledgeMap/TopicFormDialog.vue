@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
-import BaseIconButton from '@/components/BaseIconButton.vue'
+import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseSelect, { type SelectOption } from '@/components/BaseSelect.vue'
 import BaseTextarea from '@/components/BaseTextarea.vue'
 import FormError from '@/components/FormError.vue'
-import PanelLayout from '@/components/knowledgeMap/PanelLayout.vue'
 import type { ApiError } from '@/lib/api'
 
 export type TopicFormMode = 'add-topic' | 'edit-topic' | 'add-subtopic' | 'edit-subtopic'
@@ -30,10 +29,9 @@ const {
   topicOptions,
   saving = false,
   error = null,
-  framed = true,
 } = defineProps<{
   mode: TopicFormMode
-  /** Read once: remount the form (with a `key`) to start over with other values. */
+  /** Read once, when the dialog opens. */
   initialValues: TopicFormValues
   /** The categories a main topic can have; you can also make a new one. */
   categoryOptions: SelectOption[]
@@ -43,13 +41,11 @@ const {
   saving?: boolean
   /** Why the last save failed; your values stay so you can fix them and try again. */
   error?: ApiError | null
-  /** False inside a dialog, which has its own title and close button. */
-  framed?: boolean
 }>()
 
 const emit = defineEmits<{
   save: [values: TopicFormValues]
-  cancel: []
+  close: []
 }>()
 
 const titles: Record<TopicFormMode, string> = {
@@ -117,23 +113,8 @@ function save(): void {
 </script>
 
 <template>
-  <form class="flex min-h-0 flex-auto flex-col" novalidate @submit.prevent="save">
-    <PanelLayout :plain="!framed">
-      <div v-if="framed" class="flex items-center justify-between gap-3">
-        <div class="flex flex-col gap-0.5">
-          <span class="text-overline text-ink-subtle uppercase">
-            {{ isAdding ? 'Add to your library' : 'Edit' }}
-          </span>
-          <h2
-            class="font-display text-2xl leading-7 font-semibold tracking-[-0.02em] text-ink"
-            data-test="form-title"
-          >
-            {{ titles[mode] }}
-          </h2>
-        </div>
-        <BaseIconButton icon="x" label="Close" data-test="close-form" @click="emit('cancel')" />
-      </div>
-
+  <BaseDialog :title="titles[mode]" :closable="!saving" @close="emit('close')">
+    <form class="flex flex-col gap-5" novalidate @submit.prevent="save">
       <BaseInput
         v-model="title"
         label="Name"
@@ -186,20 +167,14 @@ function save(): void {
         data-test="notes"
       />
 
-      <template #footer>
-        <div class="flex flex-col gap-3">
-          <FormError v-if="generalError" :message="generalError" />
-          <div class="flex justify-end gap-2">
-            <BaseButton variant="ghost" :disabled="saving" @click="emit('cancel')">
-              Cancel
-            </BaseButton>
-            <BaseButton type="submit" icon="check" :disabled="!canSave" data-test="save">
-              <template v-if="saving">Saving…</template>
-              <template v-else>{{ isAdding ? 'Add to library' : 'Save changes' }}</template>
-            </BaseButton>
-          </div>
-        </div>
-      </template>
-    </PanelLayout>
-  </form>
+      <FormError v-if="generalError" :message="generalError" />
+      <div class="flex justify-end gap-2">
+        <BaseButton variant="ghost" :disabled="saving" @click="emit('close')">Cancel</BaseButton>
+        <BaseButton type="submit" icon="check" :disabled="!canSave" data-test="save">
+          <template v-if="saving">Saving…</template>
+          <template v-else>{{ isAdding ? 'Add to library' : 'Save changes' }}</template>
+        </BaseButton>
+      </div>
+    </form>
+  </BaseDialog>
 </template>

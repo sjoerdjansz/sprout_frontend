@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
@@ -38,7 +38,19 @@ function cardTitles(wrapper: VueWrapper): string[] {
 }
 
 function subtopicTitles(wrapper: VueWrapper): string[] {
-  return wrapper.findAll('[data-test="subtopic"]').map((row) => row.find('span').text())
+  return wrapper.findAll('[data-test="subtopic-title"]').map((title) => title.text())
+}
+
+async function selectTopic(wrapper: VueWrapper, title: string): Promise<void> {
+  const card = wrapper
+    .findAll('[data-test="topic-card"]')
+    .find((candidate) => candidate.text().includes(title))
+  await card?.trigger('click')
+}
+
+async function submitForm(wrapper: VueWrapper): Promise<void> {
+  await wrapper.get('form').trigger('submit')
+  await flushPromises()
 }
 
 function validationError(field: string, message: string): Response {
@@ -46,6 +58,11 @@ function validationError(field: string, message: string): Response {
 }
 
 describe('KnowledgeMapView', () => {
+  beforeAll(() => {
+    // jsdom doesn't implement showModal.
+    HTMLDialogElement.prototype.showModal = vi.fn<() => void>()
+  })
+
   beforeEach(async () => {
     localStorage.clear()
     setActivePinia(createPinia())
@@ -57,7 +74,7 @@ describe('KnowledgeMapView', () => {
     vi.unstubAllGlobals()
   })
 
-  it('sums up your library and opens on the first subtopic that needs attention', async () => {
+  it('sums up your library and shows the subtopics of the first topic', async () => {
     const wrapper = await mountKnowledgeMap()
 
     expect(wrapper.get('[data-test="summary"]').text()).toBe(
@@ -65,9 +82,14 @@ describe('KnowledgeMapView', () => {
     )
     expect(cardTitles(wrapper)).toHaveLength(4)
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
-    expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Photosynthesis')
-    expect(wrapper.findAll('[data-test="facet"]')).toHaveLength(3)
-    expect(wrapper.get('[data-test="open-subtopic"]').attributes('href')).toBe('/subtopics/101')
+    expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration', 'Chlorophyll'])
+    expect(wrapper.find('aside').exists()).toBe(false)
+  })
+
+  it('opens the page of a subtopic from its row', async () => {
+    const wrapper = await mountKnowledgeMap()
+
+    expect(wrapper.get('[data-test="subtopic"]').attributes('href')).toBe('/subtopics/101')
   })
 
   it('says what to do when the library cannot load, and tries again', async () => {
@@ -89,7 +111,6 @@ describe('KnowledgeMapView', () => {
     const wrapper = await mountKnowledgeMap({ 'GET /topics': Response.json([]) })
 
     expect(wrapper.get('[data-test="empty-library"]').text()).toContain('Your library is empty')
-    expect(wrapper.find('aside').exists()).toBe(false)
   })
 
   it('narrows the cards as you search, and clears the filters when nothing matches', async () => {
@@ -122,55 +143,44 @@ describe('KnowledgeMapView', () => {
     expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration'])
   })
 
-  it('shows a topic with its subtopics, and a subtopic with its facets', async () => {
+  it('shows the subtopics of the topic you pick', async () => {
     const wrapper = await mountKnowledgeMap()
 
-    const chemistryCard = wrapper
-      .findAll('[data-test="topic-card"]')
-      .find((card) => card.text().includes('Chemistry'))
-    await chemistryCard?.trigger('click')
+    await selectTopic(wrapper, 'Chemistry')
 
-    expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Chemistry')
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
     expect(subtopicTitles(wrapper)).toEqual(['The periodic table', 'Chemical bonds'])
-    expect(wrapper.find('[data-test="facet"]').exists()).toBe(false)
-
-    await wrapper.findAll('[data-test="subtopic"]')[1]?.trigger('click')
-    expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Chemical bonds')
-    expect(wrapper.findAll('[data-test="facet"]')).toHaveLength(3)
   })
 
-  it('adds a topic and selects it', async () => {
+  it('adds a topic in a dialog and shows it', async () => {
     const wrapper = await mountKnowledgeMap({
       'POST /topics': Response.json(makeTopic({ id: 9, title: 'Astronomy' }), { status: 201 }),
     })
 
     await wrapper.get('[data-test="add-topic"]').trigger('click')
-    expect(wrapper.get('[data-test="form-title"]').text()).toBe('New topic')
+    expect(wrapper.get('dialog h2').text()).toBe('New topic')
 
     await wrapper.get('[data-test="name"]').setValue('Astronomy')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
+    await submitForm(wrapper)
 
+    expect(wrapper.find('dialog').exists()).toBe(false)
     expect(cardTitles(wrapper)).toHaveLength(5)
-    expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Astronomy')
-    expect(wrapper.get('[data-test="level"]').text()).toBe('New')
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Astronomy')
     expect(wrapper.get('[data-test="no-subtopics"]').text()).toBe(
       'No subtopics yet. Add the first one.',
     )
   })
 
-  it('keeps the form open with the API message when saving fails', async () => {
+  it('keeps the dialog open with the API message when saving fails', async () => {
     const wrapper = await mountKnowledgeMap({
       'POST /topics': validationError('title', 'Give your topic a name.'),
     })
 
     await wrapper.get('[data-test="add-topic"]').trigger('click')
     await wrapper.get('[data-test="name"]').setValue('Astronomy')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
+    await submitForm(wrapper)
 
-    expect(wrapper.get('[data-test="form-title"]').text()).toBe('New topic')
-    expect(wrapper.text()).toContain('Give your topic a name.')
+    expect(wrapper.get('dialog').text()).toContain('Give your topic a name.')
     expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe('Astronomy')
   })
 
@@ -184,56 +194,45 @@ describe('KnowledgeMapView', () => {
     await wrapper.get('[data-test="name"]').setValue('Guitar')
     await wrapper.get('[data-test="category"]').setValue('new')
     await wrapper.get('[data-test="new-category"]').setValue('Music')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
+    await submitForm(wrapper)
 
-    expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Guitar')
-    expect(wrapper.text()).toContain('Main topic · Music')
     expect(wrapper.findAll('[data-test="category-chip"]').map((chip) => chip.text())).toContain(
       'Music',
     )
   })
 
-  it('moves a subtopic to another topic when you edit it, and says what was generated', async () => {
-    const moved = makeSubtopic({ topic_id: 2, due_cards: 3 })
+  it('edits the topic whose subtopics you see', async () => {
     const wrapper = await mountKnowledgeMap({
-      'PUT /subtopics/101': Response.json({
-        subtopic: moved,
-        added: { flashcards: 2, questions: 1 },
-      }),
+      'PUT /topics/1': Response.json(makeTopic({ title: 'Biology basics' })),
     })
 
-    await wrapper.get('[data-test="edit"]').trigger('click')
-    expect(wrapper.get('[data-test="form-title"]').text()).toBe('Edit subtopic')
-    expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe(
-      'Photosynthesis',
-    )
+    await wrapper.get('[data-test="edit-topic"]').trigger('click')
+    expect(wrapper.get('dialog h2').text()).toBe('Edit topic')
+    expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe('Biology')
 
-    await wrapper.get('[data-test="main-topic"]').setValue('2')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
+    await wrapper.get('[data-test="name"]').setValue('Biology basics')
+    await submitForm(wrapper)
 
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
-    expect(subtopicTitles(wrapper)).toContain('Photosynthesis')
-    expect(wrapper.get('[data-test="summary"]').text()).toContain('8 subtopics')
-    expect(wrapper.get('[data-test="toast"]').text()).toContain('2 flashcards and 1 question')
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology basics')
   })
 
-  it('opens the practice picker on the suggested mode', async () => {
-    const wrapper = await mountKnowledgeMap()
+  it('adds a subtopic to the topic and says what was generated', async () => {
+    const respiration = makeSubtopic({ id: 501, title: 'Respiration', is_new: true })
+    const wrapper = await mountKnowledgeMap({
+      'POST /subtopics': Response.json(
+        { subtopic: respiration, added: { flashcards: 2, questions: 1 } },
+        { status: 201 },
+      ),
+    })
 
-    expect(wrapper.get('[data-test="suggestion"]').text()).toBe(
-      'Suggested: Explain it — your weakest facet.',
-    )
+    await wrapper.get('[data-test="add-subtopic"]').trigger('click')
+    expect(wrapper.get('dialog h2').text()).toBe('New subtopic')
+    expect((wrapper.get('[data-test="main-topic"]').element as HTMLSelectElement).value).toBe('1')
 
-    await wrapper.get('[data-test="practice"]').trigger('click')
-    expect(wrapper.get('[data-test="mode-feynman"]').attributes('aria-pressed')).toBe('true')
-    expect(wrapper.get('[data-test="start-practice"]').text()).toBe('Start explaining')
+    await wrapper.get('[data-test="name"]').setValue('Respiration')
+    await submitForm(wrapper)
 
-    await wrapper.get('[data-test="mode-cards"]').trigger('click')
-    expect(wrapper.get('[data-test="start-practice"]').text()).toBe('Start flashcards')
-
-    await wrapper.get('[data-test="close-practice"]').trigger('click')
-    expect(wrapper.find('[data-test="practice"]').exists()).toBe(true)
+    expect(subtopicTitles(wrapper)).toContain('Respiration')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('2 flashcards and 1 question')
   })
 })

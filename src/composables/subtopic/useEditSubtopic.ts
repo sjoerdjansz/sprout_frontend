@@ -1,14 +1,15 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
-import type { TopicFormValues } from '@/components/knowledgeMap/TopicForm.vue'
+import type { TopicFormValues } from '@/components/knowledgeMap/TopicFormDialog.vue'
 import { addedMaterialToast } from '@/composables/subtopic/useGenerateMaterial'
 import type { SubtopicPageActions } from '@/composables/subtopic/useSubtopicLoader'
 import type { Toast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
-import { useTopicsStore } from '@/stores/topics'
+import { useTopicsStore, type SubtopicDetail } from '@/stores/topics'
 
 /** Editing the subtopic (name, main topic, description and notes) in a dialog. */
 export function useEditSubtopic(
+  subtopic: Ref<SubtopicDetail | null>,
   actions: SubtopicPageActions,
   showToast: (toast: Toast) => void,
 ): {
@@ -16,6 +17,8 @@ export function useEditSubtopic(
   saving: Ref<boolean>
   /** Why the last save failed; the form keeps your values. */
   error: Ref<ApiError | null>
+  /** The form filled with the subtopic as it is now. */
+  initialValues: ComputedRef<TopicFormValues | null>
   /** The main topics it can move to. */
   topicOptions: ComputedRef<SelectOption[]>
   open: () => Promise<void>
@@ -27,6 +30,22 @@ export function useEditSubtopic(
   const isOpen = ref(false)
   const saving = ref(false)
   const error = ref<ApiError | null>(null)
+
+  const initialValues = computed<TopicFormValues | null>(() => {
+    const current = subtopic.value
+    if (current === null) {
+      return null
+    }
+
+    return {
+      title: current.title,
+      description: current.description ?? '',
+      notes: current.notes ?? '',
+      categoryId: current.topic.category.id,
+      newCategoryName: '',
+      topicId: current.topic.id,
+    }
+  })
 
   const topicOptions = computed<SelectOption[]>(() =>
     topicsStore.topics.map((topic) => ({ value: String(topic.id), label: topic.title })),
@@ -83,5 +102,5 @@ export function useEditSubtopic(
     }
   }
 
-  return { isOpen, saving, error, topicOptions, open, close, save }
+  return { isOpen, saving, error, initialValues, topicOptions, open, close, save }
 }
