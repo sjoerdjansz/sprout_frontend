@@ -1,4 +1,8 @@
-import type { Conversation, ConversationSummary } from '@/stores/conversations'
+import type {
+  Conversation,
+  ConversationListItem,
+  ConversationSummary,
+} from '@/stores/conversations'
 
 /** A conversation shaped like the API.md example: two messages and a half-agreed draft. */
 export function makeConversation(overrides: Partial<Conversation> = {}): Conversation {
@@ -41,4 +45,11 @@ export function makeSummary(overrides: Partial<ConversationSummary> = {}): Conve
   const { messages: _messages, ...summary } = makeConversation()
 
   return { ...summary, ...overrides }
+}
+
+/** A conversation as `GET /conversations?topic_id=` lists it: a count and its first messages. */
+export function makeListItem(overrides: Partial<ConversationListItem> = {}): ConversationListItem {
+  const { messages, ...summary } = makeConversation()
+
+  return { ...summary, message_count: 7, preview: messages, ...overrides }
 }
