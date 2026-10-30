@@ -42,7 +42,8 @@ describe('DashboardView', () => {
     const wrapper = await mountDashboard()
 
     expect(wrapper.get('h1').text()).toMatch(/^Good (morning|afternoon|evening), Ada$/)
-    expect(wrapper.get('[data-test="logout"]').text()).toContain('AL')
+    expect(wrapper.get('[data-test="account"]').text()).toContain('AL')
+    expect(wrapper.get('[data-test="account"]').text()).toContain('Ada Lovelace')
   })
 
   it('shows every section of the dashboard', async () => {
