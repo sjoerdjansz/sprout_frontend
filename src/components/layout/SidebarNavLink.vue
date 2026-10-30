@@ -1,16 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import BaseIcon from '@/components/BaseIcon.vue'
 import type { IconName } from '@/components/icons'
 
-const { icon, to } = defineProps<{
+const {
+  icon,
+  label,
+  to,
+  collapsed = false,
+} = defineProps<{
   icon: IconName
+  label: string
   /** Leave it out while the page doesn't exist yet: the link then does nothing. */
   to?: RouteLocationRaw
+  /** Icon only; the label stays for screen readers and shows as a tooltip. */
+  collapsed?: boolean
 }>()
 
-const linkClasses =
-  'flex h-11 items-center gap-3 rounded-md px-3 text-body-strong text-ink-muted transition-colors duration-150 ease-default hover:bg-surface hover:text-ink'
+const linkClasses = computed<string>(
+  () =>
+    `flex h-11 items-center gap-3 rounded-md text-body-strong text-ink-muted transition-colors duration-150 ease-default hover:bg-surface hover:text-ink ${collapsed ? 'justify-center px-0' : 'px-3'}`,
+)
 </script>
 
 <template>
@@ -18,15 +29,16 @@ const linkClasses =
   <RouterLink
     v-if="to"
     :to="to"
+    :title="collapsed ? label : undefined"
     :class="linkClasses"
     exact-active-class="bg-surface text-ink shadow-sm"
   >
     <BaseIcon :name="icon" />
-    <slot />
+    <span :class="{ 'sr-only': collapsed }">{{ label }}</span>
   </RouterLink>
 
-  <a v-else href="#" :class="linkClasses" @click.prevent>
+  <a v-else href="#" :title="collapsed ? label : undefined" :class="linkClasses" @click.prevent>
     <BaseIcon :name="icon" />
-    <slot />
+    <span :class="{ 'sr-only': collapsed }">{{ label }}</span>
   </a>
 </template>

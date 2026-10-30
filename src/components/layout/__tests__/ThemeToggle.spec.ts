@@ -14,11 +14,11 @@ describe('ThemeToggle', () => {
     const wrapper = mount(ThemeToggle)
     const toggle = wrapper.get('[data-test="theme-toggle"]')
 
-    expect(toggle.attributes('aria-label')).toBe('Switch to dark mode')
+    expect(toggle.text()).toBe('Switch to dark mode')
 
     await toggle.trigger('click')
 
-    expect(toggle.attributes('aria-label')).toBe('Switch to light mode')
+    expect(toggle.text()).toBe('Switch to light mode')
     expect(document.documentElement.dataset.theme).toBe('dark')
   })
 })

@@ -46,8 +46,8 @@ const emit = defineEmits<{
         />
       </label>
       <BaseButton
-        variant="secondary"
-        size="sm"
+        variant="ghost"
+        size="md"
         icon="plus"
         data-test="add-topic"
         @click="emit('addTopic')"

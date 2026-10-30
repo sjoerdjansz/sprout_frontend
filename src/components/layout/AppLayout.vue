@@ -5,6 +5,7 @@ import { ApiError } from '@/lib/api'
 import { initials } from '@/lib/names'
 import { useAuthStore } from '@/stores/auth'
 import { useConversationsStore } from '@/stores/conversations'
+import { useSidebarStore } from '@/stores/sidebar'
 
 const { asideLabel } = defineProps<{
   /** Names the aside for screen readers ("Topic details"); only used with the `aside` slot. */
@@ -14,6 +15,7 @@ const { asideLabel } = defineProps<{
 const auth = useAuthStore()
 const slots = useSlots()
 const conversationsStore = useConversationsStore()
+const sidebarStore = useSidebarStore()
 
 const userName = computed<string>(() => auth.user?.name ?? '')
 const historyError = ref<string | null>(null)
@@ -57,17 +59,21 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- The sidebar column narrows to icons when you collapse it (250ms, the toggle speed). -->
   <div
-    class="grid min-h-svh grid-cols-[232px_minmax(0,1fr)]"
-    :class="{ 'rail:grid-cols-[232px_minmax(0,1fr)_380px]': hasAside }"
+    class="grid min-h-svh grid-cols-[var(--sidebar-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-250 ease-default motion-reduce:transition-none"
+    :class="{ 'rail:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_380px]': hasAside }"
+    :style="{ '--sidebar-width': sidebarStore.collapsed ? '72px' : '232px' }"
   >
     <AppSidebar
       :user-name="userName"
       :user-initials="initials(userName)"
       :conversations="conversationsStore.conversations"
       :history-error="historyError"
-      class="sticky top-0 h-svh overflow-y-auto"
+      :collapsed="sidebarStore.collapsed"
+      class="sticky top-0 h-svh overflow-x-hidden overflow-y-auto"
       @logout="auth.logout()"
+      @toggle-collapsed="sidebarStore.toggleCollapsed()"
     />
 
     <!-- Under the rail breakpoint the aside stacks below the page; from it, `contents` lets main

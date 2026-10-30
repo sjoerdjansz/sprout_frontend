@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import BaseIcon from '@/components/BaseIcon.vue'
 
-/** `reversed` is for dark grounds such as the deep-forest art panel. */
-const { reversed = false } = defineProps<{
+/**
+ * `reversed` is for dark grounds such as the deep-forest art panel; `compact` shows the mark
+ * alone (the collapsed sidebar), keeping the name for screen readers.
+ */
+const { reversed = false, compact = false } = defineProps<{
   reversed?: boolean
+  compact?: boolean
 }>()
 </script>
 
@@ -19,7 +23,10 @@ const { reversed = false } = defineProps<{
     </span>
     <span
       class="font-display font-semibold tracking-[-0.02em]"
-      :class="reversed ? 'text-2xl text-honeydew' : 'text-[22px] text-ink'"
+      :class="[
+        reversed ? 'text-2xl text-honeydew' : 'text-[22px] text-ink',
+        { 'sr-only': compact },
+      ]"
     >
       Sprout
     </span>
