@@ -42,7 +42,7 @@ const emit = defineEmits<{
     >
       <SproutLogo :compact="collapsed" />
       <BaseIconButton
-        :icon="collapsed ? 'panel-left-open' : 'panel-left-close'"
+        :icon="collapsed ? 'chevron-right' : 'chevron-left'"
         :label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         :aria-expanded="!collapsed"
         data-test="sidebar-toggle"
