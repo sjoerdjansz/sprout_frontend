@@ -1,17 +1,48 @@
 <script setup lang="ts">
+import type { RouteLocationRaw } from 'vue-router'
 import BaseBadge from '@/components/BaseBadge.vue'
+import FormError from '@/components/FormError.vue'
 import ChatComposer, { type Suggestion } from '@/components/chat/ChatComposer.vue'
+import ChatThread from '@/components/chat/ChatThread.vue'
 import ResumeSession from '@/components/dashboard/ResumeSession.vue'
 
 export interface LastSession {
-  topic: string
+  title: string
   lastStudied: string
+  to: RouteLocationRaw
 }
 
-const { suggestions, lastSession } = defineProps<{
-  suggestions: Suggestion[]
-  lastSession: LastSession
+const {
+  pendingMessage = null,
+  error = null,
+  lastSession = null,
+  userInitials,
+} = defineProps<{
+  /** Your first message while the tutor writes its reply. */
+  pendingMessage?: string | null
+  error?: string | null
+  /** Your most recent conversation that isn't saved yet. */
+  lastSession?: LastSession | null
+  userInitials: string
 }>()
+
+const emit = defineEmits<{
+  send: [text: string]
+}>()
+
+const message = defineModel<string>({ required: true })
+
+// Exploration starters: the chat scopes a subject with you, practising happens elsewhere.
+const suggestions: Suggestion[] = [
+  { label: 'Learn something new', icon: 'sparkles', message: 'I want to learn about ' },
+  {
+    label: 'Clear up a confusion',
+    icon: 'circle-help',
+    message: 'Something I keep getting confused about is ',
+  },
+  { label: 'Go deeper on a topic', icon: 'layers', message: 'I know the basics of ' },
+  { label: 'Prepare for something', icon: 'target', message: 'I’m preparing for ' },
+]
 </script>
 
 <template>
@@ -30,11 +61,29 @@ const { suggestions, lastSession } = defineProps<{
       </p>
     </div>
 
-    <ChatComposer
-      :suggestions="suggestions"
-      placeholder="Ask about a new concept, or something that confuses you…"
+    <ChatThread
+      v-if="pendingMessage !== null"
+      :messages="[]"
+      :pending-message="pendingMessage"
+      :user-initials="userInitials"
+      class="py-1"
     />
 
-    <ResumeSession :topic="lastSession.topic" :last-studied="lastSession.lastStudied" />
+    <FormError v-if="error" :message="error" />
+
+    <ChatComposer
+      v-model="message"
+      :suggestions="suggestions"
+      :disabled="pendingMessage !== null"
+      placeholder="Ask about a new concept, or something that confuses you…"
+      @send="emit('send', $event)"
+    />
+
+    <ResumeSession
+      v-if="lastSession"
+      :title="lastSession.title"
+      :last-studied="lastSession.lastStudied"
+      :to="lastSession.to"
+    />
   </section>
 </template>

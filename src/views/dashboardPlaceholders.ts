@@ -2,28 +2,14 @@
  * Example data from the dashboard design, until the API serves the real thing. Replace these
  * with store state one section at a time; the components only care about the shapes.
  */
-import type { Suggestion } from '@/components/chat/ChatComposer.vue'
 import type { PracticeMode } from '@/components/dashboard/PracticeModeCard.vue'
 import type { QueueTopic } from '@/components/dashboard/RetentionQueueItem.vue'
-import type { LastSession } from '@/components/dashboard/TutorPrompt.vue'
 import type { WeeklyStat } from '@/components/dashboard/WeeklyInsights.vue'
 
 export const progress = {
   streakDays: 6,
   masteredTopics: 2,
   totalTopics: 8,
-}
-
-export const suggestions: Suggestion[] = [
-  { label: 'Explain a new concept', icon: 'sparkles' },
-  { label: 'Clear up Recursion', icon: 'circle-help' },
-  { label: 'Feynman: Photosynthesis', icon: 'lightbulb' },
-  { label: 'Quiz me on Spanish verbs', icon: 'list-checks' },
-]
-
-export const lastSession: LastSession = {
-  topic: 'Photosynthesis · the light reactions',
-  lastStudied: '2 hours ago',
 }
 
 export const retentionQueue = {
