@@ -6,9 +6,11 @@ import type { IconName } from '@/components/icons'
 // Native attributes (type, placeholder, autocomplete, data-test ...) belong on the <input>, not the wrapper.
 defineOptions({ inheritAttrs: false })
 
-const { label, icon, error } = defineProps<{
+const { label, icon, hint, error } = defineProps<{
   label: string
   icon?: IconName
+  /** Helper text under the field; an error replaces it. */
+  hint?: string
   /** Says what to do next ("Add your email ..."); turns the border ember. */
   error?: string
 }>()
@@ -17,6 +19,7 @@ const model = defineModel<string>({ required: true })
 
 const inputId = useId()
 const errorId = `${inputId}-error`
+const hintId = `${inputId}-hint`
 </script>
 
 <template>
@@ -33,7 +36,7 @@ const errorId = `${inputId}-error`
         v-model="model"
         class="min-w-0 flex-1 bg-transparent py-3 text-body text-ink outline-none placeholder:text-ink-subtle focus-visible:shadow-none"
         :aria-invalid="error ? 'true' : undefined"
-        :aria-describedby="error ? errorId : undefined"
+        :aria-describedby="error ? errorId : hint ? hintId : undefined"
         v-bind="$attrs"
       />
     </div>
@@ -42,5 +45,6 @@ const errorId = `${inputId}-error`
       <BaseIcon name="circle-help" :size="14" />
       {{ error }}
     </p>
+    <p v-else-if="hint" :id="hintId" class="text-caption text-ink-subtle">{{ hint }}</p>
   </div>
 </template>
