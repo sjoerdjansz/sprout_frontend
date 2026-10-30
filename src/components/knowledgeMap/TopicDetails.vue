@@ -5,9 +5,8 @@ import DetailStat from '@/components/knowledgeMap/DetailStat.vue'
 import { averageMastery, dueCards, isMastered, topicLevel, type Level } from '@/lib/knowledgeMap'
 import type { Topic } from '@/stores/topics'
 
-const { topic, categoryName } = defineProps<{
+const { topic } = defineProps<{
   topic: Topic
-  categoryName: string
 }>()
 
 const emit = defineEmits<{
@@ -22,12 +21,12 @@ const mastered = computed<number>(() => topic.subtopics.filter(isMastered).lengt
 
 <template>
   <DetailHeader
-    :overline="`Main topic · ${categoryName}`"
+    :overline="`Main topic · ${topic.category.name}`"
     :title="topic.title"
     :mastery="mastery"
     :mastery-label="`Average mastery ${mastery}%`"
     :level="level"
-    :description="topic.description"
+    :description="topic.description ?? ''"
     @edit="emit('edit')"
   />
 

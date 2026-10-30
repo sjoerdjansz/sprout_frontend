@@ -1,14 +1,25 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { useTopicsStore, type Topic } from '@/stores/topics'
+import { stubApi } from '@/__tests__/stubApi'
+import {
+  makeCategories,
+  makeLibrary,
+  makeSubtopic,
+  makeSubtopicDetail,
+  makeTopic,
+} from '@/__tests__/topicFixtures'
+import { useTopicsStore } from '../topics'
 
-function topicNamed(topics: Topic[], title: string): Topic {
-  const topic = topics.find((candidate) => candidate.title === title)
-  if (topic === undefined) {
-    throw new Error(`No topic ${title}`)
-  }
+function requestBody(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, call = 0): unknown {
+  const request = fetchMock.mock.calls[call]?.[1]
 
-  return topic
+  return JSON.parse(String(request?.body))
+}
+
+function subtopicTitles(topicId: number): string[] {
+  const topic = useTopicsStore().topics.find((candidate) => candidate.id === topicId)
+
+  return topic?.subtopics.map((subtopic) => subtopic.title) ?? []
 }
 
 describe('topics store', () => {
@@ -16,94 +27,143 @@ describe('topics store', () => {
     setActivePinia(createPinia())
   })
 
-  it('starts with the example library', () => {
-    expect(useTopicsStore().topics.map((topic) => topic.title)).toEqual([
-      'Biology',
-      'Chemistry',
-      'Computer science',
-      'Spanish',
-    ])
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
-  it('adds a topic with a new id and no subtopics, and edits it', () => {
+  it('fetches your topics and categories', async () => {
+    stubApi({
+      'GET /topics': Response.json(makeLibrary()),
+      'GET /categories': Response.json(makeCategories()),
+    })
     const store = useTopicsStore()
 
-    const id = store.addTopic({
+    await store.fetchLibrary()
+
+    expect(store.topics).toHaveLength(4)
+    expect(store.categories).toHaveLength(6)
+  })
+
+  it('adds a topic in a new category, sending its name instead of an id', async () => {
+    const astronomy = makeTopic({ id: 9, title: 'Astronomy', category: { id: 31, name: 'Space' } })
+    const fetchMock = stubApi({ 'POST /topics': Response.json(astronomy, { status: 201 }) })
+    const store = useTopicsStore()
+
+    await store.addTopic({
       title: 'Astronomy',
-      description: 'Stars and planets.',
+      description: '',
+      notes: 'NASA site',
+      categoryId: null,
+      categoryName: 'Space',
+    })
+
+    expect(requestBody(fetchMock)).toEqual({
+      title: 'Astronomy',
+      description: null,
+      notes: 'NASA site',
+      category_name: 'Space',
+    })
+    expect(store.topics.map((topic) => topic.title)).toEqual(['Astronomy'])
+    expect(store.categories).toEqual([{ id: 31, name: 'Space' }])
+  })
+
+  it('edits a topic in place', async () => {
+    const fetchMock = stubApi({
+      'PUT /topics/1': Response.json(makeTopic({ title: 'Biology basics' })),
+    })
+    const store = useTopicsStore()
+    store.topics = makeLibrary()
+
+    await store.updateTopic(1, {
+      title: 'Biology basics',
+      description: 'Cells',
       notes: '',
       categoryId: 1,
-    })
-    store.updateTopic(id, {
-      title: 'Astronomy basics',
-      description: 'Stars, planets and galaxies.',
-      notes: 'NASA site',
-      categoryId: 1,
+      categoryName: '',
     })
 
-    const astronomy = topicNamed(store.topics, 'Astronomy basics')
-    expect(astronomy).toMatchObject({ id, subtopics: [], notes: 'NASA site', icon: 'book-open' })
-    expect(store.topics.filter((topic) => topic.id === id)).toHaveLength(1)
+    expect(requestBody(fetchMock)).toMatchObject({ category_id: 1, notes: null })
+    expect(store.topics.map((topic) => topic.title)).toContain('Biology basics')
   })
 
-  it('starts with the starter categories and adds your own once', () => {
+  it('adds a subtopic at the end of its topic and says what was generated', async () => {
+    const respiration = makeSubtopic({ id: 501, title: 'Respiration', is_new: true })
+    stubApi({
+      'POST /subtopics': Response.json(
+        { subtopic: respiration, added: { flashcards: 3, questions: 1 } },
+        { status: 201 },
+      ),
+    })
     const store = useTopicsStore()
+    store.topics = makeLibrary()
 
-    expect(store.categories.map((category) => category.name)).toEqual([
-      'Science',
-      'Technology',
-      'Maths',
-      'Languages',
-      'History',
-      'Arts & culture',
-    ])
+    const result = await store.addSubtopic({
+      topicId: 1,
+      title: 'Respiration',
+      description: '',
+      notes: 'Cells release energy.',
+    })
 
-    const music = store.addCategory('Music')
-    expect(store.categoryName(music)).toBe('Music')
-    expect(store.addCategory(' music ')).toBe(music)
-    expect(store.addCategory('maths')).toBe(3)
-    expect(store.categories).toHaveLength(7)
+    expect(result.added).toEqual({ flashcards: 3, questions: 1 })
+    expect(subtopicTitles(1).slice(-1)[0]).toBe('Respiration')
   })
 
-  it('adds a subtopic you have not started yet', () => {
+  it('moves an edited subtopic to the end of its new topic', async () => {
+    const moved = makeSubtopic({ topic_id: 2 })
+    stubApi({
+      'PUT /subtopics/101': Response.json({
+        subtopic: moved,
+        added: { flashcards: 0, questions: 0 },
+      }),
+    })
     const store = useTopicsStore()
-    const chemistry = topicNamed(store.topics, 'Chemistry')
+    store.topics = makeLibrary()
 
-    const id = store.addSubtopic({
-      title: 'Acids and bases',
+    await store.updateSubtopic(101, {
+      topicId: 2,
+      title: 'Photosynthesis',
       description: '',
       notes: '',
-      topicId: chemistry.id,
     })
 
-    expect(topicNamed(store.topics, 'Chemistry').subtopics.slice(-1)[0]).toMatchObject({
-      id,
-      title: 'Acids and bases',
-      mastery: 0,
-      isNew: true,
-      nextReview: null,
-    })
+    expect(subtopicTitles(1)).not.toContain('Photosynthesis')
+    expect(subtopicTitles(2).slice(-1)[0]).toBe('Photosynthesis')
   })
 
-  it('moves a subtopic to another topic when you change its main topic', () => {
+  it('fetches one subtopic for its page', async () => {
+    stubApi({ 'GET /subtopics/101': Response.json(makeSubtopicDetail()) })
     const store = useTopicsStore()
-    const biology = topicNamed(store.topics, 'Biology')
-    const chemistry = topicNamed(store.topics, 'Chemistry')
-    const chlorophyll = biology.subtopics.find((subtopic) => subtopic.title === 'Chlorophyll')
 
-    store.updateSubtopic(chlorophyll?.id ?? 0, {
-      title: 'Chlorophyll molecules',
-      description: 'The pigment.',
-      notes: '',
-      topicId: chemistry.id,
-    })
+    await store.fetchSubtopic(101)
 
-    expect(topicNamed(store.topics, 'Biology').subtopics.map((s) => s.title)).not.toContain(
-      'Chlorophyll',
-    )
-    expect(topicNamed(store.topics, 'Chemistry').subtopics.slice(-1)[0]).toMatchObject({
-      title: 'Chlorophyll molecules',
-      mastery: 82,
+    expect(store.subtopic?.topic.title).toBe('Biology')
+    expect(store.subtopic?.counts.flashcards).toBe(2)
+  })
+
+  it('deletes a subtopic from the page and the library', async () => {
+    stubApi({ 'DELETE /subtopics/101': new Response(null, { status: 204 }) })
+    const store = useTopicsStore()
+    store.topics = makeLibrary()
+    store.subtopic = makeSubtopicDetail()
+
+    await store.deleteSubtopic(101)
+
+    expect(subtopicTitles(1)).not.toContain('Photosynthesis')
+    expect(store.subtopic).toBeNull()
+  })
+
+  it('generates material from the notes', async () => {
+    const fetchMock = stubApi({
+      'POST /subtopics/101/generate': Response.json({
+        subtopic: makeSubtopic(),
+        added: { flashcards: 2, questions: 0 },
+      }),
     })
+    const store = useTopicsStore()
+
+    const result = await store.generateMaterial(101)
+
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBeUndefined()
+    expect(result.added.flashcards).toBe(2)
   })
 })

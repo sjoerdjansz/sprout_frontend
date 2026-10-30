@@ -12,6 +12,8 @@ import {
   subtopicLevel,
   type Level,
 } from '@/lib/knowledgeMap'
+import { dueLabel } from '@/lib/dueDate'
+import { capitalize } from '@/lib/text'
 import type { FacetProgress, Subtopic, Topic } from '@/stores/topics'
 
 const { topic, subtopic } = defineProps<{
@@ -26,11 +28,11 @@ const emit = defineEmits<{
 const level = computed<Level>(() => subtopicLevel(subtopic))
 
 const nextReview = computed<string>(() => {
-  if (subtopic.isNew || subtopic.nextReview === null) {
+  if (subtopic.is_new || subtopic.next_review_on === null) {
     return 'After your first session'
   }
 
-  return subtopic.nextReview.charAt(0).toUpperCase() + subtopic.nextReview.slice(1)
+  return capitalize(dueLabel(subtopic.next_review_on))
 })
 
 function facetStatus(progress: FacetProgress): string {
@@ -49,9 +51,10 @@ function facetStatus(progress: FacetProgress): string {
     :mastery="subtopic.mastery"
     :mastery-label="`Mastery ${subtopic.mastery}%`"
     :level="level"
-    :description="subtopic.description"
+    :description="subtopic.description ?? ''"
     @edit="emit('edit')"
   />
+
 
   <div class="flex flex-col gap-2">
     <div class="flex items-baseline justify-between">
@@ -97,8 +100,8 @@ function facetStatus(progress: FacetProgress): string {
   <div class="flex gap-2.5">
     <DetailStat
       label="Due today"
-      :value="subtopic.dueCards > 0 ? pluralize(subtopic.dueCards, 'card') : 'Nothing'"
-      :tone="subtopic.dueCards > 0 ? 'sun' : 'ink'"
+      :value="subtopic.due_cards > 0 ? pluralize(subtopic.due_cards, 'card') : 'Nothing'"
+      :tone="subtopic.due_cards > 0 ? 'sun' : 'ink'"
     />
     <DetailStat label="Next review" :value="nextReview" />
   </div>

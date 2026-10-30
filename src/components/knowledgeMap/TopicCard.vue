@@ -2,12 +2,17 @@
 import { computed } from 'vue'
 import IconTile from '@/components/IconTile.vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import { averageMastery, dueCards, pluralize } from '@/lib/knowledgeMap'
+import {
+  averageMastery,
+  dueCards,
+  pluralize,
+  topicAppearance,
+  type TopicAppearance,
+} from '@/lib/knowledgeMap'
 import type { Topic } from '@/stores/topics'
 
-const { topic, categoryName, selected } = defineProps<{
+const { topic, selected } = defineProps<{
   topic: Topic
-  categoryName: string
   selected: boolean
 }>()
 
@@ -17,6 +22,7 @@ const emit = defineEmits<{
 
 const mastery = computed<number>(() => averageMastery(topic))
 const due = computed<number>(() => dueCards(topic))
+const appearance = computed<TopicAppearance>(() => topicAppearance(topic))
 </script>
 
 <template>
@@ -28,7 +34,7 @@ const due = computed<number>(() => dueCards(topic))
     @click="emit('select')"
   >
     <span class="flex items-center justify-between gap-3">
-      <IconTile :icon="topic.icon" :tint="topic.tint" />
+      <IconTile :icon="appearance.icon" :tint="appearance.tint" />
       <ProgressRing :value="mastery" :size="48" :label="`${topic.title} mastery ${mastery}%`" />
     </span>
     <span class="flex flex-col gap-0.75">
@@ -36,7 +42,9 @@ const due = computed<number>(() => dueCards(topic))
         {{ topic.title }}
       </span>
       <span class="flex flex-wrap gap-1.5 text-label font-normal text-ink-muted">
-        <span> {{ categoryName }} · {{ pluralize(topic.subtopics.length, 'subtopic') }} </span>
+        <span>
+          {{ topic.category.name }} · {{ pluralize(topic.subtopics.length, 'subtopic') }}
+        </span>
         <span v-if="due > 0" class="font-[650] text-sun-ink">· {{ due }} due</span>
       </span>
     </span>

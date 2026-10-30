@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { stubApi } from '@/__tests__/stubApi'
+import { makeCategories, makeLibrary, makeSubtopic, makeTopic } from '@/__tests__/topicFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
 import KnowledgeMapView from '../KnowledgeMapView.vue'
 
@@ -16,9 +17,16 @@ const user: User = {
   created_at: '2026-10-29T12:00:00.000000Z',
 }
 
-async function mountKnowledgeMap(): Promise<VueWrapper> {
-  // The sidebar loads you and your chat history; the library itself is demo data for now.
-  stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+type Routes = Parameters<typeof stubApi>[0]
+
+async function mountKnowledgeMap(routes: Routes = {}): Promise<VueWrapper> {
+  stubApi({
+    'GET /user': Response.json(user),
+    'GET /conversations': Response.json([]),
+    'GET /topics': Response.json(makeLibrary()),
+    'GET /categories': Response.json(makeCategories()),
+    ...routes,
+  })
   const wrapper = mount(KnowledgeMapView, { global: { plugins: [router] } })
   await flushPromises()
 
@@ -33,6 +41,10 @@ function subtopicTitles(wrapper: VueWrapper): string[] {
   return wrapper.findAll('[data-test="subtopic"]').map((row) => row.find('span').text())
 }
 
+function validationError(field: string, message: string): Response {
+  return Response.json({ message, errors: { [field]: [message] } }, { status: 422 })
+}
+
 describe('KnowledgeMapView', () => {
   beforeEach(async () => {
     localStorage.clear()
@@ -45,16 +57,38 @@ describe('KnowledgeMapView', () => {
     vi.unstubAllGlobals()
   })
 
-  it('sums up your library and opens on a subtopic you are working on', async () => {
+  it('sums up your library and opens on the first subtopic that needs attention', async () => {
     const wrapper = await mountKnowledgeMap()
 
     expect(wrapper.get('[data-test="summary"]').text()).toBe(
-      '4 topics · 13 subtopics · 2 mastered · 32 cards due today',
+      '4 topics · 8 subtopics · 1 mastered · 11 cards due today',
     )
     expect(cardTitles(wrapper)).toHaveLength(4)
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
     expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Photosynthesis')
     expect(wrapper.findAll('[data-test="facet"]')).toHaveLength(3)
+  })
+
+  it('says what to do when the library cannot load, and tries again', async () => {
+    const wrapper = await mountKnowledgeMap({
+      'GET /topics': [
+        () => Response.json({ message: 'Something went wrong.' }, { status: 500 }),
+        () => Response.json(makeLibrary()),
+      ],
+    })
+
+    expect(wrapper.get('[data-test="form-error"]').text()).toContain('Something went wrong.')
+
+    await wrapper.get('[data-test="retry"]').trigger('click')
+    await flushPromises()
+    expect(cardTitles(wrapper)).toHaveLength(4)
+  })
+
+  it('invites you to add a first topic when your library is empty', async () => {
+    const wrapper = await mountKnowledgeMap({ 'GET /topics': Response.json([]) })
+
+    expect(wrapper.get('[data-test="empty-library"]').text()).toContain('Your library is empty')
+    expect(wrapper.find('aside').exists()).toBe(false)
   })
 
   it('narrows the cards as you search, and clears the filters when nothing matches', async () => {
@@ -84,11 +118,7 @@ describe('KnowledgeMapView', () => {
 
     await wrapper.get('[data-test="category-all"]').trigger('click')
     await wrapper.get('[data-test="needs-attention"]').trigger('click')
-    expect(subtopicTitles(wrapper)).toEqual([
-      'Photosynthesis',
-      'Cell respiration',
-      'DNA replication',
-    ])
+    expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration'])
   })
 
   it('shows a topic with its subtopics, and a subtopic with its facets', async () => {
@@ -109,13 +139,16 @@ describe('KnowledgeMapView', () => {
   })
 
   it('adds a topic and selects it', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountKnowledgeMap({
+      'POST /topics': Response.json(makeTopic({ id: 9, title: 'Astronomy' }), { status: 201 }),
+    })
 
     await wrapper.get('[data-test="add-topic"]').trigger('click')
     expect(wrapper.get('[data-test="form-title"]').text()).toBe('New topic')
 
     await wrapper.get('[data-test="name"]').setValue('Astronomy')
     await wrapper.get('form').trigger('submit')
+    await flushPromises()
 
     expect(cardTitles(wrapper)).toHaveLength(5)
     expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Astronomy')
@@ -125,14 +158,33 @@ describe('KnowledgeMapView', () => {
     )
   })
 
+  it('keeps the form open with the API message when saving fails', async () => {
+    const wrapper = await mountKnowledgeMap({
+      'POST /topics': validationError('title', 'Give your topic a name.'),
+    })
+
+    await wrapper.get('[data-test="add-topic"]').trigger('click')
+    await wrapper.get('[data-test="name"]').setValue('Astronomy')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="form-title"]').text()).toBe('New topic')
+    expect(wrapper.text()).toContain('Give your topic a name.')
+    expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe('Astronomy')
+  })
+
   it('adds a topic in a category of your own, which then gets a chip', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const guitar = makeTopic({ id: 9, title: 'Guitar', category: { id: 31, name: 'Music' } })
+    const wrapper = await mountKnowledgeMap({
+      'POST /topics': Response.json(guitar, { status: 201 }),
+    })
 
     await wrapper.get('[data-test="add-topic"]').trigger('click')
     await wrapper.get('[data-test="name"]').setValue('Guitar')
     await wrapper.get('[data-test="category"]').setValue('new')
     await wrapper.get('[data-test="new-category"]').setValue('Music')
     await wrapper.get('form').trigger('submit')
+    await flushPromises()
 
     expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Guitar')
     expect(wrapper.text()).toContain('Main topic · Music')
@@ -141,8 +193,14 @@ describe('KnowledgeMapView', () => {
     )
   })
 
-  it('moves a subtopic to another topic when you edit it', async () => {
-    const wrapper = await mountKnowledgeMap()
+  it('moves a subtopic to another topic when you edit it, and says what was generated', async () => {
+    const moved = makeSubtopic({ topic_id: 2, due_cards: 3 })
+    const wrapper = await mountKnowledgeMap({
+      'PUT /subtopics/101': Response.json({
+        subtopic: moved,
+        added: { flashcards: 2, questions: 1 },
+      }),
+    })
 
     await wrapper.get('[data-test="edit"]').trigger('click')
     expect(wrapper.get('[data-test="form-title"]').text()).toBe('Edit subtopic')
@@ -152,10 +210,12 @@ describe('KnowledgeMapView', () => {
 
     await wrapper.get('[data-test="main-topic"]').setValue('2')
     await wrapper.get('form').trigger('submit')
+    await flushPromises()
 
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
     expect(subtopicTitles(wrapper)).toContain('Photosynthesis')
-    expect(wrapper.get('[data-test="summary"]').text()).toContain('13 subtopics')
+    expect(wrapper.get('[data-test="summary"]').text()).toContain('8 subtopics')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('2 flashcards and 1 question')
   })
 
   it('opens the practice picker on the suggested mode', async () => {

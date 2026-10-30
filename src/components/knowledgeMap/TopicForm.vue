@@ -5,7 +5,9 @@ import BaseIconButton from '@/components/BaseIconButton.vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseSelect, { type SelectOption } from '@/components/BaseSelect.vue'
 import BaseTextarea from '@/components/BaseTextarea.vue'
+import FormError from '@/components/FormError.vue'
 import PanelLayout from '@/components/knowledgeMap/PanelLayout.vue'
+import type { ApiError } from '@/lib/api'
 
 export type TopicFormMode = 'add-topic' | 'edit-topic' | 'add-subtopic' | 'edit-subtopic'
 
@@ -21,7 +23,15 @@ export interface TopicFormValues {
   topicId: number
 }
 
-const { mode, initialValues, categoryOptions, topicOptions } = defineProps<{
+const {
+  mode,
+  initialValues,
+  categoryOptions,
+  topicOptions,
+  saving = false,
+  error = null,
+  framed = true,
+} = defineProps<{
   mode: TopicFormMode
   /** Read once: remount the form (with a `key`) to start over with other values. */
   initialValues: TopicFormValues
@@ -29,6 +39,12 @@ const { mode, initialValues, categoryOptions, topicOptions } = defineProps<{
   categoryOptions: SelectOption[]
   /** The main topics a subtopic can belong to. */
   topicOptions: SelectOption[]
+  /** While the API saves (and maybe generates cards from the notes). */
+  saving?: boolean
+  /** Why the last save failed; your values stay so you can fix them and try again. */
+  error?: ApiError | null
+  /** False inside a dialog, which has its own title and close button. */
+  framed?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -68,8 +84,21 @@ const isNewCategory = computed<boolean>(
 )
 
 const canSave = computed<boolean>(
-  () => title.value.trim() !== '' && (!isNewCategory.value || newCategoryName.value.trim() !== ''),
+  () =>
+    !saving &&
+    title.value.trim() !== '' &&
+    (!isNewCategory.value || newCategoryName.value.trim() !== ''),
 )
+
+// Field errors show next to their field. The rest (your AI key, too many saves, the AI being
+// unavailable ...) needs a message of its own above the buttons.
+const generalError = computed<string | null>(() => {
+  if (error === null) {
+    return null
+  }
+
+  return error.fieldError('ai_key') ?? (error.hasFieldErrors ? null : error.message)
+})
 
 function save(): void {
   if (!canSave.value) {
@@ -89,8 +118,8 @@ function save(): void {
 
 <template>
   <form class="flex min-h-0 flex-auto flex-col" novalidate @submit.prevent="save">
-    <PanelLayout>
-      <div class="flex items-center justify-between gap-3">
+    <PanelLayout :plain="!framed">
+      <div v-if="framed" class="flex items-center justify-between gap-3">
         <div class="flex flex-col gap-0.5">
           <span class="text-overline text-ink-subtle uppercase">
             {{ isAdding ? 'Add to your library' : 'Edit' }}
@@ -109,6 +138,7 @@ function save(): void {
         v-model="title"
         label="Name"
         :placeholder="isSubtopic ? 'e.g. The Calvin cycle' : 'e.g. Astronomy'"
+        :error="error?.fieldError('title')"
         data-test="name"
       />
 
@@ -117,6 +147,7 @@ function save(): void {
         v-model="topicId"
         label="Main topic"
         :options="topicOptions"
+        :error="error?.fieldError('topic_id')"
         data-test="main-topic"
       />
       <BaseSelect
@@ -124,6 +155,7 @@ function save(): void {
         v-model="categoryChoice"
         label="Category"
         :options="categoryChoices"
+        :error="error?.fieldError('category_id')"
         data-test="category"
       />
       <BaseInput
@@ -131,6 +163,7 @@ function save(): void {
         v-model="newCategoryName"
         label="Category name"
         placeholder="e.g. Music"
+        :error="error?.fieldError('category_name')"
         data-test="new-category"
       />
 
@@ -139,6 +172,7 @@ function save(): void {
         label="What should it cover?"
         placeholder="A sentence or two is enough. Sprout uses this to plan questions."
         rows="3"
+        :error="error?.fieldError('description')"
         data-test="description"
       />
 
@@ -148,15 +182,22 @@ function save(): void {
         icon="book-open"
         placeholder="Paste a link or some notes"
         hint="Sprout turns these into cards and questions."
+        :error="error?.fieldError('notes')"
         data-test="notes"
       />
 
       <template #footer>
-        <div class="flex justify-end gap-2">
-          <BaseButton variant="ghost" @click="emit('cancel')">Cancel</BaseButton>
-          <BaseButton type="submit" icon="check" :disabled="!canSave" data-test="save">
-            {{ isAdding ? 'Add to library' : 'Save changes' }}
-          </BaseButton>
+        <div class="flex flex-col gap-3">
+          <FormError v-if="generalError" :message="generalError" />
+          <div class="flex justify-end gap-2">
+            <BaseButton variant="ghost" :disabled="saving" @click="emit('cancel')">
+              Cancel
+            </BaseButton>
+            <BaseButton type="submit" icon="check" :disabled="!canSave" data-test="save">
+              <template v-if="saving">Saving…</template>
+              <template v-else>{{ isAdding ? 'Add to library' : 'Save changes' }}</template>
+            </BaseButton>
+          </div>
         </div>
       </template>
     </PanelLayout>

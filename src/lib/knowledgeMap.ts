@@ -3,9 +3,18 @@
  * attention, what to practise next, and which topics a search shows. Kept apart from the
  * components so they stay presentational and the rules are easy to test.
  */
+import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
+import { dueLabel } from '@/lib/dueDate'
 import { practiceMode, practiceModes, type PracticeMode } from '@/lib/practiceModes'
-import type { Category, FacetKey, FacetProgress, Subtopic, Topic } from '@/stores/topics'
+import type {
+  AddedMaterial,
+  Category,
+  FacetKey,
+  FacetProgress,
+  Subtopic,
+  Topic,
+} from '@/stores/topics'
 
 export interface Facet {
   key: FacetKey
@@ -24,17 +33,22 @@ export function pluralize(count: number, singular: string, plural = `${singular}
   return `${count} ${count === 1 ? singular : plural}`
 }
 
+/** "3 flashcards and 1 question": what Sprout made from a subtopic's notes. */
+export function describeAdded(added: AddedMaterial): string {
+  return `${pluralize(added.flashcards, 'flashcard')} and ${pluralize(added.questions, 'question')}`
+}
+
 export function holdingCount(subtopic: Subtopic): number {
   return facets.filter((facet) => subtopic.facets[facet.key].holding).length
 }
 
 /** Mastered means all three facets hold over time, not one good session. */
 export function isMastered(subtopic: Subtopic): boolean {
-  return !subtopic.isNew && !subtopic.slipping && holdingCount(subtopic) === facets.length
+  return !subtopic.is_new && !subtopic.slipping && holdingCount(subtopic) === facets.length
 }
 
 export function needsAttention(subtopic: Subtopic): boolean {
-  return subtopic.dueCards > 0 || subtopic.slipping
+  return subtopic.due_cards > 0 || subtopic.slipping
 }
 
 export function averageMastery(topic: Topic): number {
@@ -47,7 +61,7 @@ export function averageMastery(topic: Topic): number {
 }
 
 export function dueCards(topic: Topic): number {
-  return topic.subtopics.reduce((sum, subtopic) => sum + subtopic.dueCards, 0)
+  return topic.subtopics.reduce((sum, subtopic) => sum + subtopic.due_cards, 0)
 }
 
 export type FacetState = 'holding' | 'started' | 'not-started'
@@ -80,7 +94,7 @@ const levels = {
 const growingFrom = 60
 
 export function subtopicLevel(subtopic: Subtopic): Level {
-  if (subtopic.isNew) {
+  if (subtopic.is_new) {
     return levels.new
   }
   if (subtopic.slipping) {
@@ -114,23 +128,25 @@ export interface Caption {
 
 /** The one line under a subtopic's name: the most urgent thing about it. */
 export function subtopicCaption(subtopic: Subtopic): Caption {
-  if (subtopic.isNew) {
+  if (subtopic.is_new) {
     return { text: 'Not started yet', tone: 'subtle' }
   }
   if (subtopic.slipping) {
-    return { text: `Slipping · ${pluralize(subtopic.dueCards, 'card')} due`, tone: 'sun' }
+    return { text: `Slipping · ${pluralize(subtopic.due_cards, 'card')} due`, tone: 'sun' }
   }
-  if (subtopic.dueCards > 0) {
-    return { text: `${pluralize(subtopic.dueCards, 'card')} due today`, tone: 'sun' }
+  if (subtopic.due_cards > 0) {
+    return { text: `${pluralize(subtopic.due_cards, 'card')} due today`, tone: 'sun' }
   }
   if (isMastered(subtopic)) {
     return { text: 'Mastered', tone: 'sprout' }
   }
 
-  return {
-    text: `Next review ${subtopic.nextReview ?? 'after your first session'}`,
-    tone: 'subtle',
-  }
+  const nextReview =
+    subtopic.next_review_on === null
+      ? 'after your first session'
+      : dueLabel(subtopic.next_review_on)
+
+  return { text: `Next review ${nextReview}`, tone: 'subtle' }
 }
 
 export interface LibraryFilters {
@@ -150,7 +166,7 @@ export function filterTopics(topics: Topic[], filters: LibraryFilters): Topic[] 
   const query = filters.query.trim().toLowerCase()
 
   return topics.filter((topic) => {
-    if (filters.categoryId !== 'all' && topic.categoryId !== filters.categoryId) {
+    if (filters.categoryId !== 'all' && topic.category.id !== filters.categoryId) {
       return false
     }
     if (
@@ -180,7 +196,7 @@ export function visibleSubtopics(topic: Topic, filters: LibraryFilters): Subtopi
 
 /** The categories worth a filter chip: the ones your topics use, in their own order. */
 export function usedCategories(categories: Category[], topics: Topic[]): Category[] {
-  return categories.filter((category) => topics.some((topic) => topic.categoryId === category.id))
+  return categories.filter((category) => topics.some((topic) => topic.category.id === category.id))
 }
 
 export function librarySummary(topics: Topic[]): string {
@@ -245,4 +261,51 @@ export function suggestPractice(topic: Topic, subtopic: Subtopic | null): Practi
         ? 'you haven’t tried this facet yet.'
         : 'your weakest facet.',
   }
+}
+
+export interface TopicAppearance {
+  icon: IconName
+  tint: Tint
+}
+
+// The starter categories get an icon of their own; categories you make get the open book.
+const categoryIcons: Record<string, IconName> = {
+  science: 'sprout',
+  technology: 'zap',
+  maths: 'chart-no-axes-column',
+  languages: 'message-circle',
+  history: 'book-open',
+  'arts & culture': 'sparkles',
+}
+
+const tints: Tint[] = ['mint', 'sun', 'peach', 'sky']
+
+/**
+ * A topic's icon tile. Presentation only, so the API doesn't store it: the icon follows the
+ * category and the tints rotate through the library by id, so a topic keeps its colour.
+ */
+export function topicAppearance(topic: Topic): TopicAppearance {
+  return {
+    icon: categoryIcons[topic.category.name.toLowerCase()] ?? 'book-open',
+    tint: tints[topic.id % tints.length] ?? 'mint',
+  }
+}
+
+export interface LibrarySelection {
+  kind: 'topic' | 'subtopic'
+  id: number
+}
+
+/**
+ * What the knowledge map opens on: the first subtopic that needs your attention, so you see why
+ * straight away; otherwise the first topic. Null for an empty library.
+ */
+export function firstSelection(topics: Topic[]): LibrarySelection | null {
+  const urgent = topics.flatMap((topic) => topic.subtopics).find(needsAttention)
+  if (urgent !== undefined) {
+    return { kind: 'subtopic', id: urgent.id }
+  }
+  const firstTopic = topics[0]
+
+  return firstTopic === undefined ? null : { kind: 'topic', id: firstTopic.id }
 }
