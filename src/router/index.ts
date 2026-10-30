@@ -8,6 +8,7 @@ import ConversationView from '@/views/ConversationView.vue'
 import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
+import SubtopicView from '@/views/SubtopicView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -39,6 +40,14 @@ const router = createRouter({
       path: '/knowledge-map',
       name: 'knowledge-map',
       component: KnowledgeMapView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/subtopics/:id',
+      name: 'subtopic',
+      component: SubtopicView,
+      // A non-numeric id becomes NaN, which the API answers with its not found message.
+      props: (route) => ({ id: Number(route.params.id) }),
       meta: { requiresAuth: true },
     },
     {

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import BaseIcon from '@/components/BaseIcon.vue'
+import IconTile from '@/components/IconTile.vue'
 import DetailHeader from '@/components/knowledgeMap/DetailHeader.vue'
 import DetailStat from '@/components/knowledgeMap/DetailStat.vue'
 import { facetStateClasses } from '@/components/knowledgeMap/facetStateClasses'
@@ -55,6 +57,20 @@ function facetStatus(progress: FacetProgress): string {
     @edit="emit('edit')"
   />
 
+  <RouterLink
+    :to="{ name: 'subtopic', params: { id: subtopic.id } }"
+    class="flex items-center gap-3 rounded-md border border-line bg-canvas px-3.5 py-3 text-ink transition-colors duration-150 ease-default hover:bg-surface-sunken"
+    data-test="open-subtopic"
+  >
+    <IconTile icon="book-open" tint="sky" size="sm" />
+    <span class="flex min-w-0 flex-auto flex-col">
+      <span class="text-[14px] leading-4.5 font-[650]">Everything about this subtopic</span>
+      <span class="text-caption font-normal text-ink-muted">
+        Flashcards, questions, sessions and sources
+      </span>
+    </span>
+    <BaseIcon name="chevron-right" :size="18" class="text-ink-subtle" />
+  </RouterLink>
 
   <div class="flex flex-col gap-2">
     <div class="flex items-baseline justify-between">

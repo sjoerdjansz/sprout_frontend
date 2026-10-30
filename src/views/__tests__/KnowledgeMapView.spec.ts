@@ -67,6 +67,7 @@ describe('KnowledgeMapView', () => {
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
     expect(wrapper.get('[data-test="detail-title"]').text()).toBe('Photosynthesis')
     expect(wrapper.findAll('[data-test="facet"]')).toHaveLength(3)
+    expect(wrapper.get('[data-test="open-subtopic"]').attributes('href')).toBe('/subtopics/101')
   })
 
   it('says what to do when the library cannot load, and tries again', async () => {
