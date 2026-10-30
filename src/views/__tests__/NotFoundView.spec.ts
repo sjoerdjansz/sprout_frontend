@@ -23,11 +23,12 @@ describe('NotFoundView', () => {
     expect(router.currentRoute.value.name).toBe('not-found')
   })
 
-  it('tells you what happened and links back home', async () => {
+  it('tells you what happened and links back home and to your library', async () => {
     await router.push('/nowhere')
     const wrapper = mount(NotFoundView, { global: { plugins: [router] } })
 
     expect(wrapper.get('[data-test="not-found-title"]').text()).toBe('Oops. A little lost.')
     expect(wrapper.get('[data-test="home-link"]').attributes('href')).toBe('/')
+    expect(wrapper.get('[data-test="library-link"]').attributes('href')).toBe('/knowledge-map')
   })
 })

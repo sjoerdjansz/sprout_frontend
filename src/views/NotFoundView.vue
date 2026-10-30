@@ -31,7 +31,7 @@ import LostSproutArt from '@/components/notFound/LostSproutArt.vue'
             This page doesn’t exist, and Sprout took a wrong turn looking for it. The forest is
             right there on the horizon. It’s just… a very long walk.
           </p>
-          <div class="pt-1">
+          <div class="flex flex-wrap gap-2.5 pt-1">
             <RouterLink
               :to="{ name: 'home' }"
               class="inline-flex h-13 items-center justify-center gap-2 rounded-lg border border-transparent bg-primary px-6 text-base font-semibold whitespace-nowrap text-on-primary shadow-xs transition duration-150 ease-default hover:bg-primary-hover active:translate-y-px"
@@ -39,6 +39,13 @@ import LostSproutArt from '@/components/notFound/LostSproutArt.vue'
             >
               <BaseIcon name="house" :size="20" />
               Take me home
+            </RouterLink>
+            <RouterLink
+              :to="{ name: 'knowledge-map' }"
+              class="inline-flex h-13 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-6 text-base font-semibold whitespace-nowrap text-ink shadow-xs transition duration-150 ease-default hover:bg-surface-sunken active:translate-y-px"
+              data-test="library-link"
+            >
+              Open my library
             </RouterLink>
           </div>
           <p class="flex items-center gap-1.5 text-label font-normal text-ink-subtle">
