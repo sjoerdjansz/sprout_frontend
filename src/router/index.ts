@@ -4,6 +4,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SignUpView from '@/views/SignUpView.vue'
 import CheckEmailView from '@/views/CheckEmailView.vue'
+import ConversationView from '@/views/ConversationView.vue'
 import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 
@@ -23,6 +24,14 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: DashboardView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/conversations/:id',
+      name: 'conversation',
+      component: ConversationView,
+      // A non-numeric id becomes NaN, which the API answers with its not found message.
+      props: (route) => ({ id: Number(route.params.id) }),
       meta: { requiresAuth: true },
     },
     {
