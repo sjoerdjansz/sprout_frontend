@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import SproutLogo from '@/components/SproutLogo.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
+import ChatHistory from '@/components/layout/ChatHistory.vue'
 import SidebarNavLink from '@/components/layout/SidebarNavLink.vue'
 import StreakNudge from '@/components/layout/StreakNudge.vue'
 import ThemeToggle from '@/components/layout/ThemeToggle.vue'
+import type { ConversationSummary } from '@/stores/conversations'
 
-const { userName, userInitials } = defineProps<{
+const {
+  userName,
+  userInitials,
+  conversations,
+  historyError = null,
+} = defineProps<{
   userName: string
   userInitials: string
+  conversations: ConversationSummary[]
+  historyError?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -27,7 +36,12 @@ const emit = defineEmits<{
     <SidebarNavLink icon="target">Practice center</SidebarNavLink>
     <SidebarNavLink icon="chart-line">Insights</SidebarNavLink>
 
-    <div class="min-h-6 grow" />
+    <!-- Takes the free space and scrolls on its own, so the bottom of the sidebar stays put. -->
+    <ChatHistory
+      :conversations="conversations"
+      :error="historyError"
+      class="my-6 min-h-0 grow overflow-y-auto"
+    />
 
     <!-- Placeholder until the API tracks streaks. -->
     <StreakNudge :days="6" nudge="Review today’s queue to make it 7." class="mb-3" />
