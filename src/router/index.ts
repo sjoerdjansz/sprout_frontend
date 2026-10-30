@@ -5,6 +5,7 @@ import LoginView from '@/views/LoginView.vue'
 import SignUpView from '@/views/SignUpView.vue'
 import CheckEmailView from '@/views/CheckEmailView.vue'
 import VerifyView from '@/views/VerifyView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -48,6 +49,13 @@ const router = createRouter({
       path: '/auth/verify',
       name: 'verify',
       component: VerifyView,
+    },
+    {
+      // Any URL the app doesn't know. Open to everyone, so a mistyped link never bounces you to
+      // the login screen first.
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
     },
   ],
 })
