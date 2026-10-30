@@ -3,13 +3,13 @@ import { computed, ref } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIconButton from '@/components/BaseIconButton.vue'
 import PracticeModeOption from '@/components/knowledgeMap/PracticeModeOption.vue'
+import type { PracticeSuggestion } from '@/lib/knowledgeMap'
 import {
   practiceMode,
   practiceModes,
   type PracticeMode,
   type PracticeModeId,
-  type PracticeSuggestion,
-} from '@/lib/knowledgeMap'
+} from '@/lib/practiceModes'
 
 const { suggestion, subjectTitle } = defineProps<{
   suggestion: PracticeSuggestion

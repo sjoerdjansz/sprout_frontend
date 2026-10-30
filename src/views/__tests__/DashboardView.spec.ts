@@ -56,8 +56,18 @@ describe('DashboardView', () => {
       'What do you want to understand today?',
       'Today’s retention queue',
       'Start a practice session',
-      'This week',
     ])
+  })
+
+  it('offers the same four ways to practise as the knowledge map', async () => {
+    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+
+    const wrapper = await mountDashboard()
+
+    const practice = wrapper.get('[aria-labelledby="practice-heading"]')
+    expect(
+      practice.findAll('button').map((card) => card.find('span:nth-of-type(2)').text()),
+    ).toEqual(['Flashcards', 'Retrieval quiz', 'Explain it', 'Open session'])
   })
 
   it('starts a conversation with your first message and opens it', async () => {

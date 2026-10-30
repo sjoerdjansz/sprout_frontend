@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseBadge from '@/components/BaseBadge.vue'
 import IconTile from '@/components/IconTile.vue'
-import type { PracticeMode } from '@/lib/knowledgeMap'
+import type { PracticeMode } from '@/lib/practiceModes'
 
 const { mode, selected, suggested } = defineProps<{
   mode: PracticeMode
