@@ -2,14 +2,14 @@
 import BaseIcon from '@/components/BaseIcon.vue'
 import type { IconName } from '@/components/icons'
 
-type Tone = 'neutral' | 'sprout' | 'sun' | 'ember' | 'sky'
+export type BadgeTone = 'neutral' | 'sprout' | 'sun' | 'ember' | 'sky'
 
 const { tone = 'neutral', icon } = defineProps<{
-  tone?: Tone
+  tone?: BadgeTone
   icon?: IconName
 }>()
 
-const toneClasses: Record<Tone, string> = {
+const toneClasses: Record<BadgeTone, string> = {
   neutral: 'bg-surface-sunken text-ink-muted',
   sprout: 'bg-sprout-soft text-sprout-ink',
   sun: 'bg-sun-soft text-sun-ink',
