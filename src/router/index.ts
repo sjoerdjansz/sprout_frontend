@@ -7,6 +7,7 @@ import CheckEmailView from '@/views/CheckEmailView.vue'
 import ConversationView from '@/views/ConversationView.vue'
 import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
+import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -32,6 +33,12 @@ const router = createRouter({
       component: ConversationView,
       // A non-numeric id becomes NaN, which the API answers with its not found message.
       props: (route) => ({ id: Number(route.params.id) }),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/knowledge-map',
+      name: 'knowledge-map',
+      component: KnowledgeMapView,
       meta: { requiresAuth: true },
     },
     {

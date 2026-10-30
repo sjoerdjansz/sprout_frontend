@@ -32,7 +32,7 @@ const emit = defineEmits<{
     </div>
 
     <SidebarNavLink icon="house" :to="{ name: 'home' }">Dashboard</SidebarNavLink>
-    <SidebarNavLink icon="network">Knowledge map</SidebarNavLink>
+    <SidebarNavLink icon="network" :to="{ name: 'knowledge-map' }">Knowledge map</SidebarNavLink>
     <SidebarNavLink icon="target">Practice center</SidebarNavLink>
     <SidebarNavLink icon="chart-line">Insights</SidebarNavLink>
 
