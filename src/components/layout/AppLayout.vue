@@ -22,7 +22,11 @@ const historyError = ref<string | null>(null)
 
 // A page with an aside (the knowledge map's detail panel) fits the viewport on wide screens:
 // its panels scroll inside, like an app. Below the rail breakpoint the aside sits under the page.
-const hasAside = computed<boolean>(() => slots.aside !== undefined)
+// A function, not a computed: slots aren't reactive, and a page can add its aside later (once
+// its data has loaded), so this is checked on every render.
+function hasAside(): boolean {
+  return slots.aside !== undefined
+}
 
 async function loadUser(): Promise<void> {
   try {
@@ -62,7 +66,7 @@ onMounted(() => {
   <!-- The sidebar column narrows to icons when you collapse it (250ms, the toggle speed). -->
   <div
     class="grid min-h-svh grid-cols-[var(--sidebar-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-250 ease-default motion-reduce:transition-none"
-    :class="{ 'rail:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_380px]': hasAside }"
+    :class="{ 'rail:grid-cols-[var(--sidebar-width)_minmax(0,1fr)_380px]': hasAside() }"
     :style="{ '--sidebar-width': sidebarStore.collapsed ? '72px' : '232px' }"
   >
     <AppSidebar
@@ -78,11 +82,11 @@ onMounted(() => {
 
     <!-- Under the rail breakpoint the aside stacks below the page; from it, `contents` lets main
          and aside each take their own grid column. -->
-    <div class="flex min-w-0 flex-col" :class="{ 'rail:contents': hasAside }">
+    <div class="flex min-w-0 flex-col" :class="{ 'rail:contents': hasAside() }">
       <main
         class="flex min-w-0 flex-col"
         :class="
-          hasAside
+          hasAside()
             ? 'gap-4 px-6 pt-6 pb-6 rail:h-svh rail:overflow-hidden rail:pl-8'
             : 'flex-auto gap-8 px-10 pt-8 pb-12'
         "
@@ -91,7 +95,7 @@ onMounted(() => {
       </main>
 
       <aside
-        v-if="hasAside"
+        v-if="hasAside()"
         :aria-label="asideLabel"
         class="flex min-w-0 flex-col border-t border-line bg-surface rail:sticky rail:top-0 rail:h-svh rail:border-t-0 rail:border-l"
       >
