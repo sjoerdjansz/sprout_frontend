@@ -178,7 +178,7 @@ export const usageKinds: UsageKind[] = [
     label: 'Card batches made',
     icon: 'layers',
     tint: 'mint',
-    hint: 'From your chats and notes',
+    hint: 'One per subtopic, from your chats and notes',
   },
   {
     key: 'subtopic_suggestions',
