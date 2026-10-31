@@ -20,6 +20,7 @@ import { useFlashcardEditor } from '@/composables/subtopic/useFlashcardEditor'
 import { useGenerateMaterial } from '@/composables/subtopic/useGenerateMaterial'
 import { useSubtopicLoader } from '@/composables/subtopic/useSubtopicLoader'
 import { useSubtopicMaterial } from '@/composables/subtopic/useSubtopicMaterial'
+import { useToast } from '@/composables/useToast'
 import { initials } from '@/lib/names'
 import type { PracticeModeId } from '@/lib/practiceModes'
 import { useAuthStore } from '@/stores/auth'
@@ -31,6 +32,7 @@ const { id } = defineProps<{
 
 const auth = useAuthStore()
 const router = useRouter()
+const { toast, showToast } = useToast()
 
 const { loadState, loadError, actionError, subtopic, load, actions } = useSubtopicLoader(() => id)
 const {
@@ -51,7 +53,7 @@ const {
   generating,
   checkError,
   generate,
-} = useGenerateMaterial(subtopic, actions)
+} = useGenerateMaterial(subtopic, actions, showToast)
 const edit = useEditSubtopic(subtopic, actions)
 const deletion = useDeleteSubtopic(() => id, undo)
 
@@ -214,7 +216,7 @@ watch(tab, () => {
       />
     </div>
 
-    <!-- A delete you can still undo. -->
+    <!-- One toast at a time: a delete you can still undo comes first. -->
     <BaseToast
       v-if="pending !== null"
       :title="pending.title"
@@ -224,5 +226,12 @@ watch(tab, () => {
     >
       <BaseButton size="sm" variant="ghost" data-test="undo" @click="undo">Undo</BaseButton>
     </BaseToast>
+    <BaseToast
+      v-else-if="toast !== null"
+      :title="toast.title"
+      :message="toast.message"
+      :tone="toast.tone"
+      :icon="toast.icon"
+    />
   </AppLayout>
 </template>

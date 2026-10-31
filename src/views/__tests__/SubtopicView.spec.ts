@@ -364,9 +364,40 @@ describe('SubtopicView', () => {
     expect(wrapper.find('[data-test="generation-badge"]').exists()).toBe(false)
     expect(cardFronts(wrapper)).toHaveLength(2)
     expect(calls('GET /subtopics/101/questions')).toBe(2)
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Added 1 flashcard and 0 questions')
 
     await vi.advanceTimersByTimeAsync(pollInterval * 5)
     expect(calls('GET /subtopics/101')).toBe(3)
+  })
+
+  it('says when the notes were already covered', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': [
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+        () => Response.json(makeSubtopicDetail({ generation_status: 'ready' })),
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Nothing new to add')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Your notes are already covered.')
+  })
+
+  it('shows no toast when making the cards failed', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': [
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+        () => Response.json(makeSubtopicDetail({ generation_status: 'failed' })),
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.find('[data-test="generation-failed"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="toast"]').exists()).toBe(false)
   })
 
   it('shows a failed subtopic with its cards, and tries again', async () => {
