@@ -6,6 +6,7 @@
  */
 import type { BadgeTone } from '@/components/BaseBadge.vue'
 import { practiceMode, practiceModes, type PracticeModeId } from '@/lib/practiceModes'
+import { ratingLabels } from '@/lib/ratings'
 import type { Flashcard, Rating } from '@/stores/flashcards'
 import type {
   PracticeMessage,
@@ -646,7 +647,7 @@ export interface SlippedItem {
 
 const ratingOrder: Rating[] = ['again', 'hard', 'good', 'easy']
 
-/** Cards whose worst rating was "Again" or "Hard", and questions you didn't get right at once. */
+/** Cards you missed or found tricky (their worst rating), and questions you didn't get right. */
 export function slippedItems(results: BlockResult[]): SlippedItem[] {
   const worstRatings = new Map<number, CardRating>()
   for (const result of results) {
@@ -666,7 +667,7 @@ export function slippedItems(results: BlockResult[]): SlippedItem[] {
     .map(({ card, rating }): SlippedItem => ({
       key: `card-${card.id}`,
       title: card.front,
-      grade: rating === 'again' ? 'Again' : 'Hard',
+      grade: ratingLabels[rating],
       tone: rating === 'again' ? 'ember' : 'sun',
     }))
 

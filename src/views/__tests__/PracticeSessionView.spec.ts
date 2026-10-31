@@ -210,7 +210,8 @@ describe('PracticeSessionView', () => {
     expect(front(wrapper)).toBe('First front')
 
     await wrapper.get('[data-test="show-answer"]').trigger('click')
-    expect(wrapper.get('[data-test="rate-again"]').text()).toContain('10 min')
+    expect(wrapper.get('[data-test="rate-again"]').text()).toBe('Missed itBack in 10 min')
+    expect(wrapper.get('[role="group"]').text()).toContain('GOT IT')
     expect(wrapper.get('[data-test="rate-good"]').text()).toContain('8 days')
     await click(wrapper, '[data-test="rate-again"]')
     expect(front(wrapper)).toBe('Second front')
@@ -219,6 +220,9 @@ describe('PracticeSessionView', () => {
     await flipAndRate(wrapper, 'good')
     expect(front(wrapper)).toBe('First front')
     expect(wrapper.get('[data-test="session-progress"]').text()).toBe('1 of 2')
+
+    expect(wrapper.get('[data-test="count-again"]').text()).toBe('1 missed it')
+    expect(wrapper.get('[data-test="count-good"]').text()).toBe('1 solid')
 
     await flipAndRate(wrapper, 'hard')
     expect(sentTo(fetchMock, 'POST /flashcards/1/reviews')).toEqual([

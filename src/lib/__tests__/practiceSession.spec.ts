@@ -294,7 +294,7 @@ describe('practice session rules', () => {
     quiz.answers = [{ question: makeQuestion({ prompt: 'Which light?' }), outcome: 'not_quite' }]
 
     expect(slippedItems([cards, quiz])).toEqual([
-      { key: 'card-1', title: 'First', grade: 'Again', tone: 'ember' },
+      { key: 'card-1', title: 'First', grade: 'Missed it', tone: 'ember' },
       { key: 'question-17', title: 'Which light?', grade: 'Not quite', tone: 'ember' },
     ])
   })

@@ -10,7 +10,7 @@ import type { IconName } from '@/components/icons'
 import { dueLabel } from '@/lib/dueDate'
 import { pluralize } from '@/lib/knowledgeMap'
 import { practiceMode } from '@/lib/practiceModes'
-import { capitalize } from '@/lib/text'
+import { ratingLabels } from '@/lib/ratings'
 import type { Flashcard } from '@/stores/flashcards'
 import type { PracticeSession } from '@/stores/practice'
 import type { Question, QuestionType, Verdict } from '@/stores/questions'
@@ -94,7 +94,7 @@ export function lastReview(card: Flashcard): string | null {
     return null
   }
 
-  return `Last: ${capitalize(card.last_rating)} · ${card.recall}% recall`
+  return `Last: ${ratingLabels[card.last_rating]} · ${card.recall}% recall`
 }
 
 export type QuestionFilter = 'all' | QuestionType | 'wrong'

@@ -68,7 +68,7 @@ const flipped = defineModel<boolean>('flipped', { required: true })
         </div>
         <p class="text-body-lg text-balance text-ink" data-test="flashcard-back">{{ back }}</p>
         <p class="absolute inset-x-0 bottom-5 text-caption font-normal text-ink-subtle">
-          How well did you know it?
+          Did you know it?
         </p>
       </div>
     </div>

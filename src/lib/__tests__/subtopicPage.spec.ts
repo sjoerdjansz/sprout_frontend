@@ -42,7 +42,7 @@ describe('subtopic page rules', () => {
     expect(flashcardStatus(due)).toMatchObject({ label: 'Due today', tone: 'sun' })
     expect(flashcardStatus(makeFlashcard({ due_on: dateFromToday(1) })).label).toBe('Due tomorrow')
     expect(flashcardStatus(makeFlashcard({ due_on: dateFromToday(4) })).label).toBe('Due in 4 days')
-    expect(lastReview(strong)).toBe('Last: Good · 95% recall')
+    expect(lastReview(strong)).toBe('Last: Solid · 95% recall')
     expect(lastReview(fresh)).toBeNull()
   })
 
