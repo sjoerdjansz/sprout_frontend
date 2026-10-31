@@ -41,6 +41,8 @@ export interface AiUsage {
   answers_checked: number
   explain_feedback: number
   card_batches: number
+  /** Times the AI read a topic's source to suggest subtopics. */
+  subtopic_suggestions: number
   total: number
 }
 

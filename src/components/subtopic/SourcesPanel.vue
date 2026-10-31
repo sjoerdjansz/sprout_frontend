@@ -2,6 +2,7 @@
 import { computed, ref, useId } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIconButton from '@/components/BaseIconButton.vue'
+import MarkdownContent from '@/components/chat/MarkdownContent.vue'
 import MaterialRow from '@/components/subtopic/MaterialRow.vue'
 import MaterialToolbar from '@/components/subtopic/MaterialToolbar.vue'
 import { pluralize } from '@/lib/knowledgeMap'
@@ -75,14 +76,14 @@ const shownNotes = computed<string | null>(() => {
           Notes · {{ pluralize(wordCount(shownNotes), 'word') }}
         </span>
       </button>
-      <p
+      <div
         v-if="expanded"
         :id="notesId"
-        class="mt-2.5 max-w-180 rounded-sm bg-surface px-3 py-2.5 text-[14px] leading-5 whitespace-pre-wrap text-ink"
+        class="mt-2.5 max-w-180 rounded-sm bg-surface px-3 py-2.5 text-[14px] leading-5 text-ink"
         data-test="notes-text"
       >
-        {{ shownNotes }}
-      </p>
+        <MarkdownContent :source="shownNotes" />
+      </div>
 
       <template #meta>
         <span class="text-label text-ink">

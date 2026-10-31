@@ -6,6 +6,7 @@ import BaseInput from '@/components/BaseInput.vue'
 import BaseSelect, { type SelectOption } from '@/components/BaseSelect.vue'
 import BaseTextarea from '@/components/BaseTextarea.vue'
 import FormError from '@/components/FormError.vue'
+import NotesField from '@/components/NotesField.vue'
 import type { ApiError } from '@/lib/api'
 
 export type TopicFormMode = 'add-topic' | 'edit-topic' | 'add-subtopic' | 'edit-subtopic'
@@ -79,6 +80,19 @@ const isNewCategory = computed<boolean>(
   () => !isSubtopic && categoryChoice.value === newCategoryChoice,
 )
 
+// A subtopic's notes become cards straight away; a topic's source is split into subtopics first.
+const notesHint = isSubtopic
+  ? 'Sprout turns these into flashcards and questions when you save.'
+  : 'After you save, Sprout suggests subtopics from this and makes cards for the ones you keep.'
+
+// New or changed notes of a subtopic take the AI a few seconds to turn into cards.
+const makesCards = computed<boolean>(
+  () =>
+    isSubtopic &&
+    notes.value.trim() !== '' &&
+    (isAdding || notes.value.trim() !== initialValues.notes.trim()),
+)
+
 const canSave = computed<boolean>(
   () =>
     !saving &&
@@ -113,7 +127,7 @@ function save(): void {
 </script>
 
 <template>
-  <BaseDialog :title="titles[mode]" :closable="!saving" @close="emit('close')">
+  <BaseDialog :title="titles[mode]" size="lg" :closable="!saving" @close="emit('close')">
     <form class="flex flex-col gap-5" novalidate @submit.prevent="save">
       <!-- The dialog focuses this when it opens, instead of its close button. -->
       <BaseInput
@@ -159,12 +173,11 @@ function save(): void {
         data-test="description"
       />
 
-      <BaseInput
+      <NotesField
         v-model="notes"
         label="Notes or a source"
-        icon="book-open"
-        placeholder="Paste a link or some notes"
-        hint="Sprout turns these into cards and questions."
+        :hint="notesHint"
+        :maximum-length="isSubtopic ? 10_000 : 30_000"
         :error="error?.fieldError('notes')"
         data-test="notes"
       />
@@ -173,7 +186,9 @@ function save(): void {
       <div class="flex justify-end gap-2">
         <BaseButton variant="ghost" :disabled="saving" @click="emit('close')">Cancel</BaseButton>
         <BaseButton type="submit" icon="check" :disabled="!canSave" data-test="save">
-          <template v-if="saving">Saving…</template>
+          <template v-if="saving">{{
+            makesCards ? 'Saving and making cards…' : 'Saving…'
+          }}</template>
           <template v-else>{{ isAdding ? 'Add to library' : 'Save changes' }}</template>
         </BaseButton>
       </div>

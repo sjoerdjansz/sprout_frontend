@@ -21,8 +21,20 @@ const user: User = {
 
 type Routes = Parameters<typeof stubApi>[0]
 
+let fetchMock: ReturnType<typeof stubApi>
+
+/** The JSON body of the first request to a route ("POST /topics/1/subtopics"). */
+function sentBody(route: string): unknown {
+  const call = fetchMock.mock.calls.find(([input, init]) => {
+    const path = String(input).replace(import.meta.env.VITE_API_URL, '')
+    return `${init?.method ?? 'GET'} ${path}` === route
+  })
+
+  return JSON.parse(String(call?.[1]?.body))
+}
+
 async function mountKnowledgeMap(routes: Routes = {}): Promise<VueWrapper> {
-  stubApi({
+  fetchMock = stubApi({
     'GET /user': Response.json(user),
     'GET /conversations': Response.json([]),
     'GET /topics': Response.json(makeLibrary()),
@@ -286,5 +298,138 @@ describe('KnowledgeMapView', () => {
 
     expect(subtopicTitles(wrapper)).toContain('Respiration')
     expect(wrapper.get('[data-test="toast"]').text()).toContain('2 flashcards and 1 question')
+  })
+
+  describe('building a topic from its source', () => {
+    const source = '# Running form\n\nWeek 1: cadence. Week 2: stride length.'
+    const suggested = {
+      suggestions: [
+        { title: 'Cadence', description: 'Steps per minute.', notes: '# Week 1: Cadence' },
+        { title: 'Stride length', description: null, notes: '# Week 2: Stride length' },
+      ],
+    }
+
+    async function saveSource(wrapper: VueWrapper): Promise<void> {
+      await wrapper.get('[data-test="edit-topic"]').trigger('click')
+      await wrapper.get('[data-test="notes"]').setValue(source)
+      await submitForm(wrapper)
+    }
+
+    function titleInputs(wrapper: VueWrapper): string[] {
+      return wrapper
+        .findAll('[data-test="suggestion-title"]')
+        .map((input) => (input.element as HTMLInputElement).value)
+    }
+
+    it('suggests subtopics after you save a changed source, and adds the ones you keep', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'PUT /topics/1': Response.json(makeTopic({ notes: source })),
+        'POST /topics/1/subtopic-suggestions': Response.json(suggested),
+        'POST /topics/1/subtopics': Response.json(
+          {
+            subtopics: [
+              makeSubtopic({ id: 601, title: 'Cadence 101' }),
+              makeSubtopic({ id: 602, title: 'Warming up' }),
+            ],
+            added: { subtopics: 2, flashcards: 6, questions: 2 },
+          },
+          { status: 201 },
+        ),
+      })
+
+      await saveSource(wrapper)
+      expect(wrapper.get('dialog h2').text()).toBe('Sprout suggests these subtopics')
+      expect(titleInputs(wrapper)).toEqual(['Cadence', 'Stride length'])
+
+      // Rename one, leave one out, add one of your own.
+      await wrapper.findAll('[data-test="suggestion-title"]')[0]?.setValue('Cadence 101')
+      await wrapper.findAll('[data-test="suggestion-keep"] [role="switch"]')[1]?.trigger('click')
+      await wrapper.get('[data-test="add-own"]').trigger('click')
+      expect(wrapper.get('[data-test="suggestions-add"]').attributes('disabled')).toBeDefined()
+      await wrapper.findAll('[data-test="suggestion-title"]')[2]?.setValue('Warming up')
+      expect(wrapper.get('[data-test="suggestions-add"]').text()).toBe('Add 2 subtopics')
+
+      await wrapper.get('[data-test="suggestions-add"]').trigger('click')
+      await flushPromises()
+
+      expect(sentBody('POST /topics/1/subtopics')).toEqual({
+        subtopics: [
+          { title: 'Cadence 101', description: 'Steps per minute.', notes: '# Week 1: Cadence' },
+          { title: 'Warming up', description: null, notes: null },
+        ],
+      })
+      expect(wrapper.find('[data-test="suggestions"]').exists()).toBe(false)
+      expect(subtopicTitles(wrapper)).toContain('Cadence 101')
+      expect(wrapper.get('[data-test="toast"]').text()).toContain('Added 2 subtopics')
+      expect(wrapper.get('[data-test="toast"]').text()).toContain('6 flashcards and 2 questions')
+    })
+
+    it('says when your subtopics already cover the source', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'PUT /topics/1': Response.json(makeTopic({ notes: source })),
+        'POST /topics/1/subtopic-suggestions': Response.json({ suggestions: [] }),
+      })
+
+      await saveSource(wrapper)
+
+      expect(wrapper.find('[data-test="suggestions"]').exists()).toBe(false)
+      expect(wrapper.get('[data-test="toast"]').text()).toContain(
+        'Your subtopics already cover this source.',
+      )
+    })
+
+    it('asks no suggestions when the source didn’t change', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'PUT /topics/1': Response.json(makeTopic({ title: 'Biology basics' })),
+      })
+
+      await wrapper.get('[data-test="edit-topic"]').trigger('click')
+      await wrapper.get('[data-test="name"]').setValue('Biology basics')
+      await submitForm(wrapper)
+
+      expect(wrapper.find('[data-test="suggestions"]').exists()).toBe(false)
+    })
+
+    it('lets you try again when Sprout can’t read the source, and skip', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'PUT /topics/1': Response.json(makeTopic({ notes: source })),
+        'POST /topics/1/subtopic-suggestions': [
+          () => Response.json({ message: 'The tutor can’t answer right now.' }, { status: 503 }),
+          () => Response.json(suggested),
+        ],
+      })
+
+      await saveSource(wrapper)
+      expect(wrapper.get('[data-test="form-error"]').text()).toContain('can’t answer right now')
+
+      await wrapper.get('[data-test="suggestions-retry"]').trigger('click')
+      await flushPromises()
+      expect(titleInputs(wrapper)).toEqual(['Cadence', 'Stride length'])
+
+      await wrapper.get('[data-test="suggestions-skip"]').trigger('click')
+      expect(wrapper.find('[data-test="suggestions"]').exists()).toBe(false)
+    })
+
+    it('shows a name the topic already has under its row, and keeps the review', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'PUT /topics/1': Response.json(makeTopic({ notes: source })),
+        'POST /topics/1/subtopic-suggestions': Response.json(suggested),
+        'POST /topics/1/subtopics': validationError(
+          'subtopics.1.title',
+          'This topic already has a subtopic with that name. Pick another name.',
+        ),
+      })
+
+      await saveSource(wrapper)
+      await wrapper.get('[data-test="suggestions-add"]').trigger('click')
+      await flushPromises()
+
+      const rows = wrapper.findAll('[data-test="suggestion"]')
+      expect(rows[1]?.text()).toContain('This topic already has a subtopic with that name.')
+      expect(wrapper.find('[data-test="suggestions"] [data-test="form-error"]').exists()).toBe(
+        false,
+      )
+      expect(titleInputs(wrapper)).toEqual(['Cadence', 'Stride length'])
+    })
   })
 })

@@ -180,6 +180,13 @@ export const usageKinds: UsageKind[] = [
     tint: 'mint',
     hint: 'From your chats and notes',
   },
+  {
+    key: 'subtopic_suggestions',
+    label: 'Sources split up',
+    icon: 'network',
+    tint: 'sky',
+    hint: 'Subtopics suggested from your notes',
+  },
 ]
 
 /** "2026-10" → "1–31 October": the whole calendar month the usage counts. */
