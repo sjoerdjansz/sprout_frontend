@@ -28,6 +28,7 @@ export function makeSubtopic(overrides: Partial<Subtopic> = {}): Subtopic {
     title: 'Photosynthesis',
     description: 'How plants turn light, water and carbon dioxide into sugar and oxygen.',
     notes: 'Plants use chlorophyll to capture light.',
+    generation_status: 'ready',
     mastery: 64,
     due_cards: 0,
     next_review_on: dateFromToday(4),

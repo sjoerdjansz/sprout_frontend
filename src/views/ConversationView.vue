@@ -10,6 +10,7 @@ import ConversationHeader from '@/components/conversation/ConversationHeader.vue
 import SaveTopicDialog from '@/components/conversation/SaveTopicDialog.vue'
 import SavedNotice from '@/components/conversation/SavedNotice.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { useSavedTopicGeneration } from '@/composables/conversation/useSavedTopicGeneration'
 import { ApiError } from '@/lib/api'
 import { chatErrorMessage } from '@/lib/chatError'
 import { initials } from '@/lib/names'
@@ -54,6 +55,11 @@ const openSaveError = ref<string | null>(null)
 const saving = ref(false)
 const saveError = ref<ApiError | null>(null)
 const saveResult = ref<SaveResult | null>(null)
+const {
+  generatingCount: savedGeneratingCount,
+  failedCount: savedFailedCount,
+  checkError: savedCheckError,
+} = useSavedTopicGeneration(saveResult)
 
 const bottom = useTemplateRef<HTMLElement>('bottom')
 
@@ -222,7 +228,12 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
 
         <div ref="bottom" class="sticky bottom-0 flex flex-col gap-3 bg-canvas pt-2 pb-4 md:pb-6">
           <template v-if="conversation.is_saved">
-            <SavedNotice :result="saveResult" />
+            <SavedNotice
+              :result="saveResult"
+              :generating-count="savedGeneratingCount"
+              :failed-count="savedFailedCount"
+              :check-error="savedCheckError"
+            />
             <ContinueLearning
               v-if="conversation.topic"
               v-model="message"

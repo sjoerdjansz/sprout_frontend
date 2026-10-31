@@ -14,10 +14,10 @@ import TopicFormDialog, {
 import TopicLibrary from '@/components/knowledgeMap/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useSubtopicSuggestions } from '@/composables/knowledgeMap/useSubtopicSuggestions'
+import { useGenerationPolling } from '@/composables/useGenerationPolling'
 import { useToast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
 import {
-  describeAdded,
   filterTopics,
   librarySummary,
   needsAttention,
@@ -89,6 +89,16 @@ async function load(): Promise<void> {
 onMounted(() => {
   void load()
 })
+
+// Subtopics whose cards Sprout is making show that, until GET /topics says they're done.
+const { error: checkError } = useGenerationPolling(
+  () =>
+    loadState.value === 'loaded' &&
+    topicsStore.topics.some((topic) =>
+      topic.subtopics.some((subtopic) => subtopic.generation_status === 'generating'),
+    ),
+  topicsStore.fetchTopics,
+)
 
 const subtopicList = useTemplateRef<InstanceType<typeof SubtopicList>>('subtopicList')
 
@@ -186,10 +196,11 @@ async function saveForm(
       notes: values.notes,
     })
     selectedTopicId.value = result.subtopic.topic_id
-    if (result.added.flashcards + result.added.questions > 0) {
+    // Its row shows the cards are coming; the toast says where they come from.
+    if (result.subtopic.generation_status === 'generating') {
       showToast({
         title: `Added ${result.subtopic.title}`,
-        message: describeAdded(result.added),
+        message: 'Sprout is making cards from your notes.',
         tone: 'sprout',
         icon: 'sparkles',
       })
@@ -281,6 +292,12 @@ async function save(values: TopicFormValues): Promise<void> {
         @select="selectTopic"
         @add-topic="openForm('add-topic', null)"
         @clear-filters="clearFilters"
+      />
+
+      <FormError
+        v-if="checkError"
+        :message="`${checkError} Sprout keeps checking on your new cards.`"
+        data-test="check-error"
       />
 
       <SubtopicList

@@ -17,7 +17,7 @@ const { cards, editing, saving, editorError, generating } = defineProps<{
   editing: CardEditorTarget | null
   saving: boolean
   editorError: ApiError | null
-  /** While Sprout makes cards from the notes. */
+  /** While Sprout makes cards from the notes, or is about to. */
   generating: boolean
 }>()
 
@@ -45,7 +45,9 @@ const shownCards = computed<Flashcard[]>(() => filterFlashcards(cards, query.val
 
 const emptyMessage = computed<string>(() =>
   cards.length === 0
-    ? 'No cards yet. Add one, or generate them from your notes.'
+    ? generating
+      ? 'No cards yet. They show up here once Sprout has made them.'
+      : 'No cards yet. Add one, or generate them from your notes.'
     : 'No cards match. Clear the filter, or add one.',
 )
 </script>
@@ -65,7 +67,7 @@ const emptyMessage = computed<string>(() =>
       data-test="generate"
       @click="emit('generate')"
     >
-      {{ generating ? 'Generating…' : 'Generate from sources' }}
+      {{ generating ? 'Making cards…' : 'Generate from sources' }}
     </BaseButton>
     <BaseButton size="sm" icon="plus" data-test="add-card" @click="add">Add card</BaseButton>
   </MaterialToolbar>

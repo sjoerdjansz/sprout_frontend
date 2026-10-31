@@ -4,7 +4,9 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeConversation, makeSummary } from '@/__tests__/conversationFixtures'
 import { stubApi } from '@/__tests__/stubApi'
-import { makeCategories } from '@/__tests__/topicFixtures'
+import { makeCategories, makeSubtopic, makeTopic } from '@/__tests__/topicFixtures'
+import { pollInterval } from '@/composables/useGenerationPolling'
+import type { GenerationStatus, Topic } from '@/stores/topics'
 import { useAuthStore, type User } from '@/stores/auth'
 import ConversationView from '../ConversationView.vue'
 
@@ -47,6 +49,17 @@ async function mountConversation(id = 10): Promise<VueWrapper> {
   return wrapper
 }
 
+/** The saved topic as `GET /topics` has it, with its one subtopic in a given state. */
+function libraryTopic(status: GenerationStatus): Topic {
+  return makeTopic({
+    id: 12,
+    title: 'Biomechanics of running',
+    subtopics: [
+      makeSubtopic({ id: 40, topic_id: 12, title: 'Gait cycle', generation_status: status }),
+    ],
+  })
+}
+
 describe('ConversationView', () => {
   beforeAll(() => {
     // jsdom doesn't implement these browser APIs.
@@ -61,6 +74,7 @@ describe('ConversationView', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -249,7 +263,8 @@ describe('ConversationView', () => {
     )
   })
 
-  it('saves the reviewed draft and tells you what was added', async () => {
+  it('saves the reviewed draft and tells you Sprout is making the cards until they are ready', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
     const fetchMock = stubApi({
       'GET /user': Response.json(user),
       'GET /conversations': Response.json([makeSummary()]),
@@ -269,13 +284,17 @@ describe('ConversationView', () => {
                 deadline: '2026-12-01',
                 recall_percentage: 80,
               },
-              subtopics: [{ id: 40, title: 'Gait cycle' }],
+              subtopics: [{ id: 40, title: 'Gait cycle', generation_status: 'generating' }],
               created_at: '2026-10-30T15:20:11.000000Z',
             },
-            added: { subtopics: 1, flashcards: 18, questions: 7 },
+            added: { subtopics: 1 },
           },
           { status: 201 },
         ),
+      'GET /topics': [
+        () => Response.json([libraryTopic('generating')]),
+        () => Response.json([libraryTopic('ready')]),
+      ],
     })
     const wrapper = await mountConversation()
 
@@ -298,9 +317,19 @@ describe('ConversationView', () => {
       subtopics: [{ title: 'Gait cycle', content: 'A running stride has a stance phase.' }],
     })
     expect(wrapper.find('dialog').exists()).toBe(false)
-    expect(wrapper.get('[data-test="saved-notice"]').text()).toContain(
-      'Saved Biomechanics of running: 1 subtopic, 18 flashcards and 7 questions',
-    )
+    const notice = (): string => wrapper.get('[data-test="saved-notice"]').text()
+    expect(notice()).toContain('Saved Biomechanics of running: 1 new subtopic')
+    expect(notice()).not.toContain('flashcard')
+    expect(notice()).toContain('Sprout is making your cards…')
     expect(wrapper.find('[data-test="composer-input"]').exists()).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(notice()).toContain('Sprout is making your cards…')
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(notice()).not.toContain('Sprout is making your cards…')
+    expect(notice()).toContain('This conversation is saved to your knowledge map.')
   })
 })

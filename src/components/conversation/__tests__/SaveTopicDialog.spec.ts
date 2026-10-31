@@ -133,12 +133,15 @@ describe('SaveTopicDialog', () => {
   })
 
   it('shows a problem that isn’t about one field above the button', () => {
-    const error = new ApiError(503, 'The tutor can’t answer right now. Try again in a moment.')
+    const error = new ApiError(
+      429,
+      "You've saved a few times in a row. Wait a minute and try again.",
+    )
 
     const wrapper = mount(SaveTopicDialog, { props: { draft, categories, error } })
 
     expect(wrapper.get('[data-test="form-error"]').text()).toBe(
-      'The tutor can’t answer right now. Try again in a moment.',
+      "You've saved a few times in a row. Wait a minute and try again.",
     )
   })
 
@@ -148,8 +151,6 @@ describe('SaveTopicDialog', () => {
     await wrapper.get('[data-test="dialog-close"]').trigger('click')
 
     expect(wrapper.emitted('close')).toBeUndefined()
-    expect(wrapper.get('[data-test="save-topic"]').text()).toBe(
-      'Saving… this can take a minute or two',
-    )
+    expect(wrapper.get('[data-test="save-topic"]').text()).toBe('Saving…')
   })
 })

@@ -9,6 +9,7 @@ import TopicFormDialog from '@/components/knowledgeMap/TopicFormDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DeleteSubtopicDialog from '@/components/subtopic/DeleteSubtopicDialog.vue'
 import FlashcardsPanel from '@/components/subtopic/FlashcardsPanel.vue'
+import GenerationNotice from '@/components/subtopic/GenerationNotice.vue'
 import QuestionsPanel from '@/components/subtopic/QuestionsPanel.vue'
 import SessionsPanel from '@/components/subtopic/SessionsPanel.vue'
 import SourcesPanel from '@/components/subtopic/SourcesPanel.vue'
@@ -47,8 +48,13 @@ const {
   removeNotes,
 } = useSubtopicMaterial(subtopic, actions)
 const cardEditor = useFlashcardEditor(actions)
-const { generating, generate } = useGenerateMaterial(actions, showToast)
-const edit = useEditSubtopic(subtopic, actions, showToast)
+const {
+  status: generationStatus,
+  generating,
+  checkError,
+  generate,
+} = useGenerateMaterial(subtopic, actions, showToast)
+const edit = useEditSubtopic(subtopic, actions)
 const deletion = useDeleteSubtopic(() => id, undo)
 
 // The editor's and dialogs' refs, top-level so the template unwraps them.
@@ -140,6 +146,13 @@ watch(tab, () => {
         :aria-label="tabLabel"
         class="overflow-hidden rounded-xl border border-line bg-surface shadow-sm"
       >
+        <!-- Where the new material lands; sessions aren't made from the notes. -->
+        <GenerationNotice
+          v-if="generationStatus !== null && tab !== 'sessions'"
+          :status="generationStatus"
+          :check-error="checkError"
+          @retry="generate"
+        />
         <FlashcardsPanel
           v-if="tab === 'cards'"
           :cards="cards"

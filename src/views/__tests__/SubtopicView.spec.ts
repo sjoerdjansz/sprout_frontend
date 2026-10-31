@@ -6,6 +6,7 @@ import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/mater
 import { makeDone, makePracticeSession } from '@/__tests__/practiceFixtures'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeLibrary, makeSubtopic, makeSubtopicDetail } from '@/__tests__/topicFixtures'
+import { pollInterval } from '@/composables/useGenerationPolling'
 import { undoWindow } from '@/composables/useUndoableDelete'
 import { useAuthStore, type User } from '@/stores/auth'
 import SubtopicView from '../SubtopicView.vue'
@@ -285,7 +286,9 @@ describe('SubtopicView', () => {
     expect(calls('DELETE /questions/17')).toBe(1)
   })
 
-  it('says what generating added, or why it could not', async () => {
+  it('shows why Generate from sources could not start', async () => {
+    const stillGenerating =
+      "Sprout is still making cards for this subtopic. They'll show up in a moment."
     const wrapper = await mountSubtopic({
       'POST /subtopics/101/generate': [
         () =>
@@ -298,7 +301,11 @@ describe('SubtopicView', () => {
             },
             { status: 422 },
           ),
-        () => Response.json({ subtopic: makeSubtopic(), added: { flashcards: 2, questions: 1 } }),
+        () =>
+          Response.json(
+            { message: stillGenerating, errors: { subtopic: [stillGenerating] } },
+            { status: 422 },
+          ),
       ],
     })
 
@@ -310,9 +317,160 @@ describe('SubtopicView', () => {
 
     await wrapper.get('[data-test="generate"]').trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-test="form-error"]').exists()).toBe(false)
-    expect(wrapper.get('[data-test="toast"]').text()).toContain('Added 2 flashcards and 1 question')
-    expect(calls('GET /subtopics/101/flashcards')).toBe(2)
+    expect(wrapper.get('[data-test="form-error"]').text()).toBe(stillGenerating)
+    // It fetched the subtopic again, to show what it's doing.
+    expect(calls('GET /subtopics/101')).toBe(2)
+  })
+
+  it('makes cards in the background and shows them once they are ready', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const wrapper = await mountSubtopic({
+      'POST /subtopics/101/generate': () =>
+        Response.json(
+          { subtopic: makeSubtopic({ generation_status: 'generating' }) },
+          { status: 202 },
+        ),
+      'GET /subtopics/101': [
+        () => Response.json(makeSubtopicDetail()),
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+        () => Response.json(makeSubtopicDetail({ generation_status: 'ready' })),
+      ],
+      'GET /subtopics/101/flashcards': [
+        () => Response.json([makeFlashcard({ id: 41 })]),
+        () => Response.json([makeFlashcard({ id: 41 }), makeFlashcard({ id: 43, front: 'New' })]),
+      ],
+    })
+    expect(wrapper.find('[data-test="generating"]').exists()).toBe(false)
+
+    await wrapper.get('[data-test="generate"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-test="generating"]').text()).toContain('Sprout is making your cards…')
+    expect(wrapper.get('[data-test="generation-badge"]').text()).toBe('Making cards')
+    const generateButton = wrapper.get('[data-test="generate"]')
+    expect(generateButton.text()).toBe('Making cards…')
+    expect(generateButton.attributes('disabled')).toBeDefined()
+    expect(cardFronts(wrapper)).toHaveLength(1)
+
+    // Still generating on the first ask.
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.find('[data-test="generating"]').exists()).toBe(true)
+    expect(calls('GET /subtopics/101/flashcards')).toBe(1)
+
+    // Ready on the next: the new card shows and the asking stops.
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.find('[data-test="generating"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="generation-badge"]').exists()).toBe(false)
+    expect(cardFronts(wrapper)).toHaveLength(2)
+    expect(calls('GET /subtopics/101/questions')).toBe(2)
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Added 1 flashcard and 0 questions')
+
+    await vi.advanceTimersByTimeAsync(pollInterval * 5)
+    expect(calls('GET /subtopics/101')).toBe(3)
+  })
+
+  it('says when the notes were already covered', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': [
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+        () => Response.json(makeSubtopicDetail({ generation_status: 'ready' })),
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Nothing new to add')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Your notes are already covered.')
+  })
+
+  it('shows no toast when making the cards failed', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': [
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+        () => Response.json(makeSubtopicDetail({ generation_status: 'failed' })),
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.find('[data-test="generation-failed"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="toast"]').exists()).toBe(false)
+  })
+
+  it('shows a failed subtopic with its cards, and tries again', async () => {
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': Response.json(makeSubtopicDetail({ generation_status: 'failed' })),
+      'POST /subtopics/101/generate': () =>
+        Response.json(
+          { subtopic: makeSubtopic({ generation_status: 'generating' }) },
+          { status: 202 },
+        ),
+    })
+
+    expect(wrapper.get('[data-test="generation-failed"]').text()).toContain(
+      "Sprout couldn't make cards from your notes.",
+    )
+    expect(wrapper.get('[data-test="generation-badge"]').text()).toBe('Cards not made')
+    expect(cardFronts(wrapper)).toHaveLength(2)
+
+    // On the questions and sources tabs too, not on sessions.
+    await openTab(wrapper, 'questions')
+    expect(wrapper.find('[data-test="generation-failed"]').exists()).toBe(true)
+    await openTab(wrapper, 'sessions')
+    expect(wrapper.find('[data-test="generation-failed"]').exists()).toBe(false)
+    await openTab(wrapper, 'sources')
+
+    await wrapper.get('[data-test="retry-generation"]').trigger('click')
+    await flushPromises()
+
+    expect(calls('POST /subtopics/101/generate')).toBe(1)
+    expect(wrapper.find('[data-test="generation-failed"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="generating"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('shows why asking for the status failed, and keeps asking', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': [
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+        () => Response.json({ message: 'Something went wrong on our side.' }, { status: 500 }),
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.get('[data-test="check-error"]').text()).toContain(
+      'Something went wrong on our side.',
+    )
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.find('[data-test="check-error"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="generating"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('stops asking when a generating subtopic is deleted elsewhere', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': [
+        () => Response.json(makeSubtopicDetail({ generation_status: 'generating' })),
+        notFound,
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.find('[data-test="not-found-title"]').exists()).toBe(true)
+    const asked = calls('GET /subtopics/101')
+
+    await vi.advanceTimersByTimeAsync(pollInterval * 5)
+    expect(calls('GET /subtopics/101')).toBe(asked)
   })
 
   it('shows your answer and Sprout’s feedback when you open a question', async () => {

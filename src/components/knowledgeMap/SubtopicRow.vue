@@ -16,6 +16,8 @@ const captionClasses: Record<Caption['tone'], string> = {
   subtle: 'text-ink-subtle',
   sun: 'text-sun-ink',
   sprout: 'text-sprout-ink',
+  sky: 'text-sky-ink',
+  ember: 'text-ember-ink',
 }
 </script>
 
@@ -31,7 +33,11 @@ const captionClasses: Record<Caption['tone'], string> = {
         <span class="text-[15px] leading-5 font-[650] text-ink" data-test="subtopic-title">
           {{ subtopic.title }}
         </span>
-        <span class="text-caption font-normal" :class="captionClasses[caption.tone]">
+        <span
+          class="text-caption font-normal"
+          :class="captionClasses[caption.tone]"
+          data-test="subtopic-caption"
+        >
           {{ caption.text }}
         </span>
       </span>

@@ -1,9 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
 import type { TopicFormValues } from '@/components/knowledgeMap/TopicFormDialog.vue'
-import { addedMaterialToast } from '@/composables/subtopic/useGenerateMaterial'
 import type { SubtopicPageActions } from '@/composables/subtopic/useSubtopicLoader'
-import type { Toast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
 import { useTopicsStore, type SubtopicDetail } from '@/stores/topics'
 
@@ -11,7 +9,6 @@ import { useTopicsStore, type SubtopicDetail } from '@/stores/topics'
 export function useEditSubtopic(
   subtopic: Ref<SubtopicDetail | null>,
   actions: SubtopicPageActions,
-  showToast: (toast: Toast) => void,
 ): {
   isOpen: Ref<boolean>
   saving: Ref<boolean>
@@ -77,17 +74,14 @@ export function useEditSubtopic(
     error.value = null
 
     try {
-      const result = await topicsStore.updateSubtopic(actions.subtopicId(), {
+      await topicsStore.updateSubtopic(actions.subtopicId(), {
         topicId: values.topicId,
         title: values.title,
         description: values.description,
         notes: values.notes,
       })
       close()
-      if (result.added.flashcards + result.added.questions > 0) {
-        showToast(addedMaterialToast(result.added))
-      }
-      // New notes can add material, and a new main topic brings other sessions.
+      // New notes make the subtopic generating, and a new main topic brings other sessions.
       await actions.reload()
     } catch (caught) {
       if (caught instanceof ApiError && caught.status !== 404) {

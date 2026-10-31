@@ -41,9 +41,12 @@ export function useSubtopicLoader(id: MaybeRefOrGetter<number>): {
   const loadError = ref('')
   const actionError = ref<string | null>(null)
 
-  // Only the subtopic this page is about, never the one from the page before.
+  // Only the subtopic this page is about, never the one from the page before, and none once it's
+  // gone (so nothing keeps asking after it).
   const subtopic = computed<SubtopicDetail | null>(() =>
-    topicsStore.subtopic?.id === toValue(id) ? topicsStore.subtopic : null,
+    topicsStore.subtopic?.id === toValue(id) && loadState.value !== 'not-found'
+      ? topicsStore.subtopic
+      : null,
   )
 
   async function loadAll(showLoading: boolean): Promise<void> {
@@ -89,7 +92,8 @@ export function useSubtopicLoader(id: MaybeRefOrGetter<number>): {
       return
     }
 
-    actionError.value = caught.fieldError('notes') ?? caught.message
+    actionError.value =
+      caught.fieldError('notes') ?? caught.fieldError('subtopic') ?? caught.message
   }
 
   // Cards and answers feed the header's mastery, facets and due count.

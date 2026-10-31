@@ -14,6 +14,7 @@ const { notes, generatedCards, generatedQuestions, generating } = defineProps<{
   /** How many cards and questions Sprout made (not the ones you wrote yourself). */
   generatedCards: number
   generatedQuestions: number
+  /** While Sprout makes cards from the notes, or is about to. */
   generating: boolean
 }>()
 
@@ -101,7 +102,7 @@ const shownNotes = computed<string | null>(() => {
         />
         <BaseIconButton
           icon="sparkles"
-          :label="generating ? 'Generating…' : 'Generate more cards from this'"
+          :label="generating ? 'Sprout is making cards' : 'Generate more cards from this'"
           size="sm"
           :disabled="generating"
           data-test="generate-from-source"

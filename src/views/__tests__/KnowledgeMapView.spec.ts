@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeCategories, makeLibrary, makeSubtopic, makeTopic } from '@/__tests__/topicFixtures'
+import { pollInterval } from '@/composables/useGenerationPolling'
 import { useAuthStore, type User } from '@/stores/auth'
 import KnowledgeMapView from '../KnowledgeMapView.vue'
 
@@ -51,6 +52,18 @@ function cardTitles(wrapper: VueWrapper): string[] {
   return wrapper.findAll('[data-test="topic-card"]').map((card) => card.text())
 }
 
+function captions(wrapper: VueWrapper): string[] {
+  return wrapper.findAll('[data-test="subtopic-caption"]').map((caption) => caption.text())
+}
+
+function topicCalls(): number {
+  return fetchMock.mock.calls.filter(
+    ([input, init]) =>
+      String(input).replace(import.meta.env.VITE_API_URL, '') === '/topics' &&
+      (init?.method ?? 'GET') === 'GET',
+  ).length
+}
+
 function subtopicTitles(wrapper: VueWrapper): string[] {
   return wrapper.findAll('[data-test="subtopic-title"]').map((title) => title.text())
 }
@@ -86,6 +99,7 @@ describe('KnowledgeMapView', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -280,13 +294,15 @@ describe('KnowledgeMapView', () => {
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology basics')
   })
 
-  it('adds a subtopic to the topic and says what was generated', async () => {
-    const respiration = makeSubtopic({ id: 501, title: 'Respiration', is_new: true })
+  it('adds a subtopic to the topic and says Sprout is making its cards', async () => {
+    const respiration = makeSubtopic({
+      id: 501,
+      title: 'Respiration',
+      is_new: true,
+      generation_status: 'generating',
+    })
     const wrapper = await mountKnowledgeMap({
-      'POST /subtopics': Response.json(
-        { subtopic: respiration, added: { flashcards: 2, questions: 1 } },
-        { status: 201 },
-      ),
+      'POST /subtopics': Response.json({ subtopic: respiration }, { status: 201 }),
     })
 
     await wrapper.get('[data-test="add-subtopic"]').trigger('click')
@@ -297,7 +313,80 @@ describe('KnowledgeMapView', () => {
     await submitForm(wrapper)
 
     expect(subtopicTitles(wrapper)).toContain('Respiration')
-    expect(wrapper.get('[data-test="toast"]').text()).toContain('2 flashcards and 1 question')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Added Respiration')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain(
+      'Sprout is making cards from your notes.',
+    )
+    expect(captions(wrapper)).toContain('Sprout is making your cards…')
+    wrapper.unmount()
+  })
+
+  it('asks again while cards are being made, once for all of them, until they are ready', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const generatingLibrary = makeLibrary()
+    for (const subtopic of generatingLibrary[0]?.subtopics.slice(0, 2) ?? []) {
+      subtopic.generation_status = 'generating'
+    }
+    const wrapper = await mountKnowledgeMap({
+      'GET /topics': [
+        () => Response.json(generatingLibrary),
+        () => Response.json(generatingLibrary),
+        () => Response.json(makeLibrary()),
+      ],
+    })
+    expect(
+      captions(wrapper).filter((text) => text === 'Sprout is making your cards…'),
+    ).toHaveLength(2)
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(topicCalls()).toBe(2)
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(topicCalls()).toBe(3)
+    expect(captions(wrapper)).not.toContain('Sprout is making your cards…')
+
+    await vi.advanceTimersByTimeAsync(pollInterval * 5)
+    expect(topicCalls()).toBe(3)
+  })
+
+  it('shows why asking for the status failed, and keeps asking', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const generatingLibrary = makeLibrary()
+    const first = generatingLibrary[0]?.subtopics[0]
+    if (first !== undefined) {
+      first.generation_status = 'generating'
+    }
+    const wrapper = await mountKnowledgeMap({
+      'GET /topics': [
+        () => Response.json(generatingLibrary),
+        () => Response.json({ message: 'Something went wrong on our side.' }, { status: 500 }),
+        () => Response.json(makeLibrary()),
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.get('[data-test="check-error"]').text()).toContain(
+      'Something went wrong on our side.',
+    )
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(wrapper.find('[data-test="check-error"]').exists()).toBe(false)
+    expect(topicCalls()).toBe(3)
+  })
+
+  it('shows a subtopic whose cards could not be made', async () => {
+    const failedLibrary = makeLibrary()
+    const first = failedLibrary[0]?.subtopics[0]
+    if (first !== undefined) {
+      first.generation_status = 'failed'
+    }
+    const wrapper = await mountKnowledgeMap({ 'GET /topics': Response.json(failedLibrary) })
+
+    expect(captions(wrapper)).toContain("Sprout couldn't make its cards. Try again on its page.")
   })
 
   describe('building a topic from its source', () => {
@@ -328,10 +417,10 @@ describe('KnowledgeMapView', () => {
         'POST /topics/1/subtopics': Response.json(
           {
             subtopics: [
-              makeSubtopic({ id: 601, title: 'Cadence 101' }),
-              makeSubtopic({ id: 602, title: 'Warming up' }),
+              makeSubtopic({ id: 601, title: 'Cadence 101', generation_status: 'generating' }),
+              makeSubtopic({ id: 602, title: 'Warming up', notes: null }),
             ],
-            added: { subtopics: 2, flashcards: 6, questions: 2 },
+            added: { subtopics: 2 },
           },
           { status: 201 },
         ),
@@ -361,7 +450,8 @@ describe('KnowledgeMapView', () => {
       expect(wrapper.find('[data-test="suggestions"]').exists()).toBe(false)
       expect(subtopicTitles(wrapper)).toContain('Cadence 101')
       expect(wrapper.get('[data-test="toast"]').text()).toContain('Added 2 subtopics')
-      expect(wrapper.get('[data-test="toast"]').text()).toContain('6 flashcards and 2 questions')
+      expect(wrapper.get('[data-test="toast"]').text()).toContain('Sprout is making their cards.')
+      wrapper.unmount()
     })
 
     it('says when your subtopics already cover the source', async () => {

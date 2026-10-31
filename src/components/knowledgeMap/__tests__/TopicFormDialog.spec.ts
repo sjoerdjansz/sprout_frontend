@@ -132,25 +132,25 @@ describe('TopicFormDialog', () => {
     const fieldError = new ApiError(422, 'Pick a category, or name a new one.', {
       category_id: ['Pick a category, or name a new one.'],
     })
-    const aiError = new ApiError(
-      503,
-      'Sprout’s AI isn’t working right now. We’re fixing it, so try again later.',
+    const rateLimited = new ApiError(
+      429,
+      "You've saved a few subtopics in a row. Wait a minute and try again.",
     )
 
     expect(mountForm('add-topic', emptyValues, { error: fieldError }).text()).toContain(
       'Pick a category, or name a new one.',
     )
     expect(
-      mountForm('add-subtopic', emptyValues, { error: aiError })
+      mountForm('add-subtopic', emptyValues, { error: rateLimited })
         .get('[data-test="form-error"]')
         .text(),
-    ).toBe('Sprout’s AI isn’t working right now. We’re fixing it, so try again later.')
+    ).toBe("You've saved a few subtopics in a row. Wait a minute and try again.")
   })
 
   it('says honestly what happens with the notes of a topic and of a subtopic', () => {
     expect(mountForm('edit-topic').text()).toContain('After you save, Sprout suggests subtopics')
     expect(mountForm('add-subtopic').text()).toContain(
-      'Sprout turns these into flashcards and questions when you save.',
+      'Sprout turns these into flashcards and questions after you save.',
     )
   })
 
@@ -168,15 +168,11 @@ describe('TopicFormDialog', () => {
     expect(wrapper.get('[data-test="notes-count"]').classes()).toContain('text-ember-ink')
   })
 
-  it('says it makes cards while a subtopic with new notes saves', () => {
+  it('only says it is saving: the cards are made after the save', () => {
     const values = { ...emptyValues, title: 'Light', notes: 'Plants use light.' }
 
     expect(
       mountForm('add-subtopic', values, { saving: true }).get('[data-test="save"]').text(),
-    ).toBe('Saving and making cards…')
-    // The same notes as before make nothing new.
-    expect(
-      mountForm('edit-subtopic', values, { saving: true }).get('[data-test="save"]').text(),
     ).toBe('Saving…')
   })
 })

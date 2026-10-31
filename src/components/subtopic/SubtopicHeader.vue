@@ -70,6 +70,22 @@ const crumbClasses =
         <BaseBadge :tone="level.tone" :icon="level.icon" data-test="level">
           {{ level.label }}
         </BaseBadge>
+        <BaseBadge
+          v-if="subtopic.generation_status === 'generating'"
+          tone="sky"
+          icon="sparkles"
+          data-test="generation-badge"
+        >
+          Making cards
+        </BaseBadge>
+        <BaseBadge
+          v-else-if="subtopic.generation_status === 'failed'"
+          tone="ember"
+          icon="circle-help"
+          data-test="generation-badge"
+        >
+          Cards not made
+        </BaseBadge>
       </div>
       <p class="text-[14px] leading-5 text-ink-muted">
         {{ subtopic.description || 'No description yet.' }}

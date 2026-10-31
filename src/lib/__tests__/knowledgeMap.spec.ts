@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  describeAdded,
   filterTopics,
   librarySummary,
   noFilters,
@@ -112,7 +111,16 @@ describe('knowledge map rules', () => {
     })
   })
 
-  it('describes what was generated from notes', () => {
-    expect(describeAdded({ flashcards: 3, questions: 1 })).toBe('3 flashcards and 1 question')
+  it('captions a subtopic whose cards are being made, or could not be made, before anything else', () => {
+    const slipping = subtopicNamed('Cell respiration')
+
+    expect(subtopicCaption({ ...slipping, generation_status: 'generating' })).toEqual({
+      text: 'Sprout is making your cards…',
+      tone: 'sky',
+    })
+    expect(subtopicCaption({ ...slipping, generation_status: 'failed' })).toEqual({
+      text: "Sprout couldn't make its cards. Try again on its page.",
+      tone: 'ember',
+    })
   })
 })

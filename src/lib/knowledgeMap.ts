@@ -6,14 +6,7 @@
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
 import { dueLabel } from '@/lib/dueDate'
-import type {
-  AddedMaterial,
-  Category,
-  FacetKey,
-  FacetProgress,
-  Subtopic,
-  Topic,
-} from '@/stores/topics'
+import type { Category, FacetKey, FacetProgress, Subtopic, Topic } from '@/stores/topics'
 
 export interface Facet {
   key: FacetKey
@@ -30,11 +23,6 @@ export const facets: Facet[] = [
 /** "1 subtopic", "4 subtopics" */
 export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`
-}
-
-/** "3 flashcards and 1 question": what Sprout made from a subtopic's notes. */
-export function describeAdded(added: AddedMaterial): string {
-  return `${pluralize(added.flashcards, 'flashcard')} and ${pluralize(added.questions, 'question')}`
 }
 
 export function holdingCount(subtopic: Subtopic): number {
@@ -108,11 +96,21 @@ export function subtopicLevel(subtopic: Subtopic): Level {
 
 export interface Caption {
   text: string
-  tone: 'subtle' | 'sun' | 'sprout'
+  tone: 'subtle' | 'sun' | 'sprout' | 'sky' | 'ember'
 }
+
+/** What the learner sees while Sprout makes a subtopic's cards in the background. */
+export const generatingMessage = 'Sprout is making your cards…'
 
 /** The one line under a subtopic's name: the most urgent thing about it. */
 export function subtopicCaption(subtopic: Subtopic): Caption {
+  // Cards on their way (or that couldn't be made) explain an empty or unchanged subtopic.
+  if (subtopic.generation_status === 'generating') {
+    return { text: generatingMessage, tone: 'sky' }
+  }
+  if (subtopic.generation_status === 'failed') {
+    return { text: "Sprout couldn't make its cards. Try again on its page.", tone: 'ember' }
+  }
   // New cards are due straight away, so a subtopic you haven't started can need attention too.
   if (subtopic.is_new) {
     return subtopic.due_cards > 0
