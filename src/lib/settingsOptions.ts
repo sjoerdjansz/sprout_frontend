@@ -1,7 +1,7 @@
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
 import type { AvatarColor } from '@/stores/auth'
-import type { AiLevel, AiUsage, LearnerRole } from '@/stores/settings'
+import type { AiLevel, AiUsage, CardCount, LearnerRole } from '@/stores/settings'
 
 /** A section of the settings page, each on its own URL (`/settings/<id>`). */
 export interface SettingsSection {
@@ -14,6 +14,7 @@ export interface SettingsSection {
 export const settingsSections: SettingsSection[] = [
   { id: 'profile', label: 'Profile', icon: 'user-round', routeName: 'settings-profile' },
   { id: 'ai', label: 'AI', icon: 'sparkles', routeName: 'settings-ai' },
+  { id: 'learning', label: 'Learning', icon: 'brain', routeName: 'settings-learning' },
 ]
 
 export interface RoleOption {
@@ -186,3 +187,5 @@ export function usagePeriod(month: string): string {
 
   return `1–${lastDay} ${monthName}`
 }
+
+export const cardCounts: CardCount[] = [10, 20, 40]

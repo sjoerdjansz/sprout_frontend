@@ -1,6 +1,8 @@
 <script setup lang="ts">
-const { label } = defineProps<{
+const { label, hideLabel = false } = defineProps<{
   label: string
+  /** For a switch in a row that already names it: the label is then for screen readers only. */
+  hideLabel?: boolean
 }>()
 
 const checked = defineModel<boolean>({ required: true })
@@ -21,6 +23,6 @@ const checked = defineModel<boolean>({ required: true })
         :class="checked ? 'translate-x-4.5 bg-on-primary' : 'bg-ink-subtle'"
       />
     </button>
-    <span>{{ label }}</span>
+    <span :class="{ 'sr-only': hideLabel }">{{ label }}</span>
   </label>
 </template>
