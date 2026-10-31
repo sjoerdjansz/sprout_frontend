@@ -15,7 +15,7 @@ const { overline, title, streakDays, masteredTopics, totalTopics } = defineProps
   <header class="flex flex-wrap items-end justify-between gap-4">
     <div class="flex flex-col gap-1.5">
       <p class="text-overline text-ink-subtle">{{ overline }}</p>
-      <h1 class="font-display text-display text-ink">{{ title }}</h1>
+      <h1 class="font-display text-title-lg text-ink md:text-display">{{ title }}</h1>
     </div>
 
     <div class="flex items-center gap-2">

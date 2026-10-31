@@ -15,7 +15,8 @@ const {
 
 const paddingClasses: Record<Padding, string> = {
   sm: 'p-4',
-  md: 'p-6',
+  // Cards pad space-4 at phone width (design system, "Spacing & layout").
+  md: 'p-4 md:p-6',
 }
 </script>
 
