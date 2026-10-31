@@ -180,6 +180,11 @@ function openForm(mode: TopicFormMode, topic: Topic | null): void {
   }
 }
 
+function editTopicById(topicId: number): void {
+  const topic = topicsStore.topics.find((candidate) => candidate.id === topicId) ?? null
+  openForm('edit-topic', topic)
+}
+
 /** A topic saved with a new or changed source, for Sprout to split into subtopics next. */
 type SavedSource = Pick<Topic, 'id' | 'title'> | null
 
@@ -290,6 +295,7 @@ async function save(values: TopicFormValues): Promise<void> {
         :selected-topic-id="shownTopic?.id ?? null"
         :attention-count="attentionCount"
         @select="selectTopic"
+        @edit-topic="editTopicById"
         @add-topic="openForm('add-topic', null)"
         @clear-filters="clearFilters"
       />

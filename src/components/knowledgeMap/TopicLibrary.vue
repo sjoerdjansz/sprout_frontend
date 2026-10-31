@@ -21,6 +21,7 @@ const needsAttention = defineModel<boolean>('needsAttention', { required: true }
 
 const emit = defineEmits<{
   select: [topicId: number]
+  editTopic: [topicId: number]
   addTopic: []
   clearFilters: []
 }>()
@@ -78,8 +79,8 @@ const emit = defineEmits<{
           :key="topic.id"
           :topic="topic"
           :selected="topic.id === selectedTopicId"
-          data-test="topic-card"
           @select="emit('select', topic.id)"
+          @edit="emit('editTopic', topic.id)"
         />
       </div>
     </div>
