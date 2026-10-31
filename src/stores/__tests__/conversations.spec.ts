@@ -109,10 +109,10 @@ describe('conversations store', () => {
         id: 12,
         title: 'Biomechanics of running',
         goal: reviewedDraft.goal,
-        subtopics: [{ id: 40, title: 'Gait cycle' }],
+        subtopics: [{ id: 40, title: 'Gait cycle', generation_status: 'generating' }],
         created_at: '2026-10-30T15:20:11.000000Z',
       },
-      added: { subtopics: 1, flashcards: 9, questions: 3 },
+      added: { subtopics: 1 },
     }
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -129,7 +129,8 @@ describe('conversations store', () => {
       expect.objectContaining({ method: 'POST' }),
     )
     expect(requestBody(fetchMock)).toEqual(reviewedDraft)
-    expect(result.added.flashcards).toBe(9)
+    expect(result.added).toEqual({ subtopics: 1 })
+    expect(result.topic.subtopics[0]?.generation_status).toBe('generating')
     expect(store.conversation?.is_saved).toBe(true)
     expect(store.conversations[0]?.is_saved).toBe(true)
   })

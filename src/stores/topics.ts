@@ -24,6 +24,12 @@ export interface FacetProgress {
   holding: boolean
 }
 
+/**
+ * Whether Sprout is still making a subtopic's flashcards and questions in the background
+ * (`../API.md`, "Material made in the background"). `failed` after every try failed.
+ */
+export type GenerationStatus = 'ready' | 'generating' | 'failed'
+
 export interface Subtopic {
   id: number
   topic_id: number
@@ -31,6 +37,7 @@ export interface Subtopic {
   description: string | null
   /** What its flashcards and questions are made from. */
   notes: string | null
+  generation_status: GenerationStatus
   /** 0–100 */
   mastery: number
   /** Cards that aren't paused and are due by the end of today. */
@@ -82,12 +89,6 @@ export interface SubtopicInput {
   notes: string
 }
 
-/** What was generated from a subtopic's notes. */
-export interface AddedMaterial {
-  flashcards: number
-  questions: number
-}
-
 /** A subtopic Sprout suggests from a topic's source (`POST /topics/{id}/subtopic-suggestions`). */
 export interface SubtopicSuggestion {
   title: string
@@ -101,13 +102,12 @@ export interface SubtopicSuggestion {
 export interface AddedSubtopics {
   /** Only the added ones, in order. */
   subtopics: Subtopic[]
-  added: AddedMaterial & { subtopics: number }
+  added: { subtopics: number }
 }
 
-/** What adding, editing or generating for a subtopic answers. */
+/** What adding, editing or generating for a subtopic answers; its material comes afterwards. */
 export interface SubtopicSaveResult {
   subtopic: Subtopic
-  added: AddedMaterial
 }
 
 // Empty text clears a field: the API takes the whole form (PUT) and null means "nothing".
@@ -148,6 +148,11 @@ export const useTopicsStore = defineStore('topics', () => {
     ])
     topics.value = fetchedTopics
     categories.value = fetchedCategories
+  }
+
+  /** Asks for the library again, e.g. to see whether material in the background is done. */
+  async function fetchTopics(): Promise<void> {
+    topics.value = await api<Topic[]>('/topics')
   }
 
   async function fetchCategories(): Promise<void> {
@@ -195,7 +200,7 @@ export const useTopicsStore = defineStore('topics', () => {
     topics.value.find((topic) => topic.id === saved.topic_id)?.subtopics.push(saved)
   }
 
-  /** Adds a subtopic; with notes, flashcards and questions are generated from them first. */
+  /** Adds a subtopic; with notes, Sprout makes its flashcards and questions in the background. */
   async function addSubtopic(input: SubtopicInput): Promise<SubtopicSaveResult> {
     const result = await api<SubtopicSaveResult>('/subtopics', {
       method: 'POST',
@@ -206,7 +211,7 @@ export const useTopicsStore = defineStore('topics', () => {
     return result
   }
 
-  /** Edits a subtopic; a different topic moves it, changed notes generate material. */
+  /** Edits a subtopic; a different topic moves it, changed notes make material in the background. */
   async function updateSubtopic(
     subtopicId: number,
     input: SubtopicInput,
@@ -249,7 +254,7 @@ export const useTopicsStore = defineStore('topics', () => {
     return result.suggestions
   }
 
-  /** Adds the subtopics you kept, at the end of the topic, with cards for the ones with notes. */
+  /** Adds the subtopics you kept, at the end of the topic; the ones with notes get cards later. */
   async function addSubtopics(
     topicId: number,
     subtopics: SubtopicSuggestion[],
@@ -263,12 +268,19 @@ export const useTopicsStore = defineStore('topics', () => {
     return result
   }
 
-  /** Asks the AI for cards and questions from the notes that the existing ones don't cover. */
+  /**
+   * Queues cards and questions from the notes that the existing ones don't cover (202). Also how
+   * a `failed` subtopic is tried again. The subtopic comes back `generating`.
+   */
   async function generateMaterial(subtopicId: number): Promise<SubtopicSaveResult> {
     const result = await api<SubtopicSaveResult>(`/subtopics/${subtopicId}/generate`, {
       method: 'POST',
     })
     placeSubtopic(result.subtopic)
+    // The subtopic page shows the new status straight away, without asking for it again.
+    if (subtopic.value?.id === result.subtopic.id) {
+      subtopic.value = { ...subtopic.value, ...result.subtopic }
+    }
 
     return result
   }
@@ -278,6 +290,7 @@ export const useTopicsStore = defineStore('topics', () => {
     topics,
     subtopic,
     fetchLibrary,
+    fetchTopics,
     fetchCategories,
     addTopic,
     updateTopic,

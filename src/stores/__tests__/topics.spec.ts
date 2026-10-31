@@ -86,13 +86,15 @@ describe('topics store', () => {
     expect(store.topics.map((topic) => topic.title)).toContain('Biology basics')
   })
 
-  it('adds a subtopic at the end of its topic and says what was generated', async () => {
-    const respiration = makeSubtopic({ id: 501, title: 'Respiration', is_new: true })
+  it('adds a subtopic at the end of its topic, generating its cards', async () => {
+    const respiration = makeSubtopic({
+      id: 501,
+      title: 'Respiration',
+      is_new: true,
+      generation_status: 'generating',
+    })
     stubApi({
-      'POST /subtopics': Response.json(
-        { subtopic: respiration, added: { flashcards: 3, questions: 1 } },
-        { status: 201 },
-      ),
+      'POST /subtopics': Response.json({ subtopic: respiration }, { status: 201 }),
     })
     const store = useTopicsStore()
     store.topics = makeLibrary()
@@ -104,17 +106,14 @@ describe('topics store', () => {
       notes: 'Cells release energy.',
     })
 
-    expect(result.added).toEqual({ flashcards: 3, questions: 1 })
+    expect(result.subtopic.generation_status).toBe('generating')
     expect(subtopicTitles(1).slice(-1)[0]).toBe('Respiration')
   })
 
   it('moves an edited subtopic to the end of its new topic', async () => {
     const moved = makeSubtopic({ topic_id: 2 })
     stubApi({
-      'PUT /subtopics/101': Response.json({
-        subtopic: moved,
-        added: { flashcards: 0, questions: 0 },
-      }),
+      'PUT /subtopics/101': Response.json({ subtopic: moved }),
     })
     const store = useTopicsStore()
     store.topics = makeLibrary()
@@ -152,19 +151,37 @@ describe('topics store', () => {
     expect(store.subtopic).toBeNull()
   })
 
-  it('generates material from the notes', async () => {
+  it('queues material from the notes and shows the page the subtopic generating', async () => {
     const fetchMock = stubApi({
-      'POST /subtopics/101/generate': Response.json({
-        subtopic: makeSubtopic(),
-        added: { flashcards: 2, questions: 0 },
-      }),
+      'POST /subtopics/101/generate': Response.json(
+        { subtopic: makeSubtopic({ generation_status: 'generating' }) },
+        { status: 202 },
+      ),
     })
     const store = useTopicsStore()
+    store.topics = makeLibrary()
+    store.subtopic = makeSubtopicDetail({ generation_status: 'failed' })
 
     const result = await store.generateMaterial(101)
 
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBeUndefined()
-    expect(result.added.flashcards).toBe(2)
+    expect(result.subtopic.generation_status).toBe('generating')
+    expect(store.subtopic?.generation_status).toBe('generating')
+    // The page's own fields (its topic and counts) stay.
+    expect(store.subtopic?.counts.flashcards).toBe(2)
+  })
+
+  it('fetches only the topics again, to see whether material is done', async () => {
+    stubApi({
+      'GET /topics': Response.json([
+        makeTopic({ subtopics: [makeSubtopic({ generation_status: 'ready' })] }),
+      ]),
+    })
+    const store = useTopicsStore()
+
+    await store.fetchTopics()
+
+    expect(store.topics[0]?.subtopics[0]?.generation_status).toBe('ready')
   })
 
   it('asks for subtopic suggestions from the saved topic, without a body', async () => {
@@ -185,7 +202,7 @@ describe('topics store', () => {
       'POST /topics/1/subtopics': Response.json(
         {
           subtopics: [makeSubtopic({ id: 601, title: 'Cadence' })],
-          added: { subtopics: 1, flashcards: 3, questions: 1 },
+          added: { subtopics: 1 },
         },
         { status: 201 },
       ),
@@ -201,6 +218,6 @@ describe('topics store', () => {
       subtopics: [{ title: 'Cadence', description: null, notes: '# Cadence' }],
     })
     expect(subtopicTitles(1)[subtopicTitles(1).length - 1]).toBe('Cadence')
-    expect(result.added).toEqual({ subtopics: 1, flashcards: 3, questions: 1 })
+    expect(result.added).toEqual({ subtopics: 1 })
   })
 })

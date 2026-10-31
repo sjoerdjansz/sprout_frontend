@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/lib/api'
+import type { GenerationStatus } from '@/stores/topics'
 
 /** One message in a conversation. Tutor messages are Markdown. */
 export interface Message {
@@ -74,10 +75,11 @@ export interface SaveResult {
     id: number
     title: string
     goal: { description: string; deadline: string; recall_percentage: number }
-    subtopics: { id: number; title: string }[]
+    subtopics: { id: number; title: string; generation_status: GenerationStatus }[]
     created_at: string
   }
-  added: { subtopics: number; flashcards: number; questions: number }
+  /** Only subtopics: their cards are made in the background after the save. */
+  added: { subtopics: number }
 }
 
 export const useConversationsStore = defineStore('conversations', () => {
