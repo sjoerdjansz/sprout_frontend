@@ -12,7 +12,8 @@ const usage = {
   answers_checked: 0,
   explain_feedback: 0,
   card_batches: 3,
-  total: 32,
+  subtopic_suggestions: 1,
+  total: 33,
 }
 
 describe('AiSettings', () => {
@@ -74,9 +75,12 @@ describe('AiSettings', () => {
     })
 
     expect(wrapper.get('[data-test="usage-period"]').text()).toBe('1–31 October')
-    expect(wrapper.get('[data-test="usage-total"]').text()).toBe('32')
+    expect(wrapper.get('[data-test="usage-total"]').text()).toBe('33')
     expect(wrapper.get('[data-test="usage-tutor_replies"]').text()).toContain('29')
     expect(wrapper.get('[data-test="usage-card_batches"]').text()).toContain('3')
+    expect(wrapper.get('[data-test="usage-subtopic_suggestions"]').text()).toContain(
+      'Sources split up',
+    )
   })
 
   it('offers to try again when usage can’t load', async () => {
@@ -93,7 +97,7 @@ describe('AiSettings', () => {
     await retry?.trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-test="usage-total"]').text()).toBe('32')
+    expect(wrapper.get('[data-test="usage-total"]').text()).toBe('33')
   })
 })
 
