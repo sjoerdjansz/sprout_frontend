@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
+import MobileTabBar from '@/components/layout/MobileTabBar.vue'
+import MobileTopBar from '@/components/layout/MobileTopBar.vue'
 import { ApiError } from '@/lib/api'
 import { initials } from '@/lib/names'
 import { useAuthStore } from '@/stores/auth'
 import { useConversationsStore } from '@/stores/conversations'
 import { useSettingsStore } from '@/stores/settings'
 import { useSidebarStore } from '@/stores/sidebar'
+
+const { tabBar = true } = defineProps<{
+  /** The tab bar at phone width; a chat page leaves it out so its composer sits at the bottom. */
+  tabBar?: boolean
+}>()
 
 const auth = useAuthStore()
 const conversationsStore = useConversationsStore()
@@ -67,25 +74,36 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- The sidebar column narrows to icons when you collapse it (250ms, the toggle speed). -->
+  <!--
+    At phone width: a top bar, the page and a tab bar. From md up: the sidebar next to the page;
+    its column narrows to icons when you collapse it (250ms, the toggle speed).
+  -->
   <div
-    class="grid min-h-svh grid-cols-[var(--sidebar-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-250 ease-default motion-reduce:transition-none"
+    class="flex min-h-svh flex-col transition-[grid-template-columns] duration-250 ease-default motion-reduce:transition-none md:grid md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]"
     :style="{ '--sidebar-width': sidebarStore.collapsed ? '72px' : '232px' }"
   >
-    <AppSidebar
-      :user-name="userName"
-      :user-initials="initials(userName)"
-      :user-color="auth.user?.avatar_color"
-      :conversations="conversationsStore.conversations"
-      :history-error="historyError"
-      :collapsed="sidebarStore.collapsed"
-      class="sticky top-0 h-svh overflow-x-hidden overflow-y-auto"
-      @logout="auth.logout()"
-      @toggle-collapsed="sidebarStore.toggleCollapsed()"
-    />
+    <MobileTopBar :menu-open="false" class="sticky top-0 z-10 md:hidden" />
 
-    <main class="flex min-w-0 flex-auto flex-col gap-8 px-10 pt-8 pb-12">
+    <div class="sticky top-0 hidden h-svh md:block">
+      <AppSidebar
+        :user-name="userName"
+        :user-initials="initials(userName)"
+        :user-color="auth.user?.avatar_color"
+        :conversations="conversationsStore.conversations"
+        :history-error="historyError"
+        :collapsed="sidebarStore.collapsed"
+        class="h-full overflow-x-hidden overflow-y-auto"
+        @logout="auth.logout()"
+        @toggle-collapsed="sidebarStore.toggleCollapsed()"
+      />
+    </div>
+
+    <main
+      class="flex min-w-0 flex-auto flex-col gap-6 px-4 pt-4 pb-6 md:gap-8 md:px-10 md:pt-8 md:pb-12"
+    >
       <slot />
     </main>
+
+    <MobileTabBar v-if="tabBar" class="sticky bottom-0 z-10 md:hidden" data-test="tab-bar" />
   </div>
 </template>
