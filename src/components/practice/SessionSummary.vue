@@ -2,16 +2,18 @@
 import { computed } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import IconTile from '@/components/IconTile.vue'
-import { mixedWhy, practiceMode, type PracticeMode } from '@/lib/practiceModes'
+import { mixedWhy, practiceMode, whyThisHelps, type PracticeMode } from '@/lib/practiceModes'
 import { blockAmount, estimateMinutes, type PracticeBlock } from '@/lib/practiceSession'
 
-const { blocks, scope, order, loading } = defineProps<{
+const { blocks, scope, order, loading, secondTry } = defineProps<{
   blocks: PracticeBlock[]
   scope: string
   /** "Due cards first" … ; hidden when nothing has an order. */
   order: string | null
   /** The scope's cards and questions are still loading. */
   loading: boolean
+  /** Whether a wrong quiz answer gets a second try (your "Hint before the answer" setting). */
+  secondTry: boolean
 }>()
 
 const emit = defineEmits<{
@@ -76,9 +78,13 @@ const isMixed = computed<boolean>(() => modes.value.length > 1)
       </div>
     </dl>
 
-    <p v-if="first" class="rounded-md bg-surface px-3.5 py-3 text-label font-normal text-ink">
+    <p
+      v-if="first"
+      class="rounded-md bg-surface px-3.5 py-3 text-label font-normal text-ink"
+      data-test="why-this-helps"
+    >
       <b class="block text-sprout-ink">Why this helps</b>
-      {{ isMixed ? mixedWhy : first.why }}
+      {{ isMixed ? mixedWhy : whyThisHelps(first, secondTry) }}
     </p>
 
     <BaseButton

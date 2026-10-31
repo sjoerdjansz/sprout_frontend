@@ -50,7 +50,7 @@ export const practiceModes: PracticeMode[] = [
     sizes: [5, 10, 20],
     defaultSize: 10,
     minutes: 1,
-    why: 'Answering from memory before you see the answer strengthens the memory far more than rereading. A wrong answer gets a second try, so you retrieve twice.',
+    why: 'Answering from memory before you see the answer strengthens the memory far more than rereading.',
   },
   {
     id: 'feynman',
@@ -81,6 +81,18 @@ export const practiceModes: PracticeMode[] = [
 /** "Why this helps" when a session combines several modes. */
 export const mixedWhy =
   'Remembering the same ideas in different ways (rating cards, answering questions, explaining) makes them stick in more situations than drilling one way.'
+
+/**
+ * "Why this helps" for one mode. The quiz only mentions the second try when you get one
+ * ("Hint before the answer" in your settings).
+ */
+export function whyThisHelps(mode: PracticeMode, secondTry: boolean): string {
+  if (mode.id === 'retrieval' && secondTry) {
+    return `${mode.why} A wrong answer gets a second try, so you retrieve twice.`
+  }
+
+  return mode.why
+}
 
 export function practiceMode(id: PracticeModeId): PracticeMode {
   const mode = practiceModes.find((candidate) => candidate.id === id)

@@ -137,6 +137,20 @@ describe('PracticeSetupView', () => {
     })
   })
 
+  it('only promises a second try in the quiz when you get one', async () => {
+    const withHint = await mountSetup('/practice?subtopic=101&modes=retrieval', {
+      'GET /settings': Response.json(makeSettings({ hint_before_answer: true })),
+    })
+    expect(withHint.get('[data-test="why-this-helps"]').text()).toContain('second try')
+
+    setActivePinia(createPinia())
+    useAuthStore().setToken('1|abc')
+    const withoutHint = await mountSetup('/practice?subtopic=101&modes=retrieval', {
+      'GET /settings': Response.json(makeSettings({ hint_before_answer: false })),
+    })
+    expect(withoutHint.get('[data-test="why-this-helps"]').text()).not.toContain('second try')
+  })
+
   it('points to the knowledge map when there is nothing to practise', async () => {
     const wrapper = await mountSetup('/practice', { 'GET /topics': Response.json([]) })
 

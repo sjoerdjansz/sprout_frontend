@@ -117,6 +117,7 @@ onMounted(() => {
             :scope="setup.scopeLabel.value"
             :order="setup.orderLabel.value"
             :loading="setup.materialState.value === 'loading'"
+            :second-try="setup.secondTry.value"
             @start="setup.start"
           />
         </div>

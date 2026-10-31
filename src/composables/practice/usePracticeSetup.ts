@@ -37,6 +37,7 @@ export interface PracticeSetup {
   questionCount: Ref<number>
   dueFirst: Ref<boolean>
   interleave: Ref<boolean>
+  secondTry: Ref<boolean>
   scope: ComputedRef<PracticeScope | null>
   unavailable: ComputedRef<Partial<Record<PracticeModeId, string>>>
   blocks: ComputedRef<PracticeBlock[]>
@@ -263,6 +264,7 @@ export function usePracticeSetup(): PracticeSetup {
     questionCount,
     dueFirst,
     interleave,
+    secondTry,
     scope,
     unavailable,
     blocks,
