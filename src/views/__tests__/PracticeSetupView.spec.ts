@@ -122,6 +122,15 @@ describe('PracticeSetupView', () => {
     expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Pick a way to practise')
   })
 
+  it('only asks how much when flashcards or the quiz is on', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=feynman,open')
+
+    expect(wrapper.find('[data-test="step-amount"]').exists()).toBe(false)
+
+    await wrapper.get('[data-test="mode-cards"]').trigger('click')
+    expect(wrapper.find('[data-test="step-amount"]').exists()).toBe(true)
+  })
+
   it('says why a mode can’t run, and offers no mix with only one other mode', async () => {
     const wrapper = await mountSetup('/practice?subtopic=102&modes=cards')
 

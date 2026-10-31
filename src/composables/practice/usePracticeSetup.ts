@@ -43,6 +43,8 @@ export interface PracticeSetup {
   blocks: ComputedRef<PracticeBlock[]>
   scopeLabel: ComputedRef<string>
   orderLabel: ComputedRef<string | null>
+  /** Flashcards or the quiz is on: the only modes with an amount and order to pick. */
+  hasSizedMode: ComputedRef<boolean>
   showWholeTopicTip: ComputedRef<boolean>
   /** The session still going today, to pick up instead of starting a new one. */
   current: ComputedRef<PracticeSession | null>
@@ -301,6 +303,7 @@ export function usePracticeSetup(): PracticeSetup {
     blocks,
     scopeLabel,
     orderLabel,
+    hasSizedMode,
     showWholeTopicTip,
     current: computed<PracticeSession | null>(() => practiceStore.current),
     starting,

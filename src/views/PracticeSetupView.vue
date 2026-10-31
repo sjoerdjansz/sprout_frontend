@@ -98,7 +98,14 @@ onMounted(() => {
           />
         </SetupStep>
 
-        <SetupStep :step="3" title="How much?" heading-id="step-amount">
+        <!-- Only flashcards and the quiz have something to pick here. -->
+        <SetupStep
+          v-if="setup.hasSizedMode.value"
+          :step="3"
+          title="How much?"
+          heading-id="step-amount"
+          data-test="step-amount"
+        >
           <AmountPicker
             v-model:card-count="cardCount"
             v-model:question-count="questionCount"
