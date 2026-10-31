@@ -1,7 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { Toast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
-import { describeAdded, pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/knowledgeMap'
 import { useTopicsStore, type SubtopicSuggestion, type Topic } from '@/stores/topics'
 
 /** Reading the source, reviewing what Sprout suggests, or adding the ones you kept. */
@@ -35,7 +35,7 @@ export interface SubtopicSuggestions {
 /**
  * "Build a topic from a source" (`../specs/topic-from-source.md`): after a topic with a new or
  * changed source is saved, Sprout suggests the subtopics it falls into; you review them and the
- * ones you keep are added with their cards in one go.
+ * ones you keep are added in one go, and Sprout makes their cards in the background.
  */
 export function useSubtopicSuggestions(showToast: (toast: Toast) => void): SubtopicSuggestions {
   const topicsStore = useTopicsStore()
@@ -145,10 +145,12 @@ export function useSubtopicSuggestions(showToast: (toast: Toast) => void): Subto
         })),
       )
       close()
-      const madeMaterial = result.added.flashcards + result.added.questions > 0
+      const makingCards = result.subtopics.some(
+        (subtopic) => subtopic.generation_status === 'generating',
+      )
       showToast({
         title: `Added ${pluralize(result.added.subtopics, 'subtopic')}`,
-        message: madeMaterial ? describeAdded(result.added) : undefined,
+        message: makingCards ? 'Sprout is making their cards.' : undefined,
         tone: 'sprout',
         icon: 'sparkles',
       })

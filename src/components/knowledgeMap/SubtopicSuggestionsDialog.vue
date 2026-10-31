@@ -131,7 +131,7 @@ const canRetry = computed<boolean>(
           data-test="suggestions-add"
           @click="emit('add')"
         >
-          <template v-if="phase === 'adding'">Adding and making cards…</template>
+          <template v-if="phase === 'adding'">Adding…</template>
           <template v-else>Add {{ pluralize(keptCount, 'subtopic') }}</template>
         </BaseButton>
       </div>
