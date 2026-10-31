@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import type { MessageFile } from '@/components/chat/ChatMessage.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
 import PracticeModes from '@/components/dashboard/PracticeModes.vue'
 import RetentionQueue, { type QueueState } from '@/components/dashboard/RetentionQueue.vue'
 import TutorPrompt, { type LastSession } from '@/components/dashboard/TutorPrompt.vue'
+import { useComposerAttachments } from '@/composables/chat/useComposerAttachments'
 import { ApiError } from '@/lib/api'
-import { chatErrorMessage } from '@/lib/chatError'
 import { masteredTopicCount, retentionQueue, reviewMinutes, type QueueTopic } from '@/lib/dashboard'
 import { dayOverline, greeting } from '@/lib/greeting'
 import { firstName, initials } from '@/lib/names'
@@ -97,25 +98,36 @@ function startReview(): void {
 
 const message = ref('')
 const pendingMessage = ref<string | null>(null)
+const pendingFiles = ref<MessageFile[]>([])
 const error = ref<string | null>(null)
+const attachments = useComposerAttachments()
+const { attachments: attachedFiles, notice: attachmentNotice } = attachments
 
 async function startConversation(text: string): Promise<void> {
+  const materialIds = attachments.readyIds.value
+  const sentFiles = attachments.takeForSending()
   pendingMessage.value = text
+  pendingFiles.value = sentFiles.map((file) => ({
+    original_filename: file.name,
+    size_bytes: file.sizeBytes,
+  }))
   message.value = ''
   error.value = null
 
   try {
-    const conversation = await conversationsStore.startConversation(text)
+    // The files go with the first message of the new conversation.
+    const conversation = await conversationsStore.startConversation(text, { materialIds })
     await router.push({ name: 'conversation', params: { id: conversation.id } })
   } catch (caught) {
     if (!(caught instanceof ApiError)) {
       throw caught
     }
-    // Nothing was stored, so give your text back to send again.
+    // Nothing was stored, so give your text and files back to send again (same ids, no upload).
     message.value = text
-    error.value = chatErrorMessage(caught)
+    error.value = attachments.restore(sentFiles, caught)
   } finally {
     pendingMessage.value = null
+    pendingFiles.value = []
   }
 }
 </script>
@@ -133,11 +145,16 @@ async function startConversation(text: string): Promise<void> {
       <TutorPrompt
         v-model="message"
         :pending-message="pendingMessage"
+        :pending-files="pendingFiles"
+        :attachments="attachedFiles"
+        :attachment-notice="attachmentNotice"
         :error="error"
         :last-session="lastSession"
         :user-initials="initials(auth.user?.name ?? '')"
         class="min-w-0 flex-[2_1_520px]"
         @send="startConversation"
+        @attach="attachments.add"
+        @remove-attachment="attachments.remove"
       />
       <RetentionQueue
         :state="queueState"

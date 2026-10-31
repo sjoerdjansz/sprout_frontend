@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
-import { makeConversation, makeSummary } from '@/__tests__/conversationFixtures'
+import { makeConversation, makeMaterial, makeSummary } from '@/__tests__/conversationFixtures'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeLibrary, makeTopic } from '@/__tests__/topicFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
@@ -224,6 +224,44 @@ describe('DashboardView', () => {
 
     expect(JSON.parse(String(fetchMock.mock.lastCall?.[1]?.body))).toEqual({
       message: 'I want to learn about running',
+    })
+    expect(router.currentRoute.value.fullPath).toBe('/conversations/10')
+  })
+
+  it('starts a conversation with your files on the first message', async () => {
+    let answerTutor: (response: Response) => void = () => {}
+    const fetchMock = stubApi({
+      'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
+      'GET /conversations': Response.json([]),
+      'POST /materials': () => Response.json(makeMaterial({ status: 'ready' }), { status: 201 }),
+      'POST /conversations': () => new Promise<Response>((resolve) => (answerTutor = resolve)),
+      'GET /conversations/10': Response.json(makeConversation()),
+    })
+    const wrapper = await mountDashboard()
+
+    const input = wrapper.get('[data-test="file-input"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['notes'], 'Lecture 1.pdf')],
+      configurable: true,
+    })
+    await input.trigger('change')
+    await flushPromises()
+    expect(wrapper.get('[data-test="composer-input"]').attributes('placeholder')).toBe(
+      'Say what you want to learn from these files…',
+    )
+
+    await wrapper.get('[data-test="composer-input"]').setValue('Here are my lecture notes')
+    await wrapper.get('[data-test="composer-send"]').trigger('click')
+    // Your message shows with its file while the tutor answers.
+    expect(wrapper.get('[data-test="pending-message"]').text()).toContain('Lecture 1.pdf')
+
+    answerTutor(Response.json(makeConversation(), { status: 201 }))
+    await flushPromises()
+
+    expect(JSON.parse(String(fetchMock.mock.lastCall?.[1]?.body))).toEqual({
+      message: 'Here are my lecture notes',
+      material_ids: [7],
     })
     expect(router.currentRoute.value.fullPath).toBe('/conversations/10')
   })
