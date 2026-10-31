@@ -239,7 +239,7 @@ const generalError = computed<string | null>(() => {
           Not yet
         </BaseButton>
         <BaseButton type="submit" icon="network" :disabled="saving" data-test="save-topic">
-          {{ saving ? 'Saving… this can take a minute or two' : 'Save topic' }}
+          {{ saving ? 'Saving…' : 'Save topic' }}
         </BaseButton>
       </div>
     </form>
