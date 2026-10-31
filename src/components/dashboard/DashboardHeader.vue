@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import BaseBadge from '@/components/BaseBadge.vue'
-import BaseIconButton from '@/components/BaseIconButton.vue'
 
-const { overline, title, streakDays, masteredTopics, totalTopics } = defineProps<{
+const { overline, title, masteredTopics, totalTopics } = defineProps<{
   overline: string
   title: string
-  streakDays: number
-  masteredTopics: number
+  /** Null until the library has loaded. */
+  masteredTopics: number | null
   totalTopics: number
 }>()
 </script>
@@ -18,12 +17,14 @@ const { overline, title, streakDays, masteredTopics, totalTopics } = defineProps
       <h1 class="font-display text-title-lg text-ink md:text-display">{{ title }}</h1>
     </div>
 
-    <div class="flex items-center gap-2">
-      <BaseBadge tone="sun" icon="flame">{{ streakDays }}-day streak</BaseBadge>
-      <BaseBadge tone="sprout" icon="sprout">
-        {{ masteredTopics }} of {{ totalTopics }} topics mastered
-      </BaseBadge>
-      <BaseIconButton icon="bell" label="Notifications" variant="secondary" />
-    </div>
+    <!-- The design's streak badge and notifications bell wait for the API (specs/dashboard.md). -->
+    <BaseBadge
+      v-if="masteredTopics !== null && totalTopics > 0"
+      tone="sprout"
+      icon="sprout"
+      data-test="mastered-topics"
+    >
+      {{ masteredTopics }} of {{ totalTopics }} topics mastered
+    </BaseBadge>
   </header>
 </template>
