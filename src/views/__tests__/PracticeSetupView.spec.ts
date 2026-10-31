@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
 import { makePracticeSession } from '@/__tests__/practiceFixtures'
-import { makeSettings } from '@/__tests__/settingsFixtures'
+import { makeSettings, makeUser } from '@/__tests__/settingsFixtures'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeCategories, makeLibrary } from '@/__tests__/topicFixtures'
 import { useAuthStore } from '@/stores/auth'
@@ -28,6 +28,10 @@ function material(): Routes {
 
 async function mountSetup(url: string, routes: Routes = {}): Promise<VueWrapper> {
   stubApi({
+    // The app shell around the page.
+    'GET /user': Response.json(makeUser()),
+    'GET /conversations': Response.json([]),
+    'GET /settings': Response.json(makeSettings()),
     'GET /topics': Response.json(makeLibrary()),
     'GET /categories': Response.json(makeCategories()),
     'GET /practice-sessions/current': new Response(null, { status: 204 }),
@@ -53,6 +57,13 @@ describe('PracticeSetupView', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('keeps the app navigation around the page', async () => {
+    const wrapper = await mountSetup('/practice')
+
+    expect(wrapper.find('[data-test="tab-bar"]').exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'AppSidebar' }).exists()).toBe(true)
   })
 
   it('opens prefilled from the URL', async () => {
