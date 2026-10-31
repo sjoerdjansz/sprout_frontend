@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
 import FormError from '@/components/FormError.vue'
 import TextLink from '@/components/TextLink.vue'
 import ChatComposer from '@/components/chat/ChatComposer.vue'
 import ChatThread from '@/components/chat/ChatThread.vue'
+import ContinueLearning from '@/components/conversation/ContinueLearning.vue'
 import ConversationHeader from '@/components/conversation/ConversationHeader.vue'
 import SaveTopicDialog from '@/components/conversation/SaveTopicDialog.vue'
 import SavedNotice from '@/components/conversation/SavedNotice.vue'
@@ -19,6 +21,7 @@ import {
   type ReviewedDraft,
   type SaveResult,
 } from '@/stores/conversations'
+import { useTopicsStore } from '@/stores/topics'
 
 const { id } = defineProps<{
   id: number
@@ -26,6 +29,8 @@ const { id } = defineProps<{
 
 const auth = useAuthStore()
 const conversationsStore = useConversationsStore()
+const topicsStore = useTopicsStore()
+const router = useRouter()
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'failed'
 
@@ -44,6 +49,8 @@ const pendingMessage = ref<string | null>(null)
 const sendError = ref<string | null>(null)
 
 const isSaveDialogOpen = ref(false)
+const openingSaveDialog = ref(false)
+const openSaveError = ref<string | null>(null)
 const saving = ref(false)
 const saveError = ref<ApiError | null>(null)
 const saveResult = ref<SaveResult | null>(null)
@@ -77,6 +84,7 @@ watch(
   () => {
     message.value = ''
     sendError.value = null
+    openSaveError.value = null
     saveResult.value = null
     isSaveDialogOpen.value = false
     void load()
@@ -105,8 +113,58 @@ async function send(text: string): Promise<void> {
   }
 }
 
-function openSaveDialog(): void {
+// A saved conversation is read-only: your next message starts a new one on the same topic,
+// which then opens on its own page.
+async function continueLearning(text: string): Promise<void> {
+  const topicId = conversation.value?.topic?.id
+  if (topicId === undefined) {
+    return
+  }
+  pendingMessage.value = text
+  message.value = ''
+  sendError.value = null
+  void scrollToNewest()
+
+  try {
+    const continued = await conversationsStore.startConversation(text, topicId)
+    await router.push({ name: 'conversation', params: { id: continued.id } })
+  } catch (caught) {
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+    // Nothing was stored, so give your text back to send again.
+    message.value = text
+    sendError.value = chatErrorMessage(caught)
+  } finally {
+    pendingMessage.value = null
+  }
+}
+
+// A new topic goes in a category, so the review needs your categories before it opens: it
+// preselects the tutor's suggestion from them.
+async function openSaveDialog(): Promise<void> {
+  if (openingSaveDialog.value) {
+    return
+  }
   saveError.value = null
+  openSaveError.value = null
+
+  if (conversation.value?.topic === null) {
+    openingSaveDialog.value = true
+    try {
+      await topicsStore.fetchCategories()
+    } catch (caught) {
+      if (!(caught instanceof ApiError)) {
+        throw caught
+      }
+      openSaveError.value = caught.message
+
+      return
+    } finally {
+      openingSaveDialog.value = false
+    }
+  }
+
   isSaveDialogOpen.value = true
 }
 
@@ -168,9 +226,20 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
         />
 
         <div ref="bottom" class="sticky bottom-0 flex flex-col gap-3 bg-canvas pt-2 pb-6">
-          <SavedNotice v-if="conversation.is_saved" :result="saveResult" />
+          <template v-if="conversation.is_saved">
+            <SavedNotice :result="saveResult" />
+            <ContinueLearning
+              v-if="conversation.topic"
+              v-model="message"
+              :topic-title="conversation.topic.title"
+              :disabled="pendingMessage !== null"
+              :error="sendError"
+              @send="continueLearning"
+            />
+          </template>
 
           <template v-else>
+            <FormError v-if="openSaveError" :message="openSaveError" />
             <FormError v-if="sendError" :message="sendError" />
             <ChatComposer
               v-model="message"
@@ -184,6 +253,7 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
         <SaveTopicDialog
           v-if="isSaveDialogOpen"
           :draft="conversation.draft"
+          :categories="conversation.topic === null ? topicsStore.categories : null"
           :saving="saving"
           :error="saveError"
           @save="save"

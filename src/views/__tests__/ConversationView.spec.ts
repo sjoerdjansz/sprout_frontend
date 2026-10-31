@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeConversation, makeSummary } from '@/__tests__/conversationFixtures'
 import { stubApi } from '@/__tests__/stubApi'
+import { makeCategories } from '@/__tests__/topicFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
 import ConversationView from '../ConversationView.vue'
 
@@ -102,7 +103,7 @@ describe('ConversationView', () => {
     expect(wrapper.text()).toContain('Then let’s start with load.')
   })
 
-  it('keeps your text when the AI key is the problem', async () => {
+  it('keeps your text when Sprout’s AI isn’t working', async () => {
     stubApi({
       'GET /user': Response.json(user),
       'GET /conversations': Response.json([makeSummary()]),
@@ -110,12 +111,9 @@ describe('ConversationView', () => {
       'POST /conversations/10/messages': () =>
         Response.json(
           {
-            message: 'Your AI key wasn’t accepted. Check it in your settings and try again.',
-            errors: {
-              ai_key: ['Your AI key wasn’t accepted. Check it in your settings and try again.'],
-            },
+            message: 'Sprout’s AI isn’t working right now. We’re fixing it, so try again later.',
           },
-          { status: 422 },
+          { status: 503 },
         ),
     })
     const wrapper = await mountConversation()
@@ -127,7 +125,7 @@ describe('ConversationView', () => {
     const input = wrapper.get('[data-test="composer-input"]').element as HTMLTextAreaElement
     expect(input.value).toBe('Mostly injuries')
     expect(wrapper.get('[data-test="form-error"]').text()).toBe(
-      'Your AI key wasn’t accepted. Check it in your settings and try again.',
+      'Sprout’s AI isn’t working right now. We’re fixing it, so try again later.',
     )
     expect(wrapper.findAll('[data-test="chat-message"]')).toHaveLength(2)
   })
@@ -160,10 +158,92 @@ describe('ConversationView', () => {
 
     const wrapper = await mountConversation()
 
-    expect(wrapper.find('[data-test="composer-input"]').exists()).toBe(false)
+    // The only composer left starts a new conversation (Continue learning).
+    expect(wrapper.findAll('[data-test="composer-input"]')).toHaveLength(1)
+    expect(wrapper.find('[data-test="continue"] [data-test="composer-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="open-save"]').exists()).toBe(false)
     expect(wrapper.get('[data-test="saved-notice"]').text()).toContain(
       'This conversation is saved to your knowledge map.',
+    )
+  })
+
+  it('continues learning on a saved topic in a new conversation', async () => {
+    const savedTopic = { id: 12, title: 'Biomechanics of running' }
+    const fetchMock = stubApi({
+      'GET /user': Response.json(user),
+      'GET /conversations': Response.json([makeSummary({ is_saved: true, topic: savedTopic })]),
+      'GET /conversations/10': Response.json(
+        makeConversation({ is_saved: true, topic: savedTopic }),
+      ),
+      'POST /conversations': () =>
+        Response.json(makeConversation({ id: 13, topic: savedTopic }), { status: 201 }),
+      'GET /conversations/13': Response.json(makeConversation({ id: 13, topic: savedTopic })),
+    })
+    const wrapper = await mountConversation()
+
+    expect(wrapper.get('[data-test="continue"]').text()).toContain(
+      'Your next message starts a new conversation on Biomechanics of running.',
+    )
+    await wrapper.get('[data-test="composer-input"]').setValue('Let’s add sprinting')
+    await wrapper.get('[data-test="composer-send"]').trigger('click')
+    await flushPromises()
+
+    const startCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url).endsWith('/conversations') && init?.method === 'POST',
+    )
+    expect(JSON.parse(String(startCall?.[1]?.body))).toEqual({
+      message: 'Let’s add sprinting',
+      topic_id: 12,
+    })
+    expect(router.currentRoute.value.path).toBe('/conversations/13')
+  })
+
+  it('keeps your text when continuing fails', async () => {
+    const savedTopic = { id: 12, title: 'Biomechanics of running' }
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /conversations': Response.json([makeSummary({ is_saved: true, topic: savedTopic })]),
+      'GET /conversations/10': Response.json(
+        makeConversation({ is_saved: true, topic: savedTopic }),
+      ),
+      'POST /conversations': () =>
+        Response.json(
+          { message: 'The tutor can’t answer right now. Try again in a moment.' },
+          { status: 503 },
+        ),
+    })
+    const wrapper = await mountConversation()
+
+    await wrapper.get('[data-test="composer-input"]').setValue('Let’s add sprinting')
+    await wrapper.get('[data-test="composer-send"]').trigger('click')
+    await flushPromises()
+
+    const input = wrapper.get('[data-test="composer-input"]').element as HTMLTextAreaElement
+    expect(input.value).toBe('Let’s add sprinting')
+    expect(wrapper.get('[data-test="form-error"]').text()).toBe(
+      'The tutor can’t answer right now. Try again in a moment.',
+    )
+    expect(router.currentRoute.value.path).toBe('/conversations/10')
+  })
+
+  it('keeps the review closed and says why when your categories don’t load', async () => {
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /conversations': Response.json([makeSummary()]),
+      'GET /conversations/10': Response.json(makeConversation()),
+      'GET /categories': Response.json(
+        { message: 'Something went wrong on our side. Try again in a moment.' },
+        { status: 500 },
+      ),
+    })
+    const wrapper = await mountConversation()
+
+    await wrapper.get('[data-test="open-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('dialog').exists()).toBe(false)
+    expect(wrapper.get('[data-test="form-error"]').text()).toBe(
+      'Something went wrong on our side. Try again in a moment.',
     )
   })
 
@@ -175,6 +255,7 @@ describe('ConversationView', () => {
         () => Response.json(makeConversation()),
         () => Response.json(makeConversation({ is_saved: true })),
       ],
+      'GET /categories': Response.json(makeCategories()),
       'POST /conversations/10/save': () =>
         Response.json(
           {
@@ -197,6 +278,7 @@ describe('ConversationView', () => {
     const wrapper = await mountConversation()
 
     await wrapper.get('[data-test="open-save"]').trigger('click')
+    await flushPromises()
     await wrapper.get('[data-test="goal-deadline"]').setValue('2026-12-01')
     await wrapper.get('[data-test="goal-recall"]').setValue('80')
     await wrapper.get('form').trigger('submit')
@@ -205,6 +287,7 @@ describe('ConversationView', () => {
     const saveCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/save'))
     expect(JSON.parse(String(saveCall?.[1]?.body))).toEqual({
       title: 'Biomechanics of running',
+      category_id: 1,
       goal: {
         description: 'Explain the phases of the running gait to the runners I coach.',
         deadline: '2026-12-01',

@@ -89,7 +89,7 @@ export function useSubtopicLoader(id: MaybeRefOrGetter<number>): {
       return
     }
 
-    actionError.value = caught.fieldError('notes') ?? caught.fieldError('ai_key') ?? caught.message
+    actionError.value = caught.fieldError('notes') ?? caught.message
   }
 
   // Cards and answers feed the header's mastery, facets and due count.

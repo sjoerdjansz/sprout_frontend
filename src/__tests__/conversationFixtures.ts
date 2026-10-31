@@ -9,6 +9,7 @@ export function makeConversation(overrides: Partial<Conversation> = {}): Convers
     is_saved: false,
     draft: {
       title: 'Biomechanics of running',
+      category: 'Science',
       goal: {
         description: 'Explain the phases of the running gait to the runners I coach.',
         deadline: null,
