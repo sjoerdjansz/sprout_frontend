@@ -103,7 +103,7 @@ describe('ConversationView', () => {
     expect(wrapper.text()).toContain('Then let’s start with load.')
   })
 
-  it('keeps your text when the AI key is the problem', async () => {
+  it('keeps your text when Sprout’s AI isn’t working', async () => {
     stubApi({
       'GET /user': Response.json(user),
       'GET /conversations': Response.json([makeSummary()]),
@@ -111,12 +111,9 @@ describe('ConversationView', () => {
       'POST /conversations/10/messages': () =>
         Response.json(
           {
-            message: 'Your AI key wasn’t accepted. Check it in your settings and try again.',
-            errors: {
-              ai_key: ['Your AI key wasn’t accepted. Check it in your settings and try again.'],
-            },
+            message: 'Sprout’s AI isn’t working right now. We’re fixing it, so try again later.',
           },
-          { status: 422 },
+          { status: 503 },
         ),
     })
     const wrapper = await mountConversation()
@@ -128,7 +125,7 @@ describe('ConversationView', () => {
     const input = wrapper.get('[data-test="composer-input"]').element as HTMLTextAreaElement
     expect(input.value).toBe('Mostly injuries')
     expect(wrapper.get('[data-test="form-error"]').text()).toBe(
-      'Your AI key wasn’t accepted. Check it in your settings and try again.',
+      'Sprout’s AI isn’t working right now. We’re fixing it, so try again later.',
     )
     expect(wrapper.findAll('[data-test="chat-message"]')).toHaveLength(2)
   })

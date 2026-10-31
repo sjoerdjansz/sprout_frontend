@@ -100,14 +100,14 @@ const canSave = computed<boolean>(
     (!isNewCategory.value || newCategoryName.value.trim() !== ''),
 )
 
-// Field errors show next to their field. The rest (your AI key, too many saves, the AI being
-// unavailable ...) needs a message of its own above the buttons.
+// Field errors show next to their field. The rest (too many saves, the AI being unavailable ...)
+// needs a message of its own above the buttons.
 const generalError = computed<string | null>(() => {
   if (error === null) {
     return null
   }
 
-  return error.fieldError('ai_key') ?? (error.hasFieldErrors ? null : error.message)
+  return error.hasFieldErrors ? null : error.message
 })
 
 function save(): void {

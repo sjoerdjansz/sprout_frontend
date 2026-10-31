@@ -132,18 +132,19 @@ describe('TopicFormDialog', () => {
     const fieldError = new ApiError(422, 'Pick a category, or name a new one.', {
       category_id: ['Pick a category, or name a new one.'],
     })
-    const keyError = new ApiError(422, 'Connect your AI key to start learning.', {
-      ai_key: ['Connect your AI key to start learning.'],
-    })
+    const aiError = new ApiError(
+      503,
+      'Sprout’s AI isn’t working right now. We’re fixing it, so try again later.',
+    )
 
     expect(mountForm('add-topic', emptyValues, { error: fieldError }).text()).toContain(
       'Pick a category, or name a new one.',
     )
     expect(
-      mountForm('add-subtopic', emptyValues, { error: keyError })
+      mountForm('add-subtopic', emptyValues, { error: aiError })
         .get('[data-test="form-error"]')
         .text(),
-    ).toBe('Connect your AI key to start learning.')
+    ).toBe('Sprout’s AI isn’t working right now. We’re fixing it, so try again later.')
   })
 
   it('says honestly what happens with the notes of a topic and of a subtopic', () => {

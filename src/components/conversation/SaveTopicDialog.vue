@@ -128,16 +128,15 @@ function save(): void {
   })
 }
 
-// Field errors show next to their field. The rest (no subtopics, your AI key, the tutor being
-// unavailable ...) needs a message of its own above the button.
+// Field errors show next to their field. The rest (no subtopics, a saved conversation, the AI
+// being unavailable ...) needs a message of its own above the button.
 const generalError = computed<string | null>(() => {
   if (error === null) {
     return null
   }
 
   // `subtopics` itself, not `subtopics.0.title`: those show next to their subtopic.
-  const errorWithoutField =
-    error.errors['subtopics']?.[0] ?? error.fieldError('ai_key') ?? error.fieldError('conversation')
+  const errorWithoutField = error.errors['subtopics']?.[0] ?? error.fieldError('conversation')
   if (errorWithoutField !== undefined) {
     return errorWithoutField
   }
