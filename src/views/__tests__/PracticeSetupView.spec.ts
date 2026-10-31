@@ -6,6 +6,7 @@ import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/mater
 import { stubApi } from '@/__tests__/stubApi'
 import { makeCategories, makeLibrary } from '@/__tests__/topicFixtures'
 import { useAuthStore } from '@/stores/auth'
+import { usePracticeStore } from '@/stores/practice'
 import PracticeSetupView from '../PracticeSetupView.vue'
 
 type Routes = Parameters<typeof stubApi>[0]
@@ -101,6 +102,17 @@ describe('PracticeSetupView', () => {
     expect(wrapper.find('[data-test="whole-topic-tip"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="interleave"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Biology · mixed subtopics')
+  })
+
+  it('starts the session with the plan and opens it', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards,retrieval')
+
+    await wrapper.get('[data-test="start-session"]').trigger('click')
+    await flushPromises()
+
+    const plan = usePracticeStore().plan
+    expect(plan?.blocks.map((block) => block.mode)).toEqual(['cards', 'retrieval'])
+    expect(router.currentRoute.value.name).toBe('practice-session')
   })
 
   it('points to the knowledge map when there is nothing to practise', async () => {

@@ -10,6 +10,7 @@ import NotFoundView from '@/views/NotFoundView.vue'
 import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
 import SubtopicView from '@/views/SubtopicView.vue'
 import PracticeSetupView from '@/views/PracticeSetupView.vue'
+import PracticeSessionView from '@/views/PracticeSessionView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -56,6 +57,13 @@ const router = createRouter({
       path: '/practice',
       name: 'practice',
       component: PracticeSetupView,
+      meta: { requiresAuth: true },
+    },
+    {
+      // Runs the plan the setup page made; without one it sends you back there.
+      path: '/practice/session',
+      name: 'practice-session',
+      component: PracticeSessionView,
       meta: { requiresAuth: true },
     },
     {
