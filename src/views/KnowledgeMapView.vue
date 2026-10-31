@@ -6,12 +6,14 @@ import type { SelectOption } from '@/components/BaseSelect.vue'
 import BaseToast from '@/components/BaseToast.vue'
 import FormError from '@/components/FormError.vue'
 import SubtopicList from '@/components/knowledgeMap/SubtopicList.vue'
+import SubtopicSuggestionsDialog from '@/components/knowledgeMap/SubtopicSuggestionsDialog.vue'
 import TopicFormDialog, {
   type TopicFormMode,
   type TopicFormValues,
 } from '@/components/knowledgeMap/TopicFormDialog.vue'
 import TopicLibrary from '@/components/knowledgeMap/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { useSubtopicSuggestions } from '@/composables/knowledgeMap/useSubtopicSuggestions'
 import { useToast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
 import {
@@ -29,6 +31,7 @@ const route = useRoute()
 const router = useRouter()
 const topicsStore = useTopicsStore()
 const { toast, showToast } = useToast()
+const suggestions = useSubtopicSuggestions(showToast)
 
 type LoadState = 'loading' | 'loaded' | 'failed'
 
@@ -167,7 +170,14 @@ function openForm(mode: TopicFormMode, topic: Topic | null): void {
   }
 }
 
-async function saveForm(mode: TopicFormMode, values: TopicFormValues): Promise<void> {
+/** A topic saved with a new or changed source, for Sprout to split into subtopics next. */
+type SavedSource = Pick<Topic, 'id' | 'title'> | null
+
+async function saveForm(
+  mode: TopicFormMode,
+  values: TopicFormValues,
+  initialNotes: string,
+): Promise<SavedSource> {
   if (mode === 'add-subtopic') {
     const result = await topicsStore.addSubtopic({
       topicId: values.topicId,
@@ -185,7 +195,7 @@ async function saveForm(mode: TopicFormMode, values: TopicFormValues): Promise<v
       })
     }
 
-    return
+    return null
   }
 
   const topicInput = {
@@ -200,6 +210,10 @@ async function saveForm(mode: TopicFormMode, values: TopicFormValues): Promise<v
       ? await topicsStore.addTopic(topicInput)
       : await topicsStore.updateTopic(values.topicId, topicInput)
   selectedTopicId.value = topic.id
+
+  const sourceChanged = mode === 'add-topic' || values.notes !== initialNotes.trim()
+
+  return values.notes !== '' && sourceChanged ? topic : null
 }
 
 async function save(values: TopicFormValues): Promise<void> {
@@ -210,10 +224,14 @@ async function save(values: TopicFormValues): Promise<void> {
   saveError.value = null
 
   try {
-    await saveForm(form.value.mode, values)
+    const savedSource = await saveForm(form.value.mode, values, form.value.values.notes)
     // Clear the filters so what you just saved is in view.
     clearFilters()
     form.value = null
+    // The topic is saved; splitting its source into subtopics is the next, separate step.
+    if (savedSource !== null) {
+      void suggestions.start(savedSource)
+    }
   } catch (caught) {
     if (!(caught instanceof ApiError)) {
       throw caught
@@ -285,6 +303,22 @@ async function save(values: TopicFormValues): Promise<void> {
       :error="saveError"
       @save="save"
       @close="form = null"
+    />
+
+    <SubtopicSuggestionsDialog
+      v-if="suggestions.topic.value !== null"
+      :topic-title="suggestions.topic.value.title"
+      :phase="suggestions.phase.value"
+      :rows="suggestions.rows.value"
+      :error="suggestions.error.value"
+      :row-errors="suggestions.rowErrors.value"
+      :kept-count="suggestions.keptCount.value"
+      :can-add="suggestions.canAdd.value"
+      @update-row="suggestions.updateRow"
+      @add-own="suggestions.addOwnRow"
+      @add="suggestions.add"
+      @retry="suggestions.retry"
+      @skip="suggestions.close"
     />
 
     <BaseToast

@@ -6,8 +6,16 @@ import type { IconName } from '@/components/icons'
 // Native attributes (type, placeholder, autocomplete, data-test ...) belong on the <input>, not the wrapper.
 defineOptions({ inheritAttrs: false })
 
-const { label, icon, hint, error } = defineProps<{
+const {
+  label,
+  icon,
+  hint,
+  error,
+  hideLabel = false,
+} = defineProps<{
   label: string
+  /** For screen readers only, when the row around the field already names it. */
+  hideLabel?: boolean
   icon?: IconName
   /** Helper text under the field; an error replaces it. */
   hint?: string
@@ -24,7 +32,9 @@ const hintId = `${inputId}-hint`
 
 <template>
   <div class="flex w-full flex-col gap-1.5">
-    <label :for="inputId" class="text-label text-ink">{{ label }}</label>
+    <label :for="inputId" class="text-label text-ink" :class="{ 'sr-only': hideLabel }">{{
+      label
+    }}</label>
 
     <div
       class="flex min-h-11.5 items-center gap-2 rounded-md border bg-surface-sunken pr-2 pl-4 text-ink-muted transition duration-150 ease-default focus-within:border-focus focus-within:bg-surface focus-within:shadow-focus-ring"

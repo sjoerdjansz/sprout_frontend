@@ -147,7 +147,7 @@ describe('TopicFormDialog', () => {
   })
 
   it('says honestly what happens with the notes of a topic and of a subtopic', () => {
-    expect(mountForm('edit-topic').text()).toContain('Kept with your topic.')
+    expect(mountForm('edit-topic').text()).toContain('After you save, Sprout suggests subtopics')
     expect(mountForm('add-subtopic').text()).toContain(
       'Sprout turns these into flashcards and questions when you save.',
     )

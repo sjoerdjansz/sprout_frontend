@@ -7,17 +7,21 @@ import MarkdownContent from '@/components/chat/MarkdownContent.vue'
 // Native attributes (data-test ...) belong on the textarea, like BaseTextarea's own.
 defineOptions({ inheritAttrs: false })
 
-const { label, hint, error } = defineProps<{
+const {
+  label,
+  hint,
+  error,
+  maximumLength = 10_000,
+} = defineProps<{
   label: string
+  /** The API's limit: 10,000 for a subtopic's notes, 30,000 for a topic's source. */
+  maximumLength?: number
   /** What happens with the notes when you save. */
   hint: string
   error?: string
 }>()
 
 const model = defineModel<string>({ required: true })
-
-/** The API's limit for notes. */
-const maximumLength = 10_000
 
 type View = 'write' | 'preview'
 const view = ref<View>('write')

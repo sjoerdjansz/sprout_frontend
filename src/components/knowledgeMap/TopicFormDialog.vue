@@ -80,10 +80,10 @@ const isNewCategory = computed<boolean>(
   () => !isSubtopic && categoryChoice.value === newCategoryChoice,
 )
 
-// Only a subtopic's notes become cards and questions; a topic keeps its notes as they are.
+// A subtopic's notes become cards straight away; a topic's source is split into subtopics first.
 const notesHint = isSubtopic
   ? 'Sprout turns these into flashcards and questions when you save.'
-  : 'Kept with your topic. To get cards, add notes to a subtopic or build the topic in a chat.'
+  : 'After you save, Sprout suggests subtopics from this and makes cards for the ones you keep.'
 
 // New or changed notes of a subtopic take the AI a few seconds to turn into cards.
 const makesCards = computed<boolean>(
@@ -177,6 +177,7 @@ function save(): void {
         v-model="notes"
         label="Notes or a source"
         :hint="notesHint"
+        :maximum-length="isSubtopic ? 10_000 : 30_000"
         :error="error?.fieldError('notes')"
         data-test="notes"
       />
