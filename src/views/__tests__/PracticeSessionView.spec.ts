@@ -1,16 +1,28 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeFlashcard, makeQuestion } from '@/__tests__/materialFixtures'
+import { makeConversation } from '@/__tests__/conversationFixtures'
+import { stubApi } from '@/__tests__/stubApi'
 import { makeSubtopic } from '@/__tests__/topicFixtures'
 import type { PracticeMaterial, PracticeOptions, PracticeScope } from '@/lib/practiceSession'
 import type { PracticeModeId } from '@/lib/practiceModes'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore, type User } from '@/stores/auth'
 import { usePracticeStore } from '@/stores/practice'
 import PracticeSessionView from '../PracticeSessionView.vue'
 
 const photosynthesis = makeSubtopic()
+
+const user: User = {
+  id: 1,
+  name: 'Ada Lovelace',
+  email: 'ada@example.com',
+  email_verified_at: '2026-10-29T12:00:00.000000Z',
+  interests: ['science'],
+  wants_daily_reminder: true,
+  created_at: '2026-10-29T12:00:00.000000Z',
+}
 
 const scope: PracticeScope = {
   topicId: 1,
@@ -58,6 +70,11 @@ function front(wrapper: VueWrapper): string {
 }
 
 describe('PracticeSessionView', () => {
+  beforeAll(() => {
+    // jsdom doesn't implement it; the open session scrolls to the newest message.
+    Element.prototype.scrollIntoView = vi.fn<() => void>()
+  })
+
   beforeEach(() => {
     setActivePinia(createPinia())
     useAuthStore().setToken('1|abc')
@@ -184,6 +201,38 @@ describe('PracticeSessionView', () => {
 
     expect(wrapper.find('[data-test="session-done"]').exists()).toBe(true)
     expect(usePracticeStore().results[0]?.explanations).toHaveLength(2)
+  })
+
+  it('talks it through with the tutor about the topic, then wraps up', async () => {
+    const fetchMock = stubApi({
+      'GET /user': Response.json(user),
+      'POST /conversations': Response.json(makeConversation({ id: 30 }), { status: 201 }),
+      'POST /conversations/30/messages': [
+        () => Response.json({ message: 'The tutor can’t answer right now.' }, { status: 503 }),
+      ],
+    })
+    const wrapper = await mountSession(['open'])
+
+    await wrapper.findAll('[data-test="suggestion"]')[0]?.trigger('click')
+    await wrapper.get('textarea').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+
+    const start = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')
+    const body: unknown = JSON.parse(String(start?.[1]?.body))
+    expect(body).toEqual({
+      message: 'Quiz me on Photosynthesis. Ask me one question at a time.',
+      topic_id: 1,
+    })
+    expect(wrapper.text()).toContain('What draws you to it')
+
+    await wrapper.get('textarea').setValue('Sport, I think.')
+    await wrapper.get('textarea').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(wrapper.get('[data-test="form-error"]').text()).toContain('The tutor can’t answer')
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('Sport, I think.')
+
+    await wrapper.get('[data-test="wrap-up"]').trigger('click')
+    expect(wrapper.get('[data-test="done-tile"]').text()).toContain('1')
   })
 
   it('ends early with what you did so far', async () => {

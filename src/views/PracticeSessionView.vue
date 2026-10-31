@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import ExplainBlock from '@/components/practice/ExplainBlock.vue'
 import FlashcardBlock from '@/components/practice/FlashcardBlock.vue'
 import NextUp from '@/components/practice/NextUp.vue'
+import OpenBlock from '@/components/practice/OpenBlock.vue'
 import QuizBlock from '@/components/practice/QuizBlock.vue'
 import PracticeTopBar from '@/components/practice/PracticeTopBar.vue'
 import SessionDone from '@/components/practice/SessionDone.vue'
@@ -135,6 +136,15 @@ onBeforeUnmount(() => practice.reset())
         :key="practice.blockIndex"
         :concept="practice.currentBlock.concept"
         @explain="practice.addExplanation"
+        @finish="practice.finishBlock"
+      />
+      <OpenBlock
+        v-else-if="practice.currentBlock.mode === 'open'"
+        :key="practice.blockIndex"
+        :topic-id="practice.currentBlock.topicId"
+        :topic-title="practice.currentBlock.topicTitle"
+        :subtopic-title="practice.currentBlock.subtopicTitle"
+        @sent="practice.countMessage"
         @finish="practice.finishBlock"
       />
     </template>
