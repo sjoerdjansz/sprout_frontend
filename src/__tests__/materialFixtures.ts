@@ -16,6 +16,7 @@ export function makeFlashcard(overrides: Partial<Flashcard> = {}): Flashcard {
     last_rating: 'good',
     last_reviewed_at: '2026-10-24T08:45:00.000000Z',
     recall: 92,
+    next_review_in_minutes: { again: 10, hard: 5760, good: 11520, easy: 14400 },
     created_at: '2026-10-20T19:04:30.000000Z',
     ...overrides,
   }
@@ -39,6 +40,7 @@ export function makeQuestion(overrides: Partial<Question> = {}): Question {
       score: 100,
       verdict: 'correct',
       feedback: 'Exactly. Green is reflected, so we see leaves as green.',
+      gaps: null,
       answered_at: '2026-10-29T08:40:00.000000Z',
     },
     created_at: '2026-10-20T19:04:30.000000Z',
@@ -59,6 +61,7 @@ export function makeOpenQuestion(overrides: Partial<Question> = {}): Question {
       score: 60,
       verdict: 'almost',
       feedback: 'Light as the energy source: right. You’re missing carbon dioxide.',
+      gaps: null,
       answered_at: '2026-10-29T08:40:00.000000Z',
     },
     ...overrides,

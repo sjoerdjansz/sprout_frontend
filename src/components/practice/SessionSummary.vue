@@ -5,13 +5,22 @@ import IconTile from '@/components/IconTile.vue'
 import { mixedWhy, practiceMode, whyThisHelps, type PracticeMode } from '@/lib/practiceModes'
 import { blockAmount, estimateMinutes, type PracticeBlock } from '@/lib/practiceSession'
 
-const { blocks, scope, order, loading, secondTry } = defineProps<{
+const {
+  blocks,
+  scope,
+  order,
+  loading,
+  starting = false,
+  secondTry,
+} = defineProps<{
   blocks: PracticeBlock[]
   scope: string
   /** "Due cards first" … ; hidden when nothing has an order. */
   order: string | null
   /** The scope's cards and questions are still loading. */
   loading: boolean
+  /** The session is being started on the API. */
+  starting?: boolean
   /** Whether a wrong quiz answer gets a second try (your "Hint before the answer" setting). */
   secondTry: boolean
 }>()
@@ -91,14 +100,14 @@ const isMixed = computed<boolean>(() => modes.value.length > 1)
       size="lg"
       icon-right="arrow-right"
       block
-      :disabled="loading || blocks.length === 0"
+      :disabled="loading || starting || blocks.length === 0"
       data-test="start-session"
       @click="emit('start')"
     >
-      {{ loading ? 'Getting your cards…' : 'Start session' }}
+      {{ loading ? 'Getting your cards…' : starting ? 'Starting…' : 'Start session' }}
     </BaseButton>
     <span class="text-center text-caption font-normal text-ink-subtle">
-      You can stop at any time. Results aren’t saved yet: that’s coming.
+      You can stop at any time. Everything you practise is saved as you go.
     </span>
   </aside>
 </template>

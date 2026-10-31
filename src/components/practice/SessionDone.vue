@@ -3,22 +3,26 @@ import { computed } from 'vue'
 import BaseBadge from '@/components/BaseBadge.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import StatTile from '@/components/StatTile.vue'
+import MasteryChanges from '@/components/practice/MasteryChanges.vue'
 import { practiceMode, type PracticeMode } from '@/lib/practiceModes'
 import {
   isBlockComplete,
+  messagesSent,
   resultLine,
+  sessionMinutes,
   slippedItems,
   summariseCards,
   summariseQuiz,
   type BlockResult,
   type SlippedItem,
 } from '@/lib/practiceSession'
-import type { PracticePlan } from '@/stores/practice'
+import type { PracticePlan, PracticeSession } from '@/stores/practice'
 
-const { plan, results, minutes } = defineProps<{
+const { plan, results, session } = defineProps<{
   plan: PracticePlan
   results: BlockResult[]
-  minutes: number
+  /** The finished session from the API; null when nothing was practised (it wasn't kept). */
+  session: PracticeSession | null
 }>()
 
 const emit = defineEmits<{
@@ -39,12 +43,18 @@ const ranToTheEnd = computed<boolean>(() =>
 )
 
 const headline = computed<string>(() => {
-  if (practised.value.length === 0) {
+  if (session === null) {
     return 'Nothing practised this time.'
   }
 
   return ranToTheEnd.value ? 'That’s everything you planned.' : 'Good stop. Here’s what you did.'
 })
+
+const lede = computed<string>(() =>
+  session === null
+    ? 'Nothing was saved, so your schedule and mastery stay as they were.'
+    : `About ${sessionMinutes(session)} min. Everything you did is saved.`,
+)
 
 const overline = computed<string>(() => {
   const modes =
@@ -74,7 +84,7 @@ function tileFor(result: BlockResult): Tile {
         mode,
         label: 'Quiz',
         value: `${summary.right} of ${result.answers.length}`,
-        hint: `${summary.secondTry} on the second try`,
+        hint: `${summary.almost} almost`,
       }
     }
     case 'feynman':
@@ -88,7 +98,7 @@ function tileFor(result: BlockResult): Tile {
       return {
         mode,
         label: 'Open session',
-        value: String(result.messagesSent),
+        value: String(messagesSent(result)),
         hint: 'Messages with the tutor',
       }
   }
@@ -101,13 +111,22 @@ const slipped = computed<SlippedItem[]>(() => slippedItems(results))
 <template>
   <main class="flex grow justify-center px-4 pt-6 pb-10 sm:px-8" data-test="session-done">
     <div class="flex w-full max-w-240 flex-col gap-6">
-      <div class="flex flex-col gap-2">
-        <span class="text-overline text-sun-ink">{{ overline }}</span>
-        <h1 class="font-display text-display text-ink" data-test="done-headline">{{ headline }}</h1>
-        <p class="text-body-lg text-ink-muted">
-          About {{ minutes }} min. Your results aren’t saved yet, so your schedule and mastery stay
-          as they were.
-        </p>
+      <div class="flex flex-wrap items-center gap-6">
+        <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-2">
+          <span class="text-overline text-sun-ink">{{ overline }}</span>
+          <h1 class="font-display text-display text-ink" data-test="done-headline">
+            {{ headline }}
+          </h1>
+          <p class="text-body-lg text-ink-muted" data-test="done-lede">{{ lede }}</p>
+        </div>
+        <div
+          v-if="session && session.xp_earned > 0"
+          class="flex flex-col items-center gap-1 rounded-lg bg-sun-soft px-5 py-3.5"
+          data-test="done-xp"
+        >
+          <span class="font-display text-title-lg text-sun-ink">+{{ session.xp_earned }} XP</span>
+          <span class="text-caption font-normal text-ink-muted">For every card and answer</span>
+        </div>
       </div>
 
       <div
@@ -127,6 +146,11 @@ const slipped = computed<SlippedItem[]>(() => slippedItems(results))
       </div>
 
       <div class="flex flex-wrap items-start gap-5">
+        <MasteryChanges
+          v-if="session && session.subtopics.length > 0"
+          :subtopics="session.subtopics"
+        />
+
         <section
           v-if="plan.blocks.length > 1"
           aria-labelledby="done-blocks"

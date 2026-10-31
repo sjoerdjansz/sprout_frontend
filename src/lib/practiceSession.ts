@@ -7,7 +7,13 @@
 import type { BadgeTone } from '@/components/BaseBadge.vue'
 import { practiceMode, practiceModes, type PracticeModeId } from '@/lib/practiceModes'
 import type { Flashcard, Rating } from '@/stores/flashcards'
-import type { Question, Verdict } from '@/stores/questions'
+import type {
+  PracticeMessage,
+  PracticeSession,
+  PracticeSessionDone,
+  PracticeSessionPlan,
+} from '@/stores/practice'
+import type { Gap, Question, Verdict } from '@/stores/questions'
 import type { Settings } from '@/stores/settings'
 import type { Subtopic } from '@/stores/topics'
 
@@ -70,8 +76,6 @@ export interface ExplainConcept {
   subtopicId: number
   subtopicTitle: string
   prompt: string
-  /** The backs of the subtopic's cards, to compare your explanation against. */
-  keyPoints: string[]
 }
 
 export type PracticeBlock =
@@ -89,8 +93,9 @@ function activeCards(material: PracticeMaterial): Flashcard[] {
   return material.flashcards.filter((card) => !card.paused)
 }
 
-function multipleChoice(material: PracticeMaterial): Question[] {
-  return material.questions.filter((question) => question.type === 'multiple_choice')
+// Explain it questions have a block of their own.
+function quizQuestions(material: PracticeMaterial): Question[] {
+  return material.questions.filter((question) => question.type !== 'feynman')
 }
 
 /** Why a mode can't run on this scope, or null when it can. */
@@ -108,7 +113,7 @@ export function unavailableReason(
         ? 'All cards here are paused.'
         : 'No flashcards here yet.'
     case 'retrieval':
-      return multipleChoice(material).length > 0 ? null : 'No multiple-choice questions here yet.'
+      return quizQuestions(material).length > 0 ? null : 'No quiz questions here yet.'
     case 'feynman':
       return scope.subtopics.length > 0 ? null : 'Add a subtopic first.'
     case 'open':
@@ -120,6 +125,14 @@ export function availableModes(scope: PracticeScope, material: PracticeMaterial)
   return practiceModes
     .map((mode) => mode.id)
     .filter((mode) => unavailableReason(mode, scope, material) === null)
+}
+
+/**
+ * What "Mix it all" turns on: every mode that can run except the open session, which has no
+ * end, so you add it to a mix yourself.
+ */
+export function mixableModes(available: PracticeModeId[]): PracticeModeId[] {
+  return available.filter((mode) => mode !== 'open')
 }
 
 // --- Picking and ordering ------------------------------------------------------------------
@@ -213,20 +226,34 @@ function byWeakness(first: Question, second: Question): number {
   return firstAnswered < secondAnswered ? -1 : firstAnswered > secondAnswered ? 1 : 0
 }
 
-/** Multiple choice only: open answers need grading by the API, which doesn't exist yet. */
+/** Multiple choice and open questions; Sprout checks the open answers. */
 export function pickQuestions(
   material: PracticeMaterial,
   scope: PracticeScope,
   options: PracticeOptions,
   random: Random = Math.random,
 ): Question[] {
-  const questions = multipleChoice(material)
+  const questions = quizQuestions(material)
   const ordered = options.dueFirst ? [...questions].sort(byWeakness) : shuffled(questions, random)
 
   return arranged(ordered.slice(0, options.questionCount), scope.subtopics, options.interleave)
 }
 
-const keyPointLimit = 5
+/**
+ * Explaining one subtopic. The prompt is its first Explain it question, the one the API files
+ * the explanation under; without one the API makes this same question.
+ */
+function conceptFor(subtopic: Subtopic, material: PracticeMaterial): ExplainConcept {
+  const feynmanQuestion = material.questions.find(
+    (question) => question.type === 'feynman' && question.subtopic_id === subtopic.id,
+  )
+
+  return {
+    subtopicId: subtopic.id,
+    subtopicTitle: subtopic.title,
+    prompt: feynmanQuestion?.prompt ?? `Explain ${subtopic.title} as if I’m 12.`,
+  }
+}
 
 /** The subtopic you explain: the one you picked, or the one whose Explain it facet is weakest. */
 export function pickConcept(scope: PracticeScope, material: PracticeMaterial): ExplainConcept {
@@ -240,20 +267,7 @@ export function pickConcept(scope: PracticeScope, material: PracticeMaterial): E
     throw new Error('Explain it needs a subtopic')
   }
 
-  const feynmanQuestion = material.questions.find(
-    (question) => question.type === 'feynman' && question.subtopic_id === subtopic.id,
-  )
-  const keyPoints = activeCards(material)
-    .filter((card) => card.subtopic_id === subtopic.id)
-    .slice(0, keyPointLimit)
-    .map((card) => card.back)
-
-  return {
-    subtopicId: subtopic.id,
-    subtopicTitle: subtopic.title,
-    prompt: feynmanQuestion?.prompt ?? `Explain ${subtopic.title} as if I’m 12.`,
-    keyPoints,
-  }
+  return conceptFor(subtopic, material)
 }
 
 /** The session's blocks: the chosen modes that can run here, in the fixed order (open last). */
@@ -282,6 +296,74 @@ export function buildBlocks(
           }
       }
     })
+}
+
+/** The plan as the API keeps it: the modes and the ids in block order. */
+export function sessionPlan(blocks: PracticeBlock[]): PracticeSessionPlan {
+  const plan: PracticeSessionPlan = {
+    modes: blocks.map((block) => block.mode),
+    card_ids: [],
+    question_ids: [],
+    explain_subtopic_id: null,
+  }
+  for (const block of blocks) {
+    if (block.mode === 'cards') {
+      plan.card_ids = block.cards.map((card) => card.id)
+    } else if (block.mode === 'retrieval') {
+      plan.question_ids = block.questions.map((question) => question.id)
+    } else if (block.mode === 'feynman') {
+      plan.explain_subtopic_id = block.concept.subtopicId
+    }
+  }
+
+  return plan
+}
+
+/**
+ * The blocks of a session you pick up again, from the plan it was started with. A card or
+ * question deleted since is left out.
+ */
+export function blocksFromPlan(
+  plan: PracticeSessionPlan,
+  scope: PracticeScope,
+  material: PracticeMaterial,
+): PracticeBlock[] {
+  return plan.modes.flatMap((mode): PracticeBlock[] => {
+    switch (mode) {
+      case 'cards':
+        return [
+          {
+            mode,
+            cards: plan.card_ids.flatMap((id) =>
+              material.flashcards.filter((card) => card.id === id),
+            ),
+          },
+        ]
+      case 'retrieval':
+        return [
+          {
+            mode,
+            questions: plan.question_ids.flatMap((id) =>
+              material.questions.filter((question) => question.id === id),
+            ),
+          },
+        ]
+      case 'feynman': {
+        const subtopic =
+          scope.subtopics.find((each) => each.id === plan.explain_subtopic_id) ?? scope.subtopics[0]
+        return subtopic === undefined ? [] : [{ mode, concept: conceptFor(subtopic, material) }]
+      }
+      case 'open':
+        return [
+          {
+            mode,
+            topicId: scope.topicId,
+            topicTitle: scope.topicTitle,
+            subtopicTitle: scope.subtopic?.title ?? null,
+          },
+        ]
+    }
+  })
 }
 
 // --- How a session reads -------------------------------------------------------------------
@@ -334,8 +416,11 @@ export function scopeTitle(scope: PracticeScope, options: PracticeOptions): stri
 
 // --- Results -------------------------------------------------------------------------------
 
-/** `second_try`: wrong the first time, right the second. */
-export type QuizOutcome = 'right' | 'second_try' | 'wrong'
+/**
+ * How a question ended, as the API grades it. Right on the second try is `almost`, like an
+ * open answer that's nearly there.
+ */
+export type QuizOutcome = Verdict
 
 export interface CardRating {
   card: Flashcard
@@ -349,6 +434,14 @@ export interface QuizAnswer {
 
 export type BlockStatus = 'not_started' | 'started' | 'finished' | 'skipped'
 
+/** One version of your explanation and what Sprout said about it. */
+export interface Explanation {
+  version: 1 | 2
+  text: string
+  feedback: string | null
+  gaps: Gap[]
+}
+
 /** What you did in one block. Only the fields of the block's mode fill up. */
 export interface BlockResult {
   mode: PracticeModeId
@@ -356,9 +449,10 @@ export interface BlockResult {
   /** Every rating in order; a card rated "Again" comes back and is rated again. */
   ratings: CardRating[]
   answers: QuizAnswer[]
-  /** Your first and second explanation (Explain it). */
-  explanations: string[]
-  messagesSent: number
+  /** Your first and simpler explanation (Explain it). */
+  explanations: Explanation[]
+  /** The open session's chat: yours and the tutor's. */
+  messages: PracticeMessage[]
 }
 
 export function emptyResult(mode: PracticeModeId): BlockResult {
@@ -368,8 +462,80 @@ export function emptyResult(mode: PracticeModeId): BlockResult {
     ratings: [],
     answers: [],
     explanations: [],
-    messagesSent: 0,
+    messages: [],
   }
+}
+
+/**
+ * What you already did in each block of a session you pick up again, from the practice the API
+ * kept. Your first explanation comes back from its question's latest answer; what was skipped
+ * isn't kept, so a skipped block is offered again.
+ */
+export function resultsFromDone(
+  blocks: PracticeBlock[],
+  done: PracticeSessionDone,
+  material: PracticeMaterial,
+): BlockResult[] {
+  return blocks.map((block) => {
+    const result = emptyResult(block.mode)
+    switch (block.mode) {
+      case 'cards':
+        result.ratings = done.flashcard_reviews.flatMap((review) =>
+          block.cards
+            .filter((card) => card.id === review.flashcard_id)
+            .map((card) => ({ card, rating: review.rating })),
+        )
+        break
+      case 'retrieval':
+        result.answers = done.answers.flatMap((answer) =>
+          answer.score === null
+            ? []
+            : block.questions
+                .filter((question) => question.id === answer.question_id)
+                .map((question) => ({ question, outcome: answer.verdict })),
+        )
+        break
+      case 'feynman':
+        result.explanations = done.explanations.map((explanation): Explanation => {
+          const latest = material.questions.find(
+            (question) => question.id === explanation.question_id,
+          )?.latest_answer
+          const first = explanation.version === 1 ? latest : undefined
+          return {
+            version: explanation.version,
+            text: first?.response ?? '',
+            feedback: first?.feedback ?? null,
+            gaps: first?.gaps ?? [],
+          }
+        })
+        break
+      case 'open':
+        result.messages = [...done.messages]
+        break
+    }
+
+    const practised =
+      result.ratings.length +
+      result.answers.length +
+      result.explanations.length +
+      result.messages.length
+    result.status = practised > 0 ? 'started' : 'not_started'
+
+    return result
+  })
+}
+
+/**
+ * Where a session you pick up again goes on: the first block that isn't done, or null when
+ * everything is. The open session has no end, so it's never done until you wrap it up.
+ */
+export function resumeIndex(blocks: PracticeBlock[], results: BlockResult[]): number | null {
+  const index = blocks.findIndex((block, each) => {
+    const result = results[each]
+    return block.mode === 'open' || result === undefined || !isBlockComplete(block, result)
+  })
+
+  return index === -1 ? null : index
 }
 
 export interface CardsSummary {
@@ -423,24 +589,30 @@ export function isBlockComplete(block: PracticeBlock, result: BlockResult): bool
     case 'retrieval':
       return result.answers.length >= block.questions.length
     case 'feynman':
-      return result.explanations.length >= 2
+      return result.explanations.some((explanation) => explanation.version === 2)
     case 'open':
-      return result.messagesSent > 0
+      return result.messages.length > 0
   }
 }
 
 export interface QuizSummary {
   right: number
-  secondTry: number
+  /** Right on the second try, or an open answer that's nearly there. */
+  almost: number
   wrong: number
 }
 
 export function summariseQuiz(answers: QuizAnswer[]): QuizSummary {
   return {
-    right: answers.filter((answer) => answer.outcome === 'right').length,
-    secondTry: answers.filter((answer) => answer.outcome === 'second_try').length,
-    wrong: answers.filter((answer) => answer.outcome === 'wrong').length,
+    right: answers.filter((answer) => answer.outcome === 'correct').length,
+    almost: answers.filter((answer) => answer.outcome === 'almost').length,
+    wrong: answers.filter((answer) => answer.outcome === 'not_quite').length,
   }
+}
+
+/** Your messages to the tutor in an open session. */
+export function messagesSent(result: BlockResult): number {
+  return result.messages.filter((message) => message.role === 'user').length
 }
 
 /** One line on how a block went, for "Next up" and the Done screen. */
@@ -456,12 +628,12 @@ export function resultLine(result: BlockResult): string {
     }
     case 'retrieval': {
       const summary = summariseQuiz(result.answers)
-      return `${summary.right} right · ${summary.secondTry} on the second try · ${summary.wrong} wrong`
+      return `${summary.right} right · ${summary.almost} almost · ${summary.wrong} wrong`
     }
     case 'feynman':
       return result.explanations.length > 0 ? 'Explained in your own words' : 'Not explained yet'
     case 'open':
-      return `${counted(result.messagesSent, 'message', 'messages')} with the tutor`
+      return `${counted(messagesSent(result), 'message', 'messages')} with the tutor`
   }
 }
 
@@ -500,13 +672,79 @@ export function slippedItems(results: BlockResult[]): SlippedItem[] {
 
   const questions = results
     .flatMap((result) => result.answers)
-    .filter(({ outcome }) => outcome !== 'right')
+    .filter(({ outcome }) => outcome !== 'correct')
     .map(({ question, outcome }): SlippedItem => ({
       key: `question-${question.id}`,
       title: question.prompt,
-      grade: outcome === 'wrong' ? 'Not quite' : 'Second try',
-      tone: outcome === 'wrong' ? 'ember' : 'sun',
+      grade: outcome === 'not_quite' ? 'Not quite' : 'Almost',
+      tone: outcome === 'not_quite' ? 'ember' : 'sun',
     }))
 
   return [...cards, ...questions]
+}
+
+/** "10 min" under an hour, otherwise in days: "1 day", "3 days". */
+export function formatInterval(minutes: number): string {
+  if (minutes < 60) {
+    return `${Math.max(1, Math.round(minutes))} min`
+  }
+
+  return counted(Math.max(1, Math.round(minutes / (24 * 60))), 'day', 'days')
+}
+
+/** When the card comes back for each rating, for the rating bar. */
+export function ratingIntervals(card: Flashcard): Record<Rating, string> {
+  const minutes = card.next_review_in_minutes
+
+  return {
+    again: formatInterval(minutes.again),
+    hard: formatInterval(minutes.hard),
+    good: formatInterval(minutes.good),
+    easy: formatInterval(minutes.easy),
+  }
+}
+
+/** A piece of your explanation, and the gap Sprout asks about in it (if any). */
+export interface ExplanationPart {
+  text: string
+  gap: Gap | null
+}
+
+/**
+ * Splits your explanation so the gaps can be highlighted. The API quotes each gap exactly from
+ * the text; a gap that can't be found (or overlaps an earlier one) is left unmarked.
+ */
+export function explanationParts(text: string, gaps: Gap[]): ExplanationPart[] {
+  const found = gaps
+    .map((gap) => ({ gap, start: text.indexOf(gap.text) }))
+    .filter(({ gap, start }) => start !== -1 && gap.text !== '')
+    .sort((first, second) => first.start - second.start)
+
+  const parts: ExplanationPart[] = []
+  let position = 0
+  for (const { gap, start } of found) {
+    if (start < position) {
+      continue
+    }
+    if (start > position) {
+      parts.push({ text: text.slice(position, start), gap: null })
+    }
+    parts.push({ text: gap.text, gap })
+    position = start + gap.text.length
+  }
+  if (position < text.length) {
+    parts.push({ text: text.slice(position), gap: null })
+  }
+
+  return parts
+}
+
+/** "About N min": from the start to your last rating, answer, explanation or message. */
+export function sessionMinutes(
+  session: Pick<PracticeSession, 'started_at' | 'last_activity_at'>,
+): number {
+  const start = new Date(session.started_at).getTime()
+  const end = new Date(session.last_activity_at).getTime()
+
+  return Math.max(1, Math.round((end - start) / 60_000))
 }

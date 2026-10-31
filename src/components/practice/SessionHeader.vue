@@ -69,8 +69,5 @@ const badgeTone = computed<BadgeTone>(() => badgeTones[practiceMode(mode).tint])
       <!-- Balances the End session button, so the middle stays centred. -->
       <span class="hidden w-28 sm:block" />
     </div>
-    <p class="bg-surface-sunken px-4 py-1 text-center text-caption font-normal text-ink-subtle">
-      Practice results aren’t saved yet, so your schedule and mastery stay as they are.
-    </p>
   </header>
 </template>

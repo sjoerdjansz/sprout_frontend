@@ -2,7 +2,7 @@
 import type { Rating } from '@/stores/flashcards'
 
 const { intervals } = defineProps<{
-  /** The next interval per grade ("3 days"), once a scheduler can say; hidden without it. */
+  /** When the card comes back per grade ("3 days"); hidden without it. */
   intervals?: Record<Rating, string>
 }>()
 

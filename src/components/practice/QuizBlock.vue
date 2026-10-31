@@ -3,9 +3,13 @@ import { computed, ref } from 'vue'
 import BaseBadge from '@/components/BaseBadge.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
-import type { IconName } from '@/components/icons'
+import BaseTextarea from '@/components/BaseTextarea.vue'
+import FormError from '@/components/FormError.vue'
 import QuizOption, { type QuizOptionState } from '@/components/QuizOption.vue'
-import { summariseQuiz, type QuizAnswer, type QuizOutcome } from '@/lib/practiceSession'
+import QuizFeedback from '@/components/practice/QuizFeedback.vue'
+import { ApiError } from '@/lib/api'
+import { summariseQuiz, type QuizAnswer } from '@/lib/practiceSession'
+import { usePracticeStore, type AnswerInput, type CheckedAnswer } from '@/stores/practice'
 import type { Question, QuestionOption } from '@/stores/questions'
 
 const {
@@ -14,9 +18,9 @@ const {
   subtopicTitles,
   secondTry = true,
 } = defineProps<{
-  /** Multiple choice only: they're checked here, from `is_correct`. */
+  /** Multiple choice and open questions; the API checks every answer. */
   questions: Question[]
-  /** What you answered so far in this block, for the score in the footer. */
+  /** What you answered so far in this block (also before a reload), for the footer. */
   answers: QuizAnswer[]
   subtopicTitles: Record<number, string>
   /** A wrong first pick gets a nudge and a second try ("Hint before the answer" in settings). */
@@ -24,49 +28,81 @@ const {
 }>()
 
 const emit = defineEmits<{
-  answer: [question: Question, outcome: QuizOutcome]
   finish: []
 }>()
+
+const practice = usePracticeStore()
 
 /** `retry`: the first pick was wrong and you get a second try before the answer. */
 type Phase = 'answer' | 'retry' | 'done'
 
-const index = ref(0)
+// Questions are answered in order, so a session picked up again goes on after the answered ones.
+const index = ref(answers.length)
 const phase = ref<Phase>('answer')
 const pickedId = ref<number | null>(null)
 const wrongFirstId = ref<number | null>(null)
-const outcome = ref<QuizOutcome | null>(null)
+const typedAnswer = ref('')
+/** The nudge after a wrong first pick: why that option was wrong. */
+const nudge = ref<string | null>(null)
+/** The graded answer that ended the question. */
+const checked = ref<CheckedAnswer | null>(null)
+const checking = ref(false)
+const checkError = ref<string | null>(null)
 
 const question = computed<Question | undefined>(() => questions[index.value])
+const isOpen = computed<boolean>(() => question.value?.type === 'open')
 const correctOption = computed<QuestionOption | undefined>(() =>
   question.value?.options.find((option) => option.is_correct),
 )
 const isLast = computed<boolean>(() => index.value >= questions.length - 1)
 const score = computed(() => summariseQuiz(answers))
 
-function finishQuestion(result: QuizOutcome): void {
-  if (question.value === undefined) {
+const canCheck = computed<boolean>(() =>
+  isOpen.value ? typedAnswer.value.trim() !== '' : pickedId.value !== null,
+)
+
+async function send(input: AnswerInput): Promise<void> {
+  const current = question.value
+  if (current === undefined || checking.value) {
     return
   }
-  outcome.value = result
-  phase.value = 'done'
-  emit('answer', question.value, result)
+  checking.value = true
+  checkError.value = null
+
+  try {
+    const answered = await practice.answerQuestion(current, input)
+    if (!answered.try_again) {
+      checked.value = answered.answer
+      phase.value = 'done'
+    } else if (secondTry) {
+      // A second retrieval is worth more than reading the answer.
+      wrongFirstId.value = pickedId.value
+      pickedId.value = null
+      nudge.value = answered.answer.feedback
+      phase.value = 'retry'
+    } else {
+      // Without hints a wrong first pick ends the question; the API still offers a second try.
+      checking.value = false
+      await send({ dont_know: true })
+    }
+  } catch (caught) {
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+    // Nothing was stored, so your pick or typed answer stays to send again.
+    checkError.value = caught.message
+  } finally {
+    checking.value = false
+  }
 }
 
 function check(): void {
-  const picked = question.value?.options.find((option) => option.id === pickedId.value)
-  if (picked === undefined) {
+  if (isOpen.value) {
+    void send({ response: typedAnswer.value.trim() })
     return
   }
-  if (picked.is_correct) {
-    finishQuestion(phase.value === 'retry' ? 'second_try' : 'right')
-  } else if (phase.value === 'answer' && secondTry) {
-    // A second retrieval is worth more than reading the answer.
-    wrongFirstId.value = picked.id
-    pickedId.value = null
-    phase.value = 'retry'
-  } else {
-    finishQuestion('wrong')
+  if (pickedId.value !== null) {
+    void send({ option_id: pickedId.value, second_try: phase.value === 'retry' })
   }
 }
 
@@ -79,7 +115,10 @@ function next(): void {
   phase.value = 'answer'
   pickedId.value = null
   wrongFirstId.value = null
-  outcome.value = null
+  typedAnswer.value = ''
+  nudge.value = null
+  checked.value = null
+  checkError.value = null
 }
 
 function optionState(option: QuestionOption): QuizOptionState {
@@ -98,41 +137,17 @@ function optionState(option: QuestionOption): QuizOptionState {
 
 const letters = 'ABCDEFGH'
 
-// The hint after a wrong first try: why that pick was wrong, when the question says so.
-const nudge = computed<string | null>(
-  () =>
-    question.value?.options.find((option) => option.id === wrongFirstId.value)?.explanation ?? null,
+// After a wrong multiple choice answer you see the right option and why it's right.
+const rightAnswer = computed<string | null>(() =>
+  !isOpen.value && checked.value?.verdict === 'not_quite'
+    ? (correctOption.value?.label ?? null)
+    : null,
 )
-
-interface Feedback {
-  title: string
-  icon: IconName
-  ground: string
-  ink: string
-}
-
-const feedback = computed<Feedback | null>(() => {
-  switch (outcome.value) {
-    case 'right':
-      return { title: 'Correct.', icon: 'check', ground: 'bg-sprout-soft', ink: 'text-sprout-ink' }
-    case 'second_try':
-      return {
-        title: 'Got it on the second try.',
-        icon: 'check',
-        ground: 'bg-sprout-soft',
-        ink: 'text-sprout-ink',
-      }
-    case 'wrong':
-      return {
-        title: 'Not this time, and that’s useful.',
-        icon: 'rotate-ccw',
-        ground: 'bg-ember-soft',
-        ink: 'text-ember-ink',
-      }
-    default:
-      return null
-  }
-})
+const feedbackText = computed<string | null>(() =>
+  rightAnswer.value !== null
+    ? (correctOption.value?.explanation ?? null)
+    : (checked.value?.feedback ?? null),
+)
 </script>
 
 <template>
@@ -143,7 +158,8 @@ const feedback = computed<Feedback | null>(() => {
   >
     <div class="flex w-full max-w-170 flex-col gap-5 self-center">
       <div class="flex flex-wrap items-center gap-2">
-        <BaseBadge tone="sky" icon="list-checks">Multiple choice</BaseBadge>
+        <BaseBadge v-if="isOpen" tone="sky" icon="brain">Open question</BaseBadge>
+        <BaseBadge v-else tone="sky" icon="list-checks">Multiple choice</BaseBadge>
         <BaseBadge v-if="subtopicTitles[question.subtopic_id]">
           {{ subtopicTitles[question.subtopic_id] }}
         </BaseBadge>
@@ -154,13 +170,22 @@ const feedback = computed<Feedback | null>(() => {
         {{ question.prompt }}
       </h1>
 
-      <div class="flex flex-col gap-2.5">
+      <BaseTextarea
+        v-if="isOpen"
+        v-model="typedAnswer"
+        label="Your answer"
+        rows="5"
+        placeholder="Answer in your own words. No peeking!"
+        :disabled="phase === 'done' || checking"
+        data-test="open-answer"
+      />
+      <div v-else class="flex flex-col gap-2.5">
         <QuizOption
           v-for="(option, optionIndex) in question.options"
           :key="option.id"
           :letter="letters[optionIndex] ?? '?'"
           :state="optionState(option)"
-          :disabled="phase === 'done' || option.id === wrongFirstId"
+          :disabled="phase === 'done' || checking || option.id === wrongFirstId"
           :data-test="`option-${option.id}`"
           @select="pickedId = option.id"
         >
@@ -184,43 +209,44 @@ const feedback = computed<Feedback | null>(() => {
         </div>
       </div>
 
-      <div
-        v-if="feedback"
-        class="flex items-start gap-3 rounded-md px-4 py-3.5 text-body"
-        :class="feedback.ground"
+      <p
+        v-if="checking && isOpen"
+        class="text-body text-ink-muted"
         aria-live="polite"
-        data-test="quiz-feedback"
+        data-test="quiz-checking"
       >
-        <BaseIcon :name="feedback.icon" :size="18" class="mt-0.5 flex-none" :class="feedback.ink" />
-        <div class="flex flex-col gap-1 text-ink">
-          <b :class="feedback.ink">{{ feedback.title }}</b>
-          <span v-if="outcome === 'wrong' && correctOption">
-            The answer is <b>{{ correctOption.label }}</b
-            >.
-          </span>
-          <span v-if="correctOption?.explanation">{{ correctOption.explanation }}</span>
-        </div>
-      </div>
+        Sprout is checking your answer…
+      </p>
+
+      <QuizFeedback
+        v-if="checked?.verdict"
+        :verdict="checked.verdict"
+        :second-try="wrongFirstId !== null"
+        :right-answer="rightAnswer"
+        :feedback="feedbackText"
+      />
+
+      <FormError v-if="checkError" :message="checkError" />
 
       <div class="flex items-center justify-between gap-3 pt-1">
         <BaseButton
           variant="ghost"
           size="sm"
           icon="circle-help"
-          :disabled="phase === 'done'"
+          :disabled="phase === 'done' || checking"
           data-test="dont-know"
-          @click="finishQuestion('wrong')"
+          @click="send({ dont_know: true })"
         >
           I don’t know
         </BaseButton>
         <BaseButton
           v-if="phase !== 'done'"
           size="lg"
-          :disabled="pickedId === null"
+          :disabled="!canCheck || checking"
           data-test="check-answer"
           @click="check"
         >
-          Check answer
+          {{ checking ? 'Checking…' : 'Check answer' }}
         </BaseButton>
         <BaseButton
           v-else
@@ -242,7 +268,7 @@ const feedback = computed<Feedback | null>(() => {
       ><b class="text-sprout-ink">{{ score.right }}</b> right</span
     >
     <span
-      ><b class="text-sun-ink">{{ score.secondTry }}</b> on 2nd try</span
+      ><b class="text-sun-ink">{{ score.almost }}</b> almost</span
     >
     <span
       ><b class="text-ember-ink">{{ score.wrong }}</b> wrong</span

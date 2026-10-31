@@ -26,6 +26,8 @@ export interface Flashcard {
   last_reviewed_at: string | null
   /** 0–100, the expected chance you remember it now; null until it has been reviewed. */
   recall: number | null
+  /** Per rating, how many minutes until the card comes back if you rate it that way now. */
+  next_review_in_minutes: Record<Rating, number>
   created_at: string
 }
 

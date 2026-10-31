@@ -2,17 +2,24 @@ import { describe, expect, it } from 'vitest'
 import {
   availableModes,
   blockAmount,
+  blocksFromPlan,
   buildBlocks,
   cardsDone,
   defaultsFromSettings,
   emptyResult,
   estimateMinutes,
+  explanationParts,
+  formatInterval,
   isBlockComplete,
+  mixableModes,
   pickCards,
   pickConcept,
   pickQuestions,
   resultLine,
+  resultsFromDone,
+  resumeIndex,
   scopeTitle,
+  sessionPlan,
   slippedItems,
   summariseCards,
   unavailableReason,
@@ -21,6 +28,7 @@ import {
   type PracticeScope,
 } from '@/lib/practiceSession'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
+import { makeDone } from '@/__tests__/practiceFixtures'
 import { dateFromToday, makeLibrary } from '@/__tests__/topicFixtures'
 import type { Topic } from '@/stores/topics'
 
@@ -72,17 +80,29 @@ describe('practice session rules', () => {
       flashcards: [makeFlashcard({ paused: true })],
       questions: [],
     }
-    const onlyOpen: PracticeMaterial = { flashcards: [], questions: [makeOpenQuestion()] }
+    const onlyFeynman: PracticeMaterial = {
+      flashcards: [],
+      questions: [makeOpenQuestion({ type: 'feynman' })],
+    }
 
     expect(unavailableReason('cards', oneSubtopic(), noMaterial)).toBe('No flashcards here yet.')
     expect(unavailableReason('cards', oneSubtopic(), paused)).toBe('All cards here are paused.')
-    expect(unavailableReason('retrieval', oneSubtopic(), onlyOpen)).toBe(
-      'No multiple-choice questions here yet.',
+    expect(unavailableReason('retrieval', oneSubtopic(), onlyFeynman)).toBe(
+      'No quiz questions here yet.',
     )
     expect(unavailableReason('feynman', { ...wholeTopic(), subtopics: [] }, noMaterial)).toBe(
       'Add a subtopic first.',
     )
     expect(availableModes(oneSubtopic(), noMaterial)).toEqual(['feynman', 'open'])
+  })
+
+  it('mixes every mode that can run except the open session', () => {
+    expect(mixableModes(['cards', 'retrieval', 'feynman', 'open'])).toEqual([
+      'cards',
+      'retrieval',
+      'feynman',
+    ])
+    expect(mixableModes(['feynman', 'open'])).toEqual(['feynman'])
   })
 
   it('puts due cards first, leaves paused ones out and cuts to the size', () => {
@@ -131,13 +151,14 @@ describe('practice session rules', () => {
     expect(cards.map((card) => card.id)).toEqual([2, 3, 1])
   })
 
-  it('asks multiple choice only, unanswered and wrong ones first', () => {
+  it('asks multiple choice and open questions, unanswered and wrong ones first', () => {
     const material: PracticeMaterial = {
       flashcards: [],
       questions: [
         makeQuestion({ id: 1 }),
         makeOpenQuestion({ id: 2, latest_answer: null }),
         makeQuestion({ id: 3, latest_answer: null }),
+        makeOpenQuestion({ id: 5, type: 'feynman', latest_answer: null }),
         makeQuestion({
           id: 4,
           latest_answer: {
@@ -146,6 +167,7 @@ describe('practice session rules', () => {
             score: 0,
             verdict: 'not_quite',
             feedback: 'Not quite.',
+            gaps: null,
             answered_at: '2026-10-28T08:00:00.000000Z',
           },
         }),
@@ -154,7 +176,7 @@ describe('practice session rules', () => {
 
     const questions = pickQuestions(material, oneSubtopic(), options())
 
-    expect(questions.map((question) => question.id)).toEqual([3, 4, 1])
+    expect(questions.map((question) => question.id)).toEqual([2, 3, 4, 1])
   })
 
   it('explains the subtopic you picked, or the one whose Explain it facet is weakest', () => {
@@ -178,7 +200,6 @@ describe('practice session rules', () => {
       subtopicId: 102,
       subtopicTitle: 'Cell respiration',
       prompt: 'Explain respiration.',
-      keyPoints: ['In the mitochondria.'],
     })
     expect(pickConcept(oneSubtopic(), material).prompt).toBe('Explain Photosynthesis as if I’m 12.')
   })
@@ -253,12 +274,12 @@ describe('practice session rules', () => {
     cards.ratings = [{ card: makeFlashcard(), rating: 'good' }]
     const quiz = { ...emptyResult('retrieval'), status: 'finished' as const }
     quiz.answers = [
-      { question: makeQuestion({ id: 1 }), outcome: 'right' },
-      { question: makeQuestion({ id: 2 }), outcome: 'second_try' },
+      { question: makeQuestion({ id: 1 }), outcome: 'correct' },
+      { question: makeQuestion({ id: 2 }), outcome: 'almost' },
     ]
 
     expect(resultLine(cards)).toBe('1 of 1 card from memory')
-    expect(resultLine(quiz)).toBe('1 right · 1 on the second try · 0 wrong')
+    expect(resultLine(quiz)).toBe('1 right · 1 almost · 0 wrong')
     expect(resultLine({ ...emptyResult('open'), status: 'skipped' })).toBe('Skipped')
   })
 
@@ -270,11 +291,148 @@ describe('practice session rules', () => {
       { card: makeFlashcard({ id: 2, front: 'Second' }), rating: 'good' },
     ]
     const quiz = emptyResult('retrieval')
-    quiz.answers = [{ question: makeQuestion({ prompt: 'Which light?' }), outcome: 'wrong' }]
+    quiz.answers = [{ question: makeQuestion({ prompt: 'Which light?' }), outcome: 'not_quite' }]
 
     expect(slippedItems([cards, quiz])).toEqual([
       { key: 'card-1', title: 'First', grade: 'Again', tone: 'ember' },
       { key: 'question-17', title: 'Which light?', grade: 'Not quite', tone: 'ember' },
+    ])
+  })
+})
+
+describe('a session on the API', () => {
+  const card = makeFlashcard({ id: 41 })
+  const question = makeQuestion({ id: 17 })
+  const feynman = makeOpenQuestion({
+    id: 31,
+    type: 'feynman',
+    prompt: 'Explain Photosynthesis as if I’m 12.',
+    latest_answer: {
+      response: 'Plants make food from light.',
+      option_id: null,
+      score: 70,
+      verdict: 'almost',
+      feedback: 'Name the sugar.',
+      gaps: [{ text: 'make food', note: 'What kind of food?' }],
+      answered_at: '2026-10-31T09:05:00.000000Z',
+    },
+  })
+  const material: PracticeMaterial = { flashcards: [card], questions: [question, feynman] }
+
+  it('keeps the plan as ids in block order, and rebuilds the blocks from it', () => {
+    const blocks = buildBlocks(
+      oneSubtopic(),
+      material,
+      options({ modes: ['cards', 'retrieval', 'feynman'] }),
+    )
+    const plan = sessionPlan(blocks)
+
+    expect(plan).toEqual({
+      modes: ['cards', 'retrieval', 'feynman'],
+      card_ids: [41],
+      question_ids: [17],
+      explain_subtopic_id: 101,
+    })
+    expect(blocksFromPlan(plan, oneSubtopic(), material)).toEqual(blocks)
+  })
+
+  it('leaves out a card deleted since the session started', () => {
+    const plan = {
+      modes: ['cards' as const],
+      card_ids: [41, 99],
+      question_ids: [],
+      explain_subtopic_id: null,
+    }
+
+    const [block] = blocksFromPlan(plan, oneSubtopic(), material)
+
+    expect(block?.mode === 'cards' && block.cards.map((each) => each.id)).toEqual([41])
+  })
+
+  it('rebuilds what you did from what the API kept', () => {
+    const blocks = blocksFromPlan(
+      {
+        modes: ['cards', 'retrieval', 'feynman', 'open'],
+        card_ids: [41],
+        question_ids: [17],
+        explain_subtopic_id: 101,
+      },
+      oneSubtopic(),
+      material,
+    )
+    const done = makeDone({
+      flashcard_reviews: [
+        { flashcard_id: 41, rating: 'again', reviewed_at: '2026-10-31T09:01:00.000000Z' },
+        { flashcard_id: 41, rating: 'good', reviewed_at: '2026-10-31T09:02:00.000000Z' },
+      ],
+      answers: [
+        { question_id: 17, option_id: 60, score: null, verdict: 'not_quite', answered_at: '' },
+        { question_id: 17, option_id: 61, score: 60, verdict: 'almost', answered_at: '' },
+      ],
+      explanations: [
+        { question_id: 31, version: 1, score: 70, verdict: 'almost', answered_at: '' },
+      ],
+    })
+
+    const results = resultsFromDone(blocks, done, material)
+
+    expect(results[0]?.ratings.map((entry) => entry.rating)).toEqual(['again', 'good'])
+    // The wrong first pick has no score, so only its second try counts.
+    expect(results[1]?.answers).toEqual([{ question, outcome: 'almost' }])
+    expect(results[2]?.explanations).toEqual([
+      {
+        version: 1,
+        text: 'Plants make food from light.',
+        feedback: 'Name the sugar.',
+        gaps: [{ text: 'make food', note: 'What kind of food?' }],
+      },
+    ])
+    expect(results.map((result) => result.status)).toEqual([
+      'started',
+      'started',
+      'started',
+      'not_started',
+    ])
+    // Cards and quiz are done; Explain it still needs its simpler version.
+    expect(resumeIndex(blocks, results)).toBe(2)
+  })
+
+  it('has nothing left to pick up when every block is done, but never ends an open session', () => {
+    const cardsOnly = blocksFromPlan(
+      { modes: ['cards'], card_ids: [41], question_ids: [], explain_subtopic_id: null },
+      oneSubtopic(),
+      material,
+    )
+    const rated = resultsFromDone(
+      cardsOnly,
+      makeDone({ flashcard_reviews: [{ flashcard_id: 41, rating: 'good', reviewed_at: '' }] }),
+      material,
+    )
+    const openOnly = blocksFromPlan(
+      { modes: ['open'], card_ids: [], question_ids: [], explain_subtopic_id: null },
+      oneSubtopic(),
+      material,
+    )
+
+    expect(resumeIndex(cardsOnly, rated)).toBeNull()
+    expect(resumeIndex(openOnly, [emptyResult('open')])).toBe(0)
+  })
+
+  it('shows when a card comes back in minutes or days', () => {
+    expect(formatInterval(10)).toBe('10 min')
+    expect(formatInterval(1440)).toBe('1 day')
+    expect(formatInterval(4320)).toBe('3 days')
+  })
+
+  it('splits an explanation around the gaps it quotes', () => {
+    const gap = { text: 'make food', note: 'What kind of food?' }
+
+    expect(
+      explanationParts('Plants make food from light.', [gap, { text: 'missing', note: '' }]),
+    ).toEqual([
+      { text: 'Plants ', gap: null },
+      { text: 'make food', gap },
+      { text: ' from light.', gap: null },
     ])
   })
 })
