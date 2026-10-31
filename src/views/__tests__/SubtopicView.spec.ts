@@ -5,7 +5,12 @@ import router from '@/router'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
 import { makeDone, makePracticeSession } from '@/__tests__/practiceFixtures'
 import { stubApi } from '@/__tests__/stubApi'
-import { makeLibrary, makeSubtopic, makeSubtopicDetail } from '@/__tests__/topicFixtures'
+import {
+  makeLibrary,
+  makeSource,
+  makeSubtopic,
+  makeSubtopicDetail,
+} from '@/__tests__/topicFixtures'
 import { pollInterval } from '@/composables/useGenerationPolling'
 import { undoWindow } from '@/composables/useUndoableDelete'
 import { useAuthStore, type User } from '@/stores/auth'
@@ -322,6 +327,17 @@ describe('SubtopicView', () => {
     expect(calls('GET /subtopics/101')).toBe(2)
   })
 
+  it('only offers Generate from sources when the subtopic has a source', async () => {
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': Response.json(
+        makeSubtopicDetail({ notes: null, source_count: 0, sources: [] }),
+      ),
+    })
+
+    expect(wrapper.get('[data-test="generate"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="tab-sources"]').text()).toContain('0')
+  })
+
   it('makes cards in the background and shows them once they are ready', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
     const wrapper = await mountSubtopic({
@@ -370,7 +386,7 @@ describe('SubtopicView', () => {
     expect(calls('GET /subtopics/101')).toBe(3)
   })
 
-  it('says when the notes were already covered', async () => {
+  it('says when the sources were already covered', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
     const wrapper = await mountSubtopic({
       'GET /subtopics/101': [
@@ -382,7 +398,7 @@ describe('SubtopicView', () => {
     await vi.advanceTimersByTimeAsync(pollInterval)
     await flushPromises()
     expect(wrapper.get('[data-test="toast"]').text()).toContain('Nothing new to add')
-    expect(wrapper.get('[data-test="toast"]').text()).toContain('Your notes are already covered.')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Your sources are already covered.')
   })
 
   it('shows no toast when making the cards failed', async () => {
@@ -411,7 +427,7 @@ describe('SubtopicView', () => {
     })
 
     expect(wrapper.get('[data-test="generation-failed"]').text()).toContain(
-      "Sprout couldn't make cards from your notes.",
+      "Sprout couldn't make cards from your sources.",
     )
     expect(wrapper.get('[data-test="generation-badge"]').text()).toBe('Cards not made')
     expect(cardFronts(wrapper)).toHaveLength(2)
@@ -559,6 +575,27 @@ describe('SubtopicView', () => {
     )
     expect(body).toMatchObject({ topic_id: 1, title: 'Light reactions' })
     expect(wrapper.find('dialog').exists()).toBe(false)
+  })
+
+  it('opens the form with only your own notes, never the tutor’s', async () => {
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': Response.json(
+        makeSubtopicDetail({
+          notes: null,
+          source_count: 1,
+          sources: [makeSource({ id: 41, type: 'tutor', content: 'From the tutor.' })],
+        }),
+      ),
+      'GET /topics': Response.json(makeLibrary()),
+      'GET /categories': Response.json([]),
+    })
+
+    await wrapper.get('[data-test="edit-subtopic"]').trigger('click')
+    await flushPromises()
+
+    const notes = wrapper.get('[data-test="notes"]').element as HTMLTextAreaElement
+    expect(notes.value).toBe('')
+    expect(wrapper.get('dialog').text()).toContain('Notes from the chat and your files stay')
   })
 
   it('deletes the subtopic after you confirm, and goes back to the knowledge map', async () => {

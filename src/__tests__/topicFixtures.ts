@@ -1,4 +1,11 @@
-import type { Category, FacetProgress, Subtopic, SubtopicDetail, Topic } from '@/stores/topics'
+import type {
+  Category,
+  FacetProgress,
+  Subtopic,
+  SubtopicDetail,
+  SubtopicSource,
+  Topic,
+} from '@/stores/topics'
 
 /** YYYY-MM-DD a number of days from today on this device, as the API sends review dates. */
 export function dateFromToday(days: number): string {
@@ -28,6 +35,7 @@ export function makeSubtopic(overrides: Partial<Subtopic> = {}): Subtopic {
     title: 'Photosynthesis',
     description: 'How plants turn light, water and carbon dioxide into sugar and oxygen.',
     notes: 'Plants use chlorophyll to capture light.',
+    source_count: 1,
     generation_status: 'ready',
     mastery: 64,
     due_cards: 0,
@@ -137,12 +145,25 @@ export function makeLibrary(): Topic[] {
   ]
 }
 
-/** The subtopic page's subtopic: Photosynthesis with its topic and counts. */
+/** A source shaped like the API.md example; your own notes unless you say otherwise. */
+export function makeSource(overrides: Partial<SubtopicSource> = {}): SubtopicSource {
+  return {
+    id: 51,
+    type: 'own',
+    content: 'Plants use chlorophyll to capture light.',
+    material: null,
+    updated_at: '2026-10-31T22:06:24.000000Z',
+    ...overrides,
+  }
+}
+
+/** The subtopic page's subtopic: Photosynthesis with its topic, counts and your notes as its source. */
 export function makeSubtopicDetail(overrides: Partial<SubtopicDetail> = {}): SubtopicDetail {
   return {
     ...makeSubtopic({ due_cards: 1, next_review_on: dateFromToday(0) }),
     topic: { id: 1, title: 'Biology', category: { id: 1, name: 'Science' } },
     counts: { flashcards: 2, questions: 2, sessions: 1 },
+    sources: [makeSource()],
     ...overrides,
   }
 }

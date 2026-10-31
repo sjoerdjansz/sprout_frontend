@@ -14,12 +14,12 @@ interface MadeBySprout {
   questions: number
 }
 
-/** The toast once Sprout is done: what it added, or that the notes were already covered. */
+/** The toast once Sprout is done: what it added, or that the sources were already covered. */
 export function addedMaterialToast(added: MadeBySprout): Toast {
   if (added.flashcards + added.questions === 0) {
     return {
       title: 'Nothing new to add',
-      message: 'Your notes are already covered.',
+      message: 'Your sources are already covered.',
       tone: 'sprout',
       icon: 'check',
     }

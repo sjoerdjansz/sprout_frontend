@@ -68,6 +68,9 @@ const {
 } = edit
 const { isOpen: isDeleteOpen, deleting: deletingSubtopic, error: deleteError } = deletion
 
+// "Generate from sources" needs something to generate from.
+const hasSources = computed<boolean>(() => (subtopic.value?.source_count ?? 0) > 0)
+
 const userInitials = computed<string>(() => initials(auth.user?.name ?? ''))
 
 type TabId = 'cards' | 'questions' | 'sessions' | 'sources'
@@ -78,7 +81,7 @@ const tabs = computed<TabItem<TabId>[]>(() => [
   { id: 'cards', label: 'Flashcards', icon: 'layers', count: cards.value.length },
   { id: 'questions', label: 'Questions', icon: 'list-checks', count: questions.value.length },
   { id: 'sessions', label: 'Sessions', icon: 'message-circle', count: sessions.value.length },
-  { id: 'sources', label: 'Sources', icon: 'book-open', count: notes.value === null ? 0 : 1 },
+  { id: 'sources', label: 'Sources', icon: 'book-open', count: subtopic.value?.source_count ?? 0 },
 ])
 
 const tabLabel = computed<string>(
@@ -160,6 +163,7 @@ watch(tab, () => {
           :saving="savingCard"
           :editor-error="cardError"
           :generating="generating"
+          :has-sources="hasSources"
           @add="cardEditor.open('new')"
           @edit="(card) => cardEditor.open(card.id)"
           @cancel-edit="cardEditor.close"
@@ -171,6 +175,7 @@ watch(tab, () => {
         <QuestionsPanel
           v-else-if="tab === 'questions'"
           :questions="questions"
+          :has-sources="hasSources"
           @remove="removeQuestion"
           @quiz="practise('retrieval')"
         />

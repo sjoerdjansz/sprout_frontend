@@ -6,8 +6,10 @@ import QuestionRow from '@/components/subtopic/QuestionRow.vue'
 import { filterQuestions, questionFilters, type QuestionFilter } from '@/lib/subtopicPage'
 import type { Question } from '@/stores/questions'
 
-const { questions } = defineProps<{
+const { questions, hasSources } = defineProps<{
   questions: Question[]
+  /** Questions are made from the sources, so without one the empty state says to add one. */
+  hasSources: boolean
 }>()
 
 const emit = defineEmits<{
@@ -57,7 +59,9 @@ function toggle(questionId: number): void {
     >
       {{
         questions.length === 0
-          ? 'No questions yet. Generate them from your notes.'
+          ? hasSources
+            ? 'No questions yet. Generate them from your sources.'
+            : 'No questions yet. Add your notes on the Sources tab so Sprout can make them.'
           : 'No questions match this filter.'
       }}
     </li>

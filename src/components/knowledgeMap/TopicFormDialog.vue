@@ -80,10 +80,18 @@ const isNewCategory = computed<boolean>(
   () => !isSubtopic && categoryChoice.value === newCategoryChoice,
 )
 
-// A subtopic's notes become cards after the save; a topic's source is split into subtopics first.
-const notesHint = isSubtopic
-  ? 'Sprout turns these into flashcards and questions after you save.'
-  : 'After you save, Sprout suggests subtopics from this and makes cards for the ones you keep.'
+// A subtopic's notes are only your own: the tutor's notes and file parts are separate sources that
+// saving never touches. A topic's source is split into subtopics first.
+const notesHints: Record<TopicFormMode, string> = {
+  'add-topic':
+    'After you save, Sprout suggests subtopics from this and makes cards for the ones you keep.',
+  'edit-topic':
+    'After you save, Sprout suggests subtopics from this and makes cards for the ones you keep.',
+  'add-subtopic': 'Sprout turns these into flashcards and questions after you save.',
+  'edit-subtopic':
+    'Sprout turns these into flashcards and questions after you save. Notes from the chat and your files stay as they are, on the Sources tab.',
+}
+const notesHint = notesHints[mode]
 
 const canSave = computed<boolean>(
   () =>
@@ -167,7 +175,7 @@ function save(): void {
 
       <NotesField
         v-model="notes"
-        label="Notes or a source"
+        :label="isSubtopic ? 'Your notes' : 'Notes or a source'"
         :hint="notesHint"
         :maximum-length="isSubtopic ? 10_000 : 30_000"
         :error="error?.fieldError('notes')"
