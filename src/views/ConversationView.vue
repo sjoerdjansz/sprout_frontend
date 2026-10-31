@@ -132,7 +132,7 @@ async function continueLearning(text: string): Promise<void> {
   void scrollToNewest()
 
   try {
-    const continued = await conversationsStore.startConversation(text, topicId)
+    const continued = await conversationsStore.startConversation(text, { topicId })
     await router.push({ name: 'conversation', params: { id: continued.id } })
   } catch (caught) {
     if (!(caught instanceof ApiError)) {

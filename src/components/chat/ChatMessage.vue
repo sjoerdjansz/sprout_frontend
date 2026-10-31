@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import BaseBadge from '@/components/BaseBadge.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
+import AttachmentChip from '@/components/chat/AttachmentChip.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { techniqueBadges, type Technique } from '@/lib/techniques'
 import type { AvatarColor } from '@/stores/auth'
+
+/** A file sent with a message: its name and size, it can't be opened or downloaded. */
+export interface MessageFile {
+  original_filename: string
+  size_bytes: number
+}
 
 const {
   from,
@@ -11,6 +18,7 @@ const {
   avatarColor,
   typing = false,
   technique = null,
+  materials = [],
 } = defineProps<{
   from: 'tutor' | 'user'
   /** The learner's initials, for their avatar. */
@@ -20,6 +28,8 @@ const {
   typing?: boolean
   /** The learning technique the tutor applies in this turn, named in a badge above it. */
   technique?: Technique | null
+  /** The files you sent with it; the tutor's messages never have any. */
+  materials?: MessageFile[]
 }>()
 </script>
 
@@ -63,6 +73,16 @@ const {
           {{ techniqueBadges[technique].label }}
         </BaseBadge>
         <slot />
+        <ul
+          v-if="from === 'user' && materials.length > 0"
+          aria-label="Attached files"
+          class="mt-2.5 flex flex-wrap gap-1.5 whitespace-normal"
+          data-test="message-files"
+        >
+          <li v-for="(file, index) in materials" :key="index" class="max-w-full min-w-0">
+            <AttachmentChip :name="file.original_filename" :size-bytes="file.size_bytes" />
+          </li>
+        </ul>
       </template>
     </div>
   </div>

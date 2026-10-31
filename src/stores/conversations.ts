@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { api } from '@/lib/api'
+import type { Material } from '@/stores/materials'
 import type { GenerationStatus } from '@/stores/topics'
 
 /** One message in a conversation. Tutor messages are Markdown. */
@@ -8,7 +9,19 @@ export interface Message {
   id: number
   role: 'user' | 'tutor'
   content: string
+  /**
+   * The files sent with it, in the order sent; always empty for the tutor. Left out of the
+   * history's `preview` (and practice sessions have none).
+   */
+  materials?: Material[]
   created_at: string
+}
+
+/** Starting a conversation: about one of your topics ("Continue learning"), and with files. */
+export interface StartOptions {
+  topicId?: number
+  /** Ready files to send with the first message. */
+  materialIds?: number[]
 }
 
 /** The learning goal; each part is null until the tutor and you agreed on it. */
@@ -82,6 +95,11 @@ export interface SaveResult {
   added: { subtopics: number }
 }
 
+// Only a message with files sends `material_ids`; the order is kept, since errors point at an index.
+function withMaterials(materialIds: number[]): { material_ids?: number[] } {
+  return materialIds.length > 0 ? { material_ids: materialIds } : {}
+}
+
 export const useConversationsStore = defineStore('conversations', () => {
   /** The chat history, latest activity first. */
   const conversations = ref<ConversationSummary[]>([])
@@ -121,10 +139,17 @@ export const useConversationsStore = defineStore('conversations', () => {
    * Starts a conversation with your first message; the tutor's reply comes back with it. With a
    * topic it continues that topic (an open practice session).
    */
-  async function startConversation(message: string, topicId?: number): Promise<Conversation> {
+  async function startConversation(
+    message: string,
+    { topicId, materialIds = [] }: StartOptions = {},
+  ): Promise<Conversation> {
     const startedConversation = await api<Conversation>('/conversations', {
       method: 'POST',
-      body: topicId === undefined ? { message } : { message, topic_id: topicId },
+      body: {
+        message,
+        ...(topicId !== undefined && { topic_id: topicId }),
+        ...withMaterials(materialIds),
+      },
     })
     conversation.value = startedConversation
     rememberInHistory(startedConversation)
@@ -132,10 +157,14 @@ export const useConversationsStore = defineStore('conversations', () => {
     return startedConversation
   }
 
-  async function sendMessage(id: number, message: string): Promise<Conversation> {
+  async function sendMessage(
+    id: number,
+    message: string,
+    materialIds: number[] = [],
+  ): Promise<Conversation> {
     const updatedConversation = await api<Conversation>(`/conversations/${id}/messages`, {
       method: 'POST',
-      body: { message },
+      body: { message, ...withMaterials(materialIds) },
     })
     conversation.value = updatedConversation
     rememberInHistory(updatedConversation)
