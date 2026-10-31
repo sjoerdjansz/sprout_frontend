@@ -26,6 +26,11 @@ export interface DraftSubtopic {
 /** The tutor's draft of the topic, updated with every reply. */
 export interface Draft {
   title: string | null
+  /**
+   * The tutor's suggestion: usually the name of one of your categories, otherwise a new one; null
+   * until the subject is clear.
+   */
+  category: string | null
   goal: Goal
   subtopics: DraftSubtopic[]
 }
@@ -52,6 +57,9 @@ export interface Conversation extends ConversationSummary {
 /** The body of `POST /conversations/{id}/save`: the draft as you reviewed it, complete. */
 export interface ReviewedDraft {
   title: string
+  /** A new topic needs one of these two; a continued topic keeps its category without either. */
+  category_id?: number
+  category_name?: string
   goal: {
     description: string
     deadline: string

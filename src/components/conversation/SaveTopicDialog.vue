@@ -3,19 +3,27 @@ import { computed, ref } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import BaseInput from '@/components/BaseInput.vue'
+import BaseSelect, { type SelectOption } from '@/components/BaseSelect.vue'
 import BaseTextarea from '@/components/BaseTextarea.vue'
 import FormError from '@/components/FormError.vue'
 import SubtopicFields from '@/components/conversation/SubtopicFields.vue'
 import type { ApiError } from '@/lib/api'
 import type { Draft, ReviewedDraft } from '@/stores/conversations'
+import type { Category } from '@/stores/topics'
 
 const {
   draft,
+  categories,
   saving = false,
   error = null,
 } = defineProps<{
   /** The tutor's draft, the starting point for your review; null for conversations from before drafts. */
   draft: Draft | null
+  /**
+   * Your categories, for a new topic to go in; null when this conversation continues a topic,
+   * which keeps its category.
+   */
+  categories: Category[] | null
   saving?: boolean
   error?: ApiError | null
 }>()
@@ -37,6 +45,35 @@ const title = ref(draft?.title ?? '')
 const goalDescription = ref(draft?.goal.description ?? '')
 const deadline = ref(draft?.goal.deadline ?? '')
 const recallPercentage = ref(draft?.goal.recall_percentage?.toString() ?? '')
+
+// The last option in the category list turns into a name field for a category of your own.
+const newCategoryChoice = 'new'
+const categoryChoices = computed<SelectOption[]>(() => [
+  ...(categories ?? []).map((category) => ({ value: String(category.id), label: category.name })),
+  { value: newCategoryChoice, label: 'New category…' },
+])
+
+// The tutor's suggestion is usually one of your categories by name, otherwise a new one. Without
+// a suggestion it starts on your first category, as the knowledge map's form does.
+function initialCategoryChoice(): string {
+  const suggestion = draft?.category?.toLowerCase() ?? null
+  const suggested = categories?.find((category) => category.name.toLowerCase() === suggestion)
+  if (suggested !== undefined) {
+    return String(suggested.id)
+  }
+  if (suggestion === null && categories?.[0] !== undefined) {
+    return String(categories[0].id)
+  }
+
+  return newCategoryChoice
+}
+
+// A <select> works with strings; the id goes back to a number on save.
+const categoryChoice = ref<string>(initialCategoryChoice())
+const newCategoryName = ref(
+  categoryChoice.value === newCategoryChoice ? (draft?.category ?? '') : '',
+)
+const isNewCategory = computed<boolean>(() => categoryChoice.value === newCategoryChoice)
 
 let nextKey = 0
 const subtopics = ref<SubtopicRow[]>(
@@ -63,9 +100,21 @@ function tomorrow(): string {
   ].join('-')
 }
 
+// Only one of the two: the API answers both together with "pick one or the other".
+function categoryFields(): Pick<ReviewedDraft, 'category_id' | 'category_name'> {
+  if (categories === null) {
+    return {}
+  }
+
+  return isNewCategory.value
+    ? { category_name: newCategoryName.value.trim() }
+    : { category_id: Number(categoryChoice.value) }
+}
+
 function save(): void {
   emit('save', {
     title: title.value.trim(),
+    ...categoryFields(),
     goal: {
       description: goalDescription.value.trim(),
       deadline: deadline.value,
@@ -111,6 +160,24 @@ const generalError = computed<string | null>(() => {
         :error="error?.fieldError('title')"
         data-test="topic-title"
       />
+
+      <template v-if="categories !== null">
+        <BaseSelect
+          v-model="categoryChoice"
+          label="Category"
+          :options="categoryChoices"
+          :error="error?.fieldError('category_id')"
+          data-test="category"
+        />
+        <BaseInput
+          v-if="isNewCategory"
+          v-model="newCategoryName"
+          label="Category name"
+          placeholder="e.g. Music"
+          :error="error?.fieldError('category_name')"
+          data-test="new-category"
+        />
+      </template>
 
       <fieldset class="flex flex-col gap-4">
         <legend class="mb-3 text-heading">Your goal</legend>

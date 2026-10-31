@@ -19,6 +19,7 @@ import {
   type ReviewedDraft,
   type SaveResult,
 } from '@/stores/conversations'
+import { useTopicsStore } from '@/stores/topics'
 
 const { id } = defineProps<{
   id: number
@@ -26,6 +27,7 @@ const { id } = defineProps<{
 
 const auth = useAuthStore()
 const conversationsStore = useConversationsStore()
+const topicsStore = useTopicsStore()
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'failed'
 
@@ -44,6 +46,8 @@ const pendingMessage = ref<string | null>(null)
 const sendError = ref<string | null>(null)
 
 const isSaveDialogOpen = ref(false)
+const openingSaveDialog = ref(false)
+const openSaveError = ref<string | null>(null)
 const saving = ref(false)
 const saveError = ref<ApiError | null>(null)
 const saveResult = ref<SaveResult | null>(null)
@@ -77,6 +81,7 @@ watch(
   () => {
     message.value = ''
     sendError.value = null
+    openSaveError.value = null
     saveResult.value = null
     isSaveDialogOpen.value = false
     void load()
@@ -105,8 +110,31 @@ async function send(text: string): Promise<void> {
   }
 }
 
-function openSaveDialog(): void {
+// A new topic goes in a category, so the review needs your categories before it opens: it
+// preselects the tutor's suggestion from them.
+async function openSaveDialog(): Promise<void> {
+  if (openingSaveDialog.value) {
+    return
+  }
   saveError.value = null
+  openSaveError.value = null
+
+  if (conversation.value?.topic === null) {
+    openingSaveDialog.value = true
+    try {
+      await topicsStore.fetchCategories()
+    } catch (caught) {
+      if (!(caught instanceof ApiError)) {
+        throw caught
+      }
+      openSaveError.value = caught.message
+
+      return
+    } finally {
+      openingSaveDialog.value = false
+    }
+  }
+
   isSaveDialogOpen.value = true
 }
 
@@ -171,6 +199,7 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
           <SavedNotice v-if="conversation.is_saved" :result="saveResult" />
 
           <template v-else>
+            <FormError v-if="openSaveError" :message="openSaveError" />
             <FormError v-if="sendError" :message="sendError" />
             <ChatComposer
               v-model="message"
@@ -184,6 +213,7 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
         <SaveTopicDialog
           v-if="isSaveDialogOpen"
           :draft="conversation.draft"
+          :categories="conversation.topic === null ? topicsStore.categories : null"
           :saving="saving"
           :error="saveError"
           @save="save"

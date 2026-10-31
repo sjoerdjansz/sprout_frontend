@@ -150,6 +150,10 @@ export const useTopicsStore = defineStore('topics', () => {
     categories.value = fetchedCategories
   }
 
+  async function fetchCategories(): Promise<void> {
+    categories.value = await api<Category[]>('/categories')
+  }
+
   // A topic saved with a new category name brings that category along.
   function rememberCategory(category: Category): void {
     if (!categories.value.some((existing) => existing.id === category.id)) {
@@ -274,6 +278,7 @@ export const useTopicsStore = defineStore('topics', () => {
     topics,
     subtopic,
     fetchLibrary,
+    fetchCategories,
     addTopic,
     updateTopic,
     addSubtopic,

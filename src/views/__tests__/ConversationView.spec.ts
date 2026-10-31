@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeConversation, makeSummary } from '@/__tests__/conversationFixtures'
 import { stubApi } from '@/__tests__/stubApi'
+import { makeCategories } from '@/__tests__/topicFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
 import ConversationView from '../ConversationView.vue'
 
@@ -167,6 +168,27 @@ describe('ConversationView', () => {
     )
   })
 
+  it('keeps the review closed and says why when your categories don’t load', async () => {
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /conversations': Response.json([makeSummary()]),
+      'GET /conversations/10': Response.json(makeConversation()),
+      'GET /categories': Response.json(
+        { message: 'Something went wrong on our side. Try again in a moment.' },
+        { status: 500 },
+      ),
+    })
+    const wrapper = await mountConversation()
+
+    await wrapper.get('[data-test="open-save"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('dialog').exists()).toBe(false)
+    expect(wrapper.get('[data-test="form-error"]').text()).toBe(
+      'Something went wrong on our side. Try again in a moment.',
+    )
+  })
+
   it('saves the reviewed draft and tells you what was added', async () => {
     const fetchMock = stubApi({
       'GET /user': Response.json(user),
@@ -175,6 +197,7 @@ describe('ConversationView', () => {
         () => Response.json(makeConversation()),
         () => Response.json(makeConversation({ is_saved: true })),
       ],
+      'GET /categories': Response.json(makeCategories()),
       'POST /conversations/10/save': () =>
         Response.json(
           {
@@ -197,6 +220,7 @@ describe('ConversationView', () => {
     const wrapper = await mountConversation()
 
     await wrapper.get('[data-test="open-save"]').trigger('click')
+    await flushPromises()
     await wrapper.get('[data-test="goal-deadline"]').setValue('2026-12-01')
     await wrapper.get('[data-test="goal-recall"]').setValue('80')
     await wrapper.get('form').trigger('submit')
@@ -205,6 +229,7 @@ describe('ConversationView', () => {
     const saveCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/save'))
     expect(JSON.parse(String(saveCall?.[1]?.body))).toEqual({
       title: 'Biomechanics of running',
+      category_id: 1,
       goal: {
         description: 'Explain the phases of the running gait to the runners I coach.',
         deadline: '2026-12-01',
