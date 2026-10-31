@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import ExplainBlock from '@/components/practice/ExplainBlock.vue'
 import FlashcardBlock from '@/components/practice/FlashcardBlock.vue'
 import NextUp from '@/components/practice/NextUp.vue'
 import QuizBlock from '@/components/practice/QuizBlock.vue'
@@ -127,6 +128,13 @@ onBeforeUnmount(() => practice.reset())
         :answers="practice.currentResult.answers"
         :subtopic-titles="subtopicTitles"
         @answer="practice.answerQuestion"
+        @finish="practice.finishBlock"
+      />
+      <ExplainBlock
+        v-else-if="practice.currentBlock.mode === 'feynman'"
+        :key="practice.blockIndex"
+        :concept="practice.currentBlock.concept"
+        @explain="practice.addExplanation"
         @finish="practice.finishBlock"
       />
     </template>

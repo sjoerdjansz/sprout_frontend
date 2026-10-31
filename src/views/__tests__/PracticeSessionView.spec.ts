@@ -161,6 +161,31 @@ describe('PracticeSessionView', () => {
     expect(wrapper.get('[data-test="option-61"]').attributes('data-state')).toBe('correct')
   })
 
+  it('explains, compares with the cards and simplifies', async () => {
+    const wrapper = await mountSession(['feynman'])
+
+    expect(wrapper.get('[data-test="explain-prompt"]').text()).toBe(
+      'Explain Photosynthesis as if I’m 12.',
+    )
+    await wrapper.get('[data-test="first-version"]').setValue('Plants make food.')
+    expect(wrapper.get('[data-test="compare"]').attributes('disabled')).toBeDefined()
+
+    await wrapper
+      .get('[data-test="first-version"]')
+      .setValue('Plants catch light in their leaves and use it to turn water into sugar to grow.')
+    await wrapper.get('[data-test="compare"]').trigger('click')
+    expect(wrapper.get('[data-test="key-points"]').text()).toContain('In the chloroplasts.')
+
+    await wrapper.get('[data-test="to-simplify"]').trigger('click')
+    await wrapper
+      .get('[data-test="second-version"]')
+      .setValue('Leaves use light, water and air to make sugar.')
+    await wrapper.get('[data-test="finish-explain"]').trigger('click')
+
+    expect(wrapper.find('[data-test="session-done"]').exists()).toBe(true)
+    expect(usePracticeStore().results[0]?.explanations).toHaveLength(2)
+  })
+
   it('ends early with what you did so far', async () => {
     const wrapper = await mountSession(['cards', 'retrieval'])
 
