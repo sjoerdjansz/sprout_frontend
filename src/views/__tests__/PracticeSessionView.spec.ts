@@ -25,7 +25,8 @@ function material(): PracticeMaterial {
       makeFlashcard({ id: 1, front: 'First front', is_due: true }),
       makeFlashcard({ id: 2, front: 'Second front', is_due: true }),
     ],
-    questions: [makeQuestion()],
+    // Options: Red (60, wrong) and Green (61, right).
+    questions: [makeQuestion({ id: 1 }), makeQuestion({ id: 2 })],
   }
 }
 
@@ -117,10 +118,47 @@ describe('PracticeSessionView', () => {
     const nextUp = wrapper.get('[data-test="next-up"]')
     expect(nextUp.text()).toContain('Flashcards done.')
     expect(nextUp.text()).toContain('Retrieval quiz')
-    expect(nextUp.text()).toContain('1 question')
+    expect(nextUp.text()).toContain('2 questions')
 
     await wrapper.get('[data-test="skip-next"]').trigger('click')
     expect(wrapper.find('[data-test="session-done"]').exists()).toBe(true)
+  })
+
+  it('gives a second try after a wrong pick and shows the answer after the second', async () => {
+    const wrapper = await mountSession(['retrieval'])
+
+    expect(wrapper.get('[data-test="check-answer"]').attributes('disabled')).toBeDefined()
+    await wrapper.get('[data-test="option-60"]').trigger('click')
+    await wrapper.get('[data-test="check-answer"]').trigger('click')
+    expect(wrapper.get('[data-test="quiz-retry"]').text()).toContain('Not quite. Try once more.')
+    expect(wrapper.get('[data-test="option-60"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-test="option-61"]').trigger('click')
+    await wrapper.get('[data-test="check-answer"]').trigger('click')
+    expect(wrapper.get('[data-test="quiz-feedback"]').text()).toContain('Got it on the second try.')
+    expect(wrapper.get('[data-test="session-progress"]').text()).toBe('Question 2 of 2')
+
+    await wrapper.get('[data-test="next-question"]').trigger('click')
+    await wrapper.get('[data-test="dont-know"]').trigger('click')
+    expect(wrapper.get('[data-test="quiz-feedback"]').text()).toContain('The answer is Green.')
+    expect(wrapper.get('[data-test="option-61"]').attributes('data-state')).toBe('missed')
+
+    await wrapper.get('[data-test="next-question"]').trigger('click')
+    expect(wrapper.get('[data-test="done-tile"]').text()).toContain('0 of 2')
+    expect(usePracticeStore().results[0]?.answers.map((answer) => answer.outcome)).toEqual([
+      'second_try',
+      'wrong',
+    ])
+  })
+
+  it('counts a right first pick as right', async () => {
+    const wrapper = await mountSession(['retrieval'])
+
+    await wrapper.get('[data-test="option-61"]').trigger('click')
+    await wrapper.get('[data-test="check-answer"]').trigger('click')
+
+    expect(wrapper.get('[data-test="quiz-feedback"]').text()).toContain('Correct.')
+    expect(wrapper.get('[data-test="option-61"]').attributes('data-state')).toBe('correct')
   })
 
   it('ends early with what you did so far', async () => {

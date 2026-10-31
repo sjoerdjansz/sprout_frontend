@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FlashcardBlock from '@/components/practice/FlashcardBlock.vue'
 import NextUp from '@/components/practice/NextUp.vue'
+import QuizBlock from '@/components/practice/QuizBlock.vue'
 import PracticeTopBar from '@/components/practice/PracticeTopBar.vue'
 import SessionDone from '@/components/practice/SessionDone.vue'
 import SessionHeader, { type BlockProgress } from '@/components/practice/SessionHeader.vue'
@@ -117,6 +118,15 @@ onBeforeUnmount(() => practice.reset())
         :ratings="practice.currentResult.ratings"
         :subtopic-titles="subtopicTitles"
         @rate="practice.rateCard"
+        @finish="practice.finishBlock"
+      />
+      <QuizBlock
+        v-else-if="practice.currentBlock.mode === 'retrieval'"
+        :key="practice.blockIndex"
+        :questions="practice.currentBlock.questions"
+        :answers="practice.currentResult.answers"
+        :subtopic-titles="subtopicTitles"
+        @answer="practice.answerQuestion"
         @finish="practice.finishBlock"
       />
     </template>
