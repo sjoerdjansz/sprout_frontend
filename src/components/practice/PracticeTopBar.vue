@@ -8,7 +8,7 @@ const { title } = defineProps<{
 }>()
 </script>
 
-<!-- The practice pages leave the sidebar out, so you can focus; the logo goes home. -->
+<!-- A running practice session leaves the sidebar out, so you can focus; the logo goes home. -->
 <template>
   <header
     class="flex flex-none items-center justify-between gap-4 border-b border-line bg-surface px-4 py-3 sm:px-8"
