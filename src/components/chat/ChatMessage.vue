@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import BaseIcon from '@/components/BaseIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
+import type { AvatarColor } from '@/stores/auth'
 
 const {
   from,
   initials = '',
+  avatarColor,
   typing = false,
 } = defineProps<{
   from: 'tutor' | 'user'
   /** The learner's initials, for their avatar. */
   initials?: string
+  avatarColor?: AvatarColor
   /** Shows bouncing dots instead of the message while the tutor writes its reply. */
   typing?: boolean
 }>()
@@ -24,7 +27,7 @@ const {
     >
       <BaseIcon name="sprout" :size="16" />
     </span>
-    <UserAvatar v-else :initials="initials" size="md" />
+    <UserAvatar v-else :initials="initials" :color="avatarColor" size="md" />
 
     <div
       class="max-w-[min(560px,86%)] px-5 py-3.5 text-body-lg text-ink"

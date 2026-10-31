@@ -8,6 +8,9 @@ import ConversationView from '@/views/ConversationView.vue'
 import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
+import SettingsView from '@/views/SettingsView.vue'
+import EmailConfirmView from '@/views/EmailConfirmView.vue'
+import ProfileSettings from '@/views/settings/ProfileSettings.vue'
 import SubtopicView from '@/views/SubtopicView.vue'
 import PracticeSetupView from '@/views/PracticeSetupView.vue'
 import PracticeSessionView from '@/views/PracticeSessionView.vue'
@@ -65,6 +68,23 @@ const router = createRouter({
       name: 'practice-session',
       component: PracticeSessionView,
       meta: { requiresAuth: true },
+    },
+    {
+      // One URL per section, so Back and reloading keep your place. Sections share the page's
+      // menu and its loaded settings.
+      path: '/settings',
+      name: 'settings',
+      component: SettingsView,
+      redirect: { name: 'settings-profile' },
+      meta: { requiresAuth: true },
+      children: [{ path: 'profile', name: 'settings-profile', component: ProfileSettings }],
+    },
+    {
+      // The link in the email-change email points here (see ../API.md). Open to everyone: the
+      // token is the proof, so it also works on a device where you aren't signed in.
+      path: '/settings/email/confirm',
+      name: 'settings-email-confirm',
+      component: EmailConfirmView,
     },
     {
       path: '/login',

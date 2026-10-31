@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import IconTile from '@/components/IconTile.vue'
-import OptionCard from '@/components/practice/OptionCard.vue'
+import OptionCard from '@/components/OptionCard.vue'
 import { practiceModes, type PracticeModeId } from '@/lib/practiceModes'
 
 const { unavailable } = defineProps<{

@@ -5,10 +5,12 @@ import { ApiError } from '@/lib/api'
 import { initials } from '@/lib/names'
 import { useAuthStore } from '@/stores/auth'
 import { useConversationsStore } from '@/stores/conversations'
+import { useSettingsStore } from '@/stores/settings'
 import { useSidebarStore } from '@/stores/sidebar'
 
 const auth = useAuthStore()
 const conversationsStore = useConversationsStore()
+const settingsStore = useSettingsStore()
 const sidebarStore = useSidebarStore()
 
 const userName = computed<string>(() => auth.user?.name ?? '')
@@ -40,9 +42,25 @@ async function loadHistory(): Promise<void> {
   }
 }
 
+// Your preferences apply on every page, and "today" and streaks follow your timezone.
+async function loadSettings(): Promise<void> {
+  try {
+    await settingsStore.fetchSettings()
+    await settingsStore.syncTimezone()
+  } catch (caught) {
+    // Without them the page still works; the settings page says what to do when they can't load.
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+  }
+}
+
 onMounted(() => {
   if (auth.user === null) {
     void loadUser()
+  }
+  if (settingsStore.settings === null) {
+    void loadSettings()
   }
   void loadHistory()
 })
@@ -57,6 +75,7 @@ onMounted(() => {
     <AppSidebar
       :user-name="userName"
       :user-initials="initials(userName)"
+      :user-color="auth.user?.avatar_color"
       :conversations="conversationsStore.conversations"
       :history-error="historyError"
       :collapsed="sidebarStore.collapsed"

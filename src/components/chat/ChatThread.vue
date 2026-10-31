@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ChatMessage from '@/components/chat/ChatMessage.vue'
 import MarkdownContent from '@/components/chat/MarkdownContent.vue'
+import { useAuthStore } from '@/stores/auth'
 import type { Message } from '@/stores/conversations'
 
 const {
@@ -13,6 +14,10 @@ const {
   pendingMessage?: string | null
   userInitials: string
 }>()
+
+// Your avatar colour is the same in every chat, so it comes from your account instead of
+// being passed down through every page that shows a thread.
+const auth = useAuthStore()
 </script>
 
 <template>
@@ -23,6 +28,7 @@ const {
       :key="message.id"
       :from="message.role"
       :initials="userInitials"
+      :avatar-color="auth.user?.avatar_color"
       data-test="chat-message"
     >
       <MarkdownContent v-if="message.role === 'tutor'" :source="message.content" />
@@ -30,9 +36,13 @@ const {
     </ChatMessage>
 
     <template v-if="pendingMessage !== null">
-      <ChatMessage from="user" :initials="userInitials" data-test="pending-message">{{
-        pendingMessage
-      }}</ChatMessage>
+      <ChatMessage
+        from="user"
+        :initials="userInitials"
+        :avatar-color="auth.user?.avatar_color"
+        data-test="pending-message"
+        >{{ pendingMessage }}</ChatMessage
+      >
       <ChatMessage from="tutor" typing />
     </template>
   </div>
