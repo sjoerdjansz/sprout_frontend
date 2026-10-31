@@ -124,6 +124,7 @@ onMounted(() => {
           :order="setup.orderLabel.value"
           :loading="setup.materialState.value === 'loading'"
           :second-try="setup.secondTry.value"
+          :no-modes="modes.length === 0"
           :starting="setup.starting.value"
           @start="setup.start"
         />

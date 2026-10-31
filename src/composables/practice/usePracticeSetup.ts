@@ -220,8 +220,9 @@ export function usePracticeSetup(): PracticeSetup {
   }
 
   // Keeps the modes that can run on this scope; when none of them can, the first one that can.
+  // With nothing picked it leaves the choice to you.
   function keepAvailableModes(): void {
-    if (scope.value === null) {
+    if (scope.value === null || modes.value.length === 0) {
       return
     }
     const available = availableModes(scope.value, practiceStore.material)

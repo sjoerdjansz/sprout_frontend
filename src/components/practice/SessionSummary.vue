@@ -12,6 +12,7 @@ const {
   loading,
   starting = false,
   secondTry,
+  noModes = false,
 } = defineProps<{
   blocks: PracticeBlock[]
   scope: string
@@ -23,6 +24,8 @@ const {
   starting?: boolean
   /** Whether a wrong quiz answer gets a second try (your "Hint before the answer" setting). */
   secondTry: boolean
+  /** You switched every mode off, so there's nothing to start until you pick one. */
+  noModes?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -32,6 +35,17 @@ const emit = defineEmits<{
 const modes = computed<PracticeMode[]>(() => blocks.map((block) => practiceMode(block.mode)))
 const first = computed<PracticeMode | undefined>(() => modes.value[0])
 const isMixed = computed<boolean>(() => modes.value.length > 1)
+
+const title = computed<string>(() => {
+  if (isMixed.value) {
+    return 'Mixed session'
+  }
+  if (first.value !== undefined) {
+    return first.value.name
+  }
+
+  return noModes ? 'Pick a way to practise' : 'Nothing to practise'
+})
 </script>
 
 <template>
@@ -45,7 +59,7 @@ const isMixed = computed<boolean>(() => modes.value.length > 1)
       <div class="flex flex-col">
         <span class="text-overline text-ink-subtle">YOUR SESSION</span>
         <b class="font-display text-title text-ink" data-test="summary-title">
-          {{ isMixed ? 'Mixed session' : (first?.name ?? 'Nothing to practise') }}
+          {{ title }}
         </b>
       </div>
     </div>

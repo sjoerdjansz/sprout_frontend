@@ -107,6 +107,21 @@ describe('PracticeSetupView', () => {
     ])
   })
 
+  it('lets you switch the last mode off and asks you to pick one', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards')
+
+    await wrapper.get('[data-test="mode-cards"]').trigger('click')
+
+    expect(pressed(wrapper, 'mode-cards')).toBe(false)
+    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Pick a way to practise')
+    expect(wrapper.get('[data-test="start-session"]').attributes('disabled')).toBeDefined()
+
+    // Another scope doesn't pick one for you.
+    await router.push('/practice?subtopic=102')
+    await flushPromises()
+    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Pick a way to practise')
+  })
+
   it('says why a mode can’t run, and offers no mix with only one other mode', async () => {
     const wrapper = await mountSetup('/practice?subtopic=102&modes=cards')
 

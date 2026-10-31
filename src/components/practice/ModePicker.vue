@@ -24,13 +24,11 @@ const isMixed = computed<boolean>(
   () => mixIds.value.length > 1 && mixIds.value.every((id) => selected.value.includes(id)),
 )
 
-// A session needs at least one mode, so the last one can't be switched off.
+// Every mode switches off, the last one too; the summary then asks you to pick one.
 function toggle(id: PracticeModeId): void {
-  if (!selected.value.includes(id)) {
-    selected.value = [...selected.value, id]
-  } else if (selected.value.length > 1) {
-    selected.value = selected.value.filter((selectedId) => selectedId !== id)
-  }
+  selected.value = selected.value.includes(id)
+    ? selected.value.filter((selectedId) => selectedId !== id)
+    : [...selected.value, id]
 }
 
 // Switching the mix off leaves the first mode, so you're never left with nothing chosen. The
