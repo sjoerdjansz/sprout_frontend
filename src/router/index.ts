@@ -13,6 +13,7 @@ import EmailConfirmView from '@/views/EmailConfirmView.vue'
 import ProfileSettings from '@/views/settings/ProfileSettings.vue'
 import AiSettings from '@/views/settings/AiSettings.vue'
 import LearningSettings from '@/views/settings/LearningSettings.vue'
+import ReminderSettings from '@/views/settings/ReminderSettings.vue'
 import SubtopicView from '@/views/SubtopicView.vue'
 import PracticeSetupView from '@/views/PracticeSetupView.vue'
 import PracticeSessionView from '@/views/PracticeSessionView.vue'
@@ -83,6 +84,7 @@ const router = createRouter({
         { path: 'profile', name: 'settings-profile', component: ProfileSettings },
         { path: 'ai', name: 'settings-ai', component: AiSettings },
         { path: 'learning', name: 'settings-learning', component: LearningSettings },
+        { path: 'reminders', name: 'settings-reminders', component: ReminderSettings },
       ],
     },
     {

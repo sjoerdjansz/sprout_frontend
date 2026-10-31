@@ -10,8 +10,15 @@ export interface SelectOption {
 // Native attributes (data-test ...) belong on the <select>, not the wrapper.
 defineOptions({ inheritAttrs: false })
 
-const { label, options, error } = defineProps<{
+const {
+  label,
+  options,
+  error,
+  hideLabel = false,
+} = defineProps<{
   label: string
+  /** For a select in a row that already names it: the label is then for screen readers only. */
+  hideLabel?: boolean
   options: SelectOption[]
   /** Says what to do next; turns the border ember. */
   error?: string
@@ -25,7 +32,9 @@ const errorId = `${selectId}-error`
 
 <template>
   <div class="flex w-full flex-col gap-1.5">
-    <label :for="selectId" class="text-label text-ink">{{ label }}</label>
+    <label :for="selectId" class="text-label text-ink" :class="{ 'sr-only': hideLabel }">{{
+      label
+    }}</label>
 
     <select
       :id="selectId"

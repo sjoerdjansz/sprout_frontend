@@ -1,7 +1,7 @@
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
 import type { AvatarColor } from '@/stores/auth'
-import type { AiLevel, AiUsage, CardCount, LearnerRole } from '@/stores/settings'
+import type { AiLevel, AiUsage, CardCount, LearnerRole, ReminderChannel } from '@/stores/settings'
 
 /** A section of the settings page, each on its own URL (`/settings/<id>`). */
 export interface SettingsSection {
@@ -15,6 +15,7 @@ export const settingsSections: SettingsSection[] = [
   { id: 'profile', label: 'Profile', icon: 'user-round', routeName: 'settings-profile' },
   { id: 'ai', label: 'AI', icon: 'sparkles', routeName: 'settings-ai' },
   { id: 'learning', label: 'Learning', icon: 'brain', routeName: 'settings-learning' },
+  { id: 'reminders', label: 'Reminders', icon: 'bell', routeName: 'settings-reminders' },
 ]
 
 export interface RoleOption {
@@ -189,3 +190,24 @@ export function usagePeriod(month: string): string {
 }
 
 export const cardCounts: CardCount[] = [10, 20, 40]
+
+export const reminderChannels: { id: ReminderChannel; label: string }[] = [
+  { id: 'push', label: 'Push' },
+  { id: 'email', label: 'Email' },
+  { id: 'both', label: 'Both' },
+]
+
+/** Every half hour of the day ("00:00" … "23:30"), plus your saved time if it's in between. */
+export function reminderTimes(savedTime: string): string[] {
+  const times: string[] = []
+  for (let hour = 0; hour < 24; hour++) {
+    const paddedHour = String(hour).padStart(2, '0')
+    times.push(`${paddedHour}:00`, `${paddedHour}:30`)
+  }
+  if (!times.includes(savedTime)) {
+    times.push(savedTime)
+    times.sort()
+  }
+
+  return times
+}
