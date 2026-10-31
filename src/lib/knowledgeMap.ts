@@ -113,8 +113,11 @@ export interface Caption {
 
 /** The one line under a subtopic's name: the most urgent thing about it. */
 export function subtopicCaption(subtopic: Subtopic): Caption {
+  // New cards are due straight away, so a subtopic you haven't started can need attention too.
   if (subtopic.is_new) {
-    return { text: 'Not started yet', tone: 'subtle' }
+    return subtopic.due_cards > 0
+      ? { text: `Not started yet · ${pluralize(subtopic.due_cards, 'card')} due`, tone: 'sun' }
+      : { text: 'Not started yet', tone: 'subtle' }
   }
   if (subtopic.slipping) {
     return { text: `Slipping · ${pluralize(subtopic.due_cards, 'card')} due`, tone: 'sun' }

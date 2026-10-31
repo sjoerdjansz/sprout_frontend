@@ -51,6 +51,10 @@ describe('knowledge map rules', () => {
     expect(subtopicCaption(subtopicNamed('Big-O notation')).text).toBe('Mastered')
     expect(subtopicCaption(subtopicNamed('Chlorophyll')).text).toBe('Next review in 4 days')
     expect(subtopicCaption(subtopicNamed('Chemical bonds')).text).toBe('Not started yet')
+    expect(subtopicCaption({ ...subtopicNamed('Chemical bonds'), due_cards: 3 })).toEqual({
+      text: 'Not started yet · 3 cards due',
+      tone: 'sun',
+    })
   })
 
   it('finds a topic by its own name or one of its subtopics', () => {
