@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import IconTile from '@/components/IconTile.vue'
 import OptionCard from '@/components/OptionCard.vue'
 import { practiceModes, type PracticeModeId } from '@/lib/practiceModes'
+import { mixableModes } from '@/lib/practiceSession'
 
 const { unavailable } = defineProps<{
   /** Why a mode can't run on the scope you picked; modes that can run aren't in it. */
@@ -16,9 +17,11 @@ const availableIds = computed<PracticeModeId[]>(() =>
   practiceModes.map((mode) => mode.id).filter((id) => unavailable[id] === undefined),
 )
 
+// The open session has no end, so the mix leaves it to its own toggle.
+const mixIds = computed<PracticeModeId[]>(() => mixableModes(availableIds.value))
+
 const isMixed = computed<boolean>(
-  () =>
-    availableIds.value.length > 1 && availableIds.value.every((id) => selected.value.includes(id)),
+  () => mixIds.value.length > 1 && mixIds.value.every((id) => selected.value.includes(id)),
 )
 
 // A session needs at least one mode, so the last one can't be switched off.
@@ -30,10 +33,13 @@ function toggle(id: PracticeModeId): void {
   }
 }
 
-// Switching the mix off leaves the first mode, so you're never left with nothing chosen.
+// Switching the mix off leaves the first mode, so you're never left with nothing chosen. The
+// open session stays as you set it either way.
 function toggleMix(): void {
-  const first = availableIds.value[0]
-  selected.value = isMixed.value && first !== undefined ? [first] : [...availableIds.value]
+  const first = mixIds.value[0]
+  const open: PracticeModeId[] = selected.value.includes('open') ? ['open'] : []
+  selected.value =
+    isMixed.value && first !== undefined ? [first, ...open] : [...mixIds.value, ...open]
 }
 </script>
 
@@ -58,7 +64,7 @@ function toggleMix(): void {
 
     <OptionCard
       :pressed="isMixed"
-      :disabled="availableIds.length < 2"
+      :disabled="mixIds.length < 2"
       class="col-span-full"
       data-test="mode-mix"
       @toggle="toggleMix"
@@ -67,7 +73,8 @@ function toggleMix(): void {
       <span class="flex min-w-0 flex-col">
         <b class="text-body-strong">Mix it all</b>
         <span class="text-caption font-normal text-ink-muted">
-          Every way to practise in one session, one after the other. Or pick a few above.
+          Every way to practise in one session, one after the other. The open session you add
+          yourself.
         </span>
       </span>
     </OptionCard>
