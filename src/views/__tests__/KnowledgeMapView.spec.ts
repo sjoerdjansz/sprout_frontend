@@ -144,6 +144,23 @@ describe('KnowledgeMapView', () => {
     expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration'])
   })
 
+  it('scrolls to the subtopics when they are below the screen', async () => {
+    const scrollIntoView = vi.fn<(options?: ScrollIntoViewOptions) => void>()
+    Element.prototype.scrollIntoView = scrollIntoView
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+    const wrapper = await mountKnowledgeMap()
+    const list = wrapper.get('section[aria-label="Subtopics"]').element
+
+    // On screen (jsdom's default position): nothing moves.
+    await selectTopic(wrapper, 'Chemistry')
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    // Below the screen, as on a phone under all the cards.
+    vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({ top: 2000 } as DOMRect)
+    await selectTopic(wrapper, 'Spanish')
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+  })
+
   it('shows a subtopic you search for, even when another topic was picked', async () => {
     const wrapper = await mountKnowledgeMap()
 

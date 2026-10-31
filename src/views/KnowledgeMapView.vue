@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
@@ -86,6 +86,24 @@ async function load(): Promise<void> {
 onMounted(() => {
   void load()
 })
+
+const subtopicList = useTemplateRef<InstanceType<typeof SubtopicList>>('subtopicList')
+
+/**
+ * Picks a topic. On a narrow screen its subtopics sit below all the cards, so scroll them into
+ * view; when they're already on screen (a wide screen) nothing moves.
+ */
+async function selectTopic(topicId: number): Promise<void> {
+  selectedTopicId.value = topicId
+  await nextTick()
+
+  const list: unknown = subtopicList.value?.$el
+  if (!(list instanceof HTMLElement) || list.getBoundingClientRect().top < window.innerHeight) {
+    return
+  }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  list.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' })
+}
 
 const filteredTopics = computed<Topic[]>(() => filterTopics(topicsStore.topics, filters.value))
 
@@ -242,12 +260,13 @@ async function save(values: TopicFormValues): Promise<void> {
         :filter-categories="filterCategories"
         :selected-topic-id="shownTopic?.id ?? null"
         :attention-count="attentionCount"
-        @select="(topicId) => (selectedTopicId = topicId)"
+        @select="selectTopic"
         @add-topic="openForm('add-topic', null)"
         @clear-filters="clearFilters"
       />
 
       <SubtopicList
+        ref="subtopicList"
         v-if="shownTopic !== null"
         :topic="shownTopic"
         :subtopics="visibleSubtopics(shownTopic, filters)"
