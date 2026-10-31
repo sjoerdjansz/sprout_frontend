@@ -141,9 +141,9 @@ describe('ConversationView', () => {
 
     const wrapper = await mountConversation(99)
 
-    expect(wrapper.get('[data-test="not-found"]').text()).toBe(
-      'We couldn’t find that conversation. Check the link, or head back to your dashboard.',
-    )
+    expect(wrapper.get('[data-test="not-found-title"]').text()).toBe('Oops. A little lost.')
+    expect(wrapper.text()).not.toContain('No query results')
+    expect(router.currentRoute.value.path).toBe('/conversations/99')
     expect(wrapper.find('[data-test="composer-input"]').exists()).toBe(false)
   })
 
