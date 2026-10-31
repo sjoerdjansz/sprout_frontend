@@ -132,11 +132,14 @@ export const useConversationsStore = defineStore('conversations', () => {
     return fetchedConversation
   }
 
-  /** Starts a conversation with your first message; the tutor's reply comes back with it. */
-  async function startConversation(message: string): Promise<Conversation> {
+  /**
+   * Starts a conversation with your first message; the tutor's reply comes back with it. With a
+   * topic it continues that topic (an open practice session).
+   */
+  async function startConversation(message: string, topicId?: number): Promise<Conversation> {
     const startedConversation = await api<Conversation>('/conversations', {
       method: 'POST',
-      body: { message },
+      body: topicId === undefined ? { message } : { message, topic_id: topicId },
     })
     conversation.value = startedConversation
     rememberInHistory(startedConversation)

@@ -64,6 +64,17 @@ describe('conversations store', () => {
     expect(store.conversations[0]).not.toHaveProperty('messages')
   })
 
+  it('starts a conversation about one of your topics', async () => {
+    const fetchMock = stubApi({
+      'POST /conversations': Response.json(makeConversation({ id: 11 }), { status: 201 }),
+    })
+    const store = useConversationsStore()
+
+    await store.startConversation('Quiz me on photosynthesis', 8)
+
+    expect(requestBody(fetchMock)).toEqual({ message: 'Quiz me on photosynthesis', topic_id: 8 })
+  })
+
   it('sends a message and moves the conversation to the top of the history', async () => {
     const updated = makeConversation({ last_activity_at: '2026-10-30T17:00:00.000000Z' })
     const fetchMock = vi
