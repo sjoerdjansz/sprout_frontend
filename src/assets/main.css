@@ -218,6 +218,10 @@
 @layer base {
   :root {
     color-scheme: light;
+    /* Every scroll area, app-wide (both properties inherit): a thin bar in a token colour on an
+       invisible track, so a scrollbar never covers content with a grey band. */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
   }
 
   body {
