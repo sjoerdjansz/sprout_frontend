@@ -5,7 +5,6 @@ import UserAvatar from '@/components/UserAvatar.vue'
 import ChatHistory from '@/components/layout/ChatHistory.vue'
 import SidebarButton from '@/components/layout/SidebarButton.vue'
 import SidebarNavLink from '@/components/layout/SidebarNavLink.vue'
-import StreakNudge from '@/components/layout/StreakNudge.vue'
 import type { AvatarColor } from '@/stores/auth'
 import type { ConversationSummary } from '@/stores/conversations'
 
@@ -66,6 +65,12 @@ const emit = defineEmits<{
       :collapsed="collapsed"
     />
     <SidebarNavLink icon="chart-line" label="Insights" :collapsed="collapsed" />
+    <SidebarNavLink
+      icon="settings"
+      label="Settings"
+      :to="{ name: 'settings' }"
+      :collapsed="collapsed"
+    />
 
     <!-- Takes the free space and scrolls on its own, so the bottom of the sidebar stays put. -->
     <ChatHistory
@@ -76,21 +81,6 @@ const emit = defineEmits<{
       data-test="chat-history"
     />
     <div v-else class="grow" />
-
-    <!-- Placeholder until the API tracks streaks. -->
-    <StreakNudge
-      v-if="!collapsed"
-      :days="6"
-      nudge="Review today’s queue to make it 7."
-      class="mb-3"
-    />
-
-    <SidebarNavLink
-      icon="settings"
-      label="Settings"
-      :to="{ name: 'settings' }"
-      :collapsed="collapsed"
-    />
 
     <!-- Who's signed in, so you know which account you're learning on. -->
     <p

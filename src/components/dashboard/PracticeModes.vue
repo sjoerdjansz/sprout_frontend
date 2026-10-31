@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import SectionHeading from '@/components/SectionHeading.vue'
-import TextLink from '@/components/TextLink.vue'
 import PracticeModeCard from '@/components/dashboard/PracticeModeCard.vue'
 import { practiceModes, type PracticeModeId } from '@/lib/practiceModes'
 
@@ -16,7 +15,6 @@ function practise(mode: PracticeModeId): void {
 <template>
   <section aria-labelledby="practice-heading" class="flex flex-col gap-4">
     <SectionHeading title="Start a practice session" heading-id="practice-heading">
-      <TextLink :to="{ name: 'practice' }">Open practice center</TextLink>
     </SectionHeading>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-4">
