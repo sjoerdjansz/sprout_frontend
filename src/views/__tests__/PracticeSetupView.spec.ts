@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
+import { makeSettings } from '@/__tests__/settingsFixtures'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeCategories, makeLibrary } from '@/__tests__/topicFixtures'
 import { useAuthStore } from '@/stores/auth'
@@ -113,6 +114,27 @@ describe('PracticeSetupView', () => {
     const plan = usePracticeStore().plan
     expect(plan?.blocks.map((block) => block.mode)).toEqual(['cards', 'retrieval'])
     expect(router.currentRoute.value.name).toBe('practice-session')
+  })
+
+  it('starts from your learning defaults in settings', async () => {
+    const wrapper = await mountSetup('/practice?topic=1&modes=cards,retrieval', {
+      'GET /settings': Response.json(
+        makeSettings({ session_size: 40, interleave_subtopics: false, hint_before_answer: false }),
+      ),
+    })
+
+    expect(
+      wrapper.find('[data-test="interleave"] [role="switch"]').attributes('aria-checked'),
+    ).toBe('false')
+    await wrapper.get('[data-test="start-session"]').trigger('click')
+    await flushPromises()
+
+    expect(usePracticeStore().plan?.options).toMatchObject({
+      cardCount: 40,
+      questionCount: 20,
+      interleave: false,
+      secondTry: false,
+    })
   })
 
   it('points to the knowledge map when there is nothing to practise', async () => {

@@ -22,6 +22,7 @@ function options(overrides: Partial<PracticeOptions> = {}): PracticeOptions {
     questionCount: 10,
     dueFirst: true,
     interleave: false,
+    secondTry: true,
     ...overrides,
   }
 }

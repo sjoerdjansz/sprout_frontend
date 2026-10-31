@@ -8,12 +8,19 @@ import QuizOption, { type QuizOptionState } from '@/components/QuizOption.vue'
 import { summariseQuiz, type QuizAnswer, type QuizOutcome } from '@/lib/practiceSession'
 import type { Question, QuestionOption } from '@/stores/questions'
 
-const { questions, answers, subtopicTitles } = defineProps<{
+const {
+  questions,
+  answers,
+  subtopicTitles,
+  secondTry = true,
+} = defineProps<{
   /** Multiple choice only: they're checked here, from `is_correct`. */
   questions: Question[]
   /** What you answered so far in this block, for the score in the footer. */
   answers: QuizAnswer[]
   subtopicTitles: Record<number, string>
+  /** A wrong first pick gets a nudge and a second try ("Hint before the answer" in settings). */
+  secondTry?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -53,7 +60,7 @@ function check(): void {
   }
   if (picked.is_correct) {
     finishQuestion(phase.value === 'retry' ? 'second_try' : 'right')
-  } else if (phase.value === 'answer') {
+  } else if (phase.value === 'answer' && secondTry) {
     // A second retrieval is worth more than reading the answer.
     wrongFirstId.value = picked.id
     pickedId.value = null

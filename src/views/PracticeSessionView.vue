@@ -128,6 +128,7 @@ onBeforeUnmount(() => practice.reset())
         :questions="practice.currentBlock.questions"
         :answers="practice.currentResult.answers"
         :subtopic-titles="subtopicTitles"
+        :second-try="practice.plan.options.secondTry"
         @answer="practice.answerQuestion"
         @finish="practice.finishBlock"
       />

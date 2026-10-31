@@ -10,6 +10,8 @@ import {
 import {
   availableModes,
   buildBlocks,
+  builtInDefaults,
+  defaultsFromSettings,
   scopeTitle,
   unavailableReason,
   type PracticeBlock,
@@ -17,6 +19,7 @@ import {
   type PracticeScope,
 } from '@/lib/practiceSession'
 import { usePracticeStore } from '@/stores/practice'
+import { useSettingsStore } from '@/stores/settings'
 import { useTopicsStore, type Topic } from '@/stores/topics'
 
 export type LoadState = 'loading' | 'loaded' | 'failed'
@@ -56,6 +59,7 @@ export function usePracticeSetup(): PracticeSetup {
   const router = useRouter()
   const topicsStore = useTopicsStore()
   const practiceStore = usePracticeStore()
+  const settingsStore = useSettingsStore()
 
   const libraryState = ref<LoadState>('loading')
   const libraryError = ref('')
@@ -65,10 +69,12 @@ export function usePracticeSetup(): PracticeSetup {
   const topicId = ref(0)
   const subtopicId = ref<number | null>(null)
   const modes = ref<PracticeModeId[]>(['cards'])
-  const cardCount = ref(practiceMode('cards').defaultSize)
-  const questionCount = ref(practiceMode('retrieval').defaultSize)
+  const cardCount = ref(builtInDefaults.cardCount)
+  const questionCount = ref(builtInDefaults.questionCount)
   const dueFirst = ref(true)
-  const interleave = ref(true)
+  const interleave = ref(builtInDefaults.interleave)
+  // Not on the setup page: it comes from your settings ("Hint before the answer").
+  const secondTry = ref(builtInDefaults.secondTry)
 
   const topics = computed<Topic[]>(() => topicsStore.topics)
 
@@ -93,6 +99,7 @@ export function usePracticeSetup(): PracticeSetup {
     questionCount: questionCount.value,
     dueFirst: dueFirst.value,
     interleave: interleave.value,
+    secondTry: secondTry.value,
   }))
 
   const unavailable = computed<Partial<Record<PracticeModeId, string>>>(() => {
@@ -161,11 +168,28 @@ export function usePracticeSetup(): PracticeSetup {
     }
   }
 
+  // Your learning defaults from settings. Practice works without them, so if they can't load the
+  // session starts from the built-in ones and you can still change every amount here.
+  async function applyLearningDefaults(): Promise<void> {
+    try {
+      const settings = settingsStore.settings ?? (await settingsStore.fetchSettings())
+      const defaults = defaultsFromSettings(settings)
+      cardCount.value = defaults.cardCount
+      questionCount.value = defaults.questionCount
+      interleave.value = defaults.interleave
+      secondTry.value = defaults.secondTry
+    } catch (caught) {
+      if (!(caught instanceof ApiError)) {
+        throw caught
+      }
+    }
+  }
+
   async function loadLibrary(): Promise<void> {
     libraryState.value = 'loading'
 
     try {
-      await topicsStore.fetchLibrary()
+      await Promise.all([topicsStore.fetchLibrary(), applyLearningDefaults()])
       prefillFromUrl()
       libraryState.value = 'loaded'
     } catch (caught) {

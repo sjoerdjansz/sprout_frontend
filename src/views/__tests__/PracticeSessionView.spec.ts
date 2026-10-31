@@ -44,7 +44,11 @@ function material(): PracticeMaterial {
   }
 }
 
-async function mountSession(modes: PracticeModeId[], attachTo?: HTMLElement): Promise<VueWrapper> {
+async function mountSession(
+  modes: PracticeModeId[],
+  attachTo?: HTMLElement,
+  secondTry = true,
+): Promise<VueWrapper> {
   const practice = usePracticeStore()
   practice.material = material()
   const options: PracticeOptions = {
@@ -53,6 +57,7 @@ async function mountSession(modes: PracticeModeId[], attachTo?: HTMLElement): Pr
     questionCount: 10,
     dueFirst: true,
     interleave: false,
+    secondTry,
   }
   practice.start(scope, options)
   await router.push('/practice/session')
@@ -184,6 +189,16 @@ describe('PracticeSessionView', () => {
       'second_try',
       'wrong',
     ])
+  })
+
+  it('shows the answer after one wrong pick when you turned the hint off', async () => {
+    const wrapper = await mountSession(['retrieval'], undefined, false)
+
+    await wrapper.get('[data-test="option-60"]').trigger('click')
+    await wrapper.get('[data-test="check-answer"]').trigger('click')
+
+    expect(wrapper.find('[data-test="quiz-retry"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="quiz-feedback"]').text()).toContain('The answer is Green.')
   })
 
   it('counts a right first pick as right', async () => {

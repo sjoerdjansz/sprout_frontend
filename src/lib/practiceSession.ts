@@ -8,6 +8,7 @@ import type { BadgeTone } from '@/components/BaseBadge.vue'
 import { practiceMode, practiceModes, type PracticeModeId } from '@/lib/practiceModes'
 import type { Flashcard, Rating } from '@/stores/flashcards'
 import type { Question, Verdict } from '@/stores/questions'
+import type { Settings } from '@/stores/settings'
 import type { Subtopic } from '@/stores/topics'
 
 export interface PracticeScope {
@@ -33,6 +34,36 @@ export interface PracticeOptions {
   dueFirst: boolean
   /** For a whole topic: mix the subtopics instead of one subtopic at a time. */
   interleave: boolean
+  /** In the quiz, a wrong first pick gets a nudge and a second try before the answer. */
+  secondTry: boolean
+}
+
+/** What a new session starts from when you haven't set your learning defaults (or they can't load). */
+export const builtInDefaults: Omit<PracticeOptions, 'modes' | 'dueFirst'> = {
+  cardCount: practiceMode('cards').defaultSize,
+  questionCount: practiceMode('retrieval').defaultSize,
+  interleave: true,
+  secondTry: true,
+}
+
+/**
+ * Your learning defaults from settings as session options. The session size counts cards; the
+ * quiz takes the same step on its own, smaller sizes (10, 20, 40 cards → 5, 10, 20 questions),
+ * since a question takes longer than a card.
+ */
+export function defaultsFromSettings(
+  settings: Pick<Settings, 'session_size' | 'interleave_subtopics' | 'hint_before_answer'>,
+): Omit<PracticeOptions, 'modes' | 'dueFirst'> {
+  const step = practiceMode('cards').sizes.indexOf(settings.session_size)
+  const cardCount = step === -1 ? builtInDefaults.cardCount : settings.session_size
+  const questionCount = practiceMode('retrieval').sizes[step] ?? builtInDefaults.questionCount
+
+  return {
+    cardCount,
+    questionCount,
+    interleave: settings.interleave_subtopics,
+    secondTry: settings.hint_before_answer,
+  }
 }
 
 export interface ExplainConcept {

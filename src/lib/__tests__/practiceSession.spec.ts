@@ -4,6 +4,7 @@ import {
   blockAmount,
   buildBlocks,
   cardsDone,
+  defaultsFromSettings,
   emptyResult,
   estimateMinutes,
   isBlockComplete,
@@ -58,6 +59,7 @@ function options(overrides: Partial<PracticeOptions> = {}): PracticeOptions {
     questionCount: 10,
     dueFirst: true,
     interleave: false,
+    secondTry: true,
     ...overrides,
   }
 }
@@ -274,5 +276,23 @@ describe('practice session rules', () => {
       { key: 'card-1', title: 'First', grade: 'Again', tone: 'ember' },
       { key: 'question-17', title: 'Which light?', grade: 'Not quite', tone: 'ember' },
     ])
+  })
+})
+
+describe('defaultsFromSettings', () => {
+  it('takes the same step on the quiz’s sizes as on the cards’', () => {
+    const settings = {
+      session_size: 40 as const,
+      interleave_subtopics: false,
+      hint_before_answer: false,
+    }
+
+    expect(defaultsFromSettings(settings)).toEqual({
+      cardCount: 40,
+      questionCount: 20,
+      interleave: false,
+      secondTry: false,
+    })
+    expect(defaultsFromSettings({ ...settings, session_size: 10 }).questionCount).toBe(5)
   })
 })

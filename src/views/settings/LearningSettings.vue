@@ -88,9 +88,9 @@ const saveChats = setting('save_chats_as_material')
     </div>
 
     <FormError v-if="error" :message="error" />
-    <!-- Stored for the Practice Hub; nothing reads them yet (../specs/settings.md). -->
+    <!-- The practice setup starts from session size, interleaving and the hint; these two wait. -->
     <p class="text-caption font-normal text-ink-subtle" data-test="not-used-yet">
-      Saved to your account. Practice sessions don’t start from these defaults yet.
+      The daily goal and saving chats as study material aren’t used yet.
     </p>
   </SettingsCard>
 
