@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeConversation, makeSummary } from '@/__tests__/conversationFixtures'
 import { stubApi } from '@/__tests__/stubApi'
+import { makeLibrary, makeTopic } from '@/__tests__/topicFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
 import DashboardView from '../DashboardView.vue'
 
@@ -39,7 +40,11 @@ describe('DashboardView', () => {
   })
 
   it('greets you by first name and shows your initials', async () => {
-    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
+      'GET /conversations': Response.json([]),
+    })
 
     const wrapper = await mountDashboard()
 
@@ -49,7 +54,11 @@ describe('DashboardView', () => {
   })
 
   it('shows every section of the dashboard', async () => {
-    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
+      'GET /conversations': Response.json([]),
+    })
 
     const wrapper = await mountDashboard()
 
@@ -62,7 +71,11 @@ describe('DashboardView', () => {
   })
 
   it('offers the same four ways to practise as the knowledge map', async () => {
-    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
+      'GET /conversations': Response.json([]),
+    })
 
     const wrapper = await mountDashboard()
 
@@ -73,7 +86,11 @@ describe('DashboardView', () => {
   })
 
   it('opens the practice setup with the mode you pick', async () => {
-    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
+      'GET /conversations': Response.json([]),
+    })
     const wrapper = await mountDashboard()
 
     await wrapper.get('[data-test="practice-mode-feynman"]').trigger('click')
@@ -82,10 +99,109 @@ describe('DashboardView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/practice?modes=feynman')
   })
 
+  it('opens the practice setup from Open practice center', async () => {
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
+      'GET /conversations': Response.json([]),
+    })
+    const wrapper = await mountDashboard()
+
+    expect(wrapper.get('[data-test="practice-center"]').attributes('href')).toBe('/practice')
+  })
+
+  describe('the retention queue', () => {
+    function stubLibrary(topics: Response): void {
+      stubApi({
+        'GET /user': Response.json(user),
+        'GET /topics': topics,
+        'GET /conversations': Response.json([]),
+      })
+    }
+
+    it('lists the topics with cards due, slipping first, and counts every due card', async () => {
+      stubLibrary(Response.json(makeLibrary()))
+      const wrapper = await mountDashboard()
+
+      const items = wrapper.findAll('[data-test="queue-item"]')
+      expect(items.map((item) => item.text())).toEqual([
+        expect.stringMatching(/^Biology\s*9 cards · slipping\s*61%\s*mastery$/),
+        expect.stringMatching(/^Computer science\s*2 cards · due today/),
+      ])
+      expect(items[0]?.attributes('href')).toBe('/practice?topic=1&modes=cards')
+      expect(wrapper.get('[aria-labelledby="queue-heading"]').text()).toContain('11 due')
+    })
+
+    it('starts a flashcard review of the most urgent topic', async () => {
+      stubLibrary(Response.json(makeLibrary()))
+      const wrapper = await mountDashboard()
+
+      const start = wrapper.get('[data-test="start-review"]')
+      expect(start.text()).toBe('Start review · about 4 min')
+
+      await start.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.fullPath).toBe('/practice?topic=1&modes=cards')
+    })
+
+    it('says when nothing is due today', async () => {
+      stubLibrary(Response.json([makeTopic()]))
+      const wrapper = await mountDashboard()
+
+      expect(wrapper.get('[data-test="queue-done"]').text()).toContain('Nothing due today')
+      expect(wrapper.find('[data-test="start-review"]').exists()).toBe(false)
+    })
+
+    it('points to the knowledge map when your library is empty', async () => {
+      stubLibrary(Response.json([]))
+      const wrapper = await mountDashboard()
+
+      const empty = wrapper.get('[data-test="queue-empty-library"]')
+      expect(empty.get('a').attributes('href')).toBe('/knowledge-map')
+      expect(wrapper.find('[data-test="mastered-topics"]').exists()).toBe(false)
+    })
+
+    it('shows why the library didn’t load and tries again', async () => {
+      let attempts = 0
+      stubApi({
+        'GET /user': Response.json(user),
+        'GET /conversations': Response.json([]),
+        'GET /topics': () => {
+          attempts += 1
+
+          return attempts === 1
+            ? Response.json({ message: 'Can’t reach Sprout right now.' }, { status: 500 })
+            : Response.json(makeLibrary())
+        },
+      })
+      const wrapper = await mountDashboard()
+
+      expect(wrapper.get('[data-test="form-error"]').text()).toBe('Can’t reach Sprout right now.')
+
+      await wrapper.get('[data-test="queue-retry"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.findAll('[data-test="queue-item"]')).toHaveLength(2)
+    })
+  })
+
+  it('counts the topics you’ve mastered', async () => {
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /topics': Response.json(makeLibrary()),
+      'GET /conversations': Response.json([]),
+    })
+    const wrapper = await mountDashboard()
+
+    expect(wrapper.get('[data-test="mastered-topics"]').text()).toBe('0 of 4 topics mastered')
+  })
+
   it('starts a conversation with your first message and opens it', async () => {
     let answerTutor: (response: Response) => void = () => {}
     const fetchMock = stubApi({
       'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
       'GET /conversations': Response.json([]),
       'POST /conversations': () =>
         // Held back so we can see the screen while the tutor is still answering.
@@ -115,6 +231,7 @@ describe('DashboardView', () => {
   it('gives your message back when the tutor can’t answer', async () => {
     stubApi({
       'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
       'GET /conversations': Response.json([]),
       'POST /conversations': () =>
         Response.json(
@@ -140,6 +257,7 @@ describe('DashboardView', () => {
   it('lets you pick up your latest conversation that isn’t saved yet', async () => {
     stubApi({
       'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
       'GET /conversations': Response.json([
         makeSummary({ id: 7, title: 'Photosynthesis', is_saved: true }),
         makeSummary({ id: 10, title: 'Biomechanics of running' }),
@@ -156,6 +274,7 @@ describe('DashboardView', () => {
   it('logs you out from the sidebar', async () => {
     const fetchMock = stubApi({
       'GET /user': Response.json(user),
+      'GET /topics': Response.json([]),
       'GET /conversations': Response.json([]),
       'POST /auth/logout': () => new Response(null, { status: 204 }),
     })
