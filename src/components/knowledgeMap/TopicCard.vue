@@ -2,12 +2,17 @@
 import { computed } from 'vue'
 import IconTile from '@/components/IconTile.vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import { averageMastery, dueCards, pluralize } from '@/lib/knowledgeMap'
+import {
+  averageMastery,
+  dueCards,
+  pluralize,
+  topicAppearance,
+  type TopicAppearance,
+} from '@/lib/knowledgeMap'
 import type { Topic } from '@/stores/topics'
 
-const { topic, categoryName, selected } = defineProps<{
+const { topic, selected } = defineProps<{
   topic: Topic
-  categoryName: string
   selected: boolean
 }>()
 
@@ -17,6 +22,7 @@ const emit = defineEmits<{
 
 const mastery = computed<number>(() => averageMastery(topic))
 const due = computed<number>(() => dueCards(topic))
+const appearance = computed<TopicAppearance>(() => topicAppearance(topic))
 </script>
 
 <template>
@@ -28,16 +34,19 @@ const due = computed<number>(() => dueCards(topic))
     @click="emit('select')"
   >
     <span class="flex items-center justify-between gap-3">
-      <IconTile :icon="topic.icon" :tint="topic.tint" />
+      <IconTile :icon="appearance.icon" :tint="appearance.tint" />
       <ProgressRing :value="mastery" :size="48" :label="`${topic.title} mastery ${mastery}%`" />
     </span>
     <span class="flex flex-col gap-0.75">
       <span class="font-display text-[19px] leading-6 font-semibold tracking-[-0.015em] text-ink">
         {{ topic.title }}
       </span>
-      <span class="flex flex-wrap gap-1.5 text-label font-normal text-ink-muted">
-        <span> {{ categoryName }} · {{ pluralize(topic.subtopics.length, 'subtopic') }} </span>
-        <span v-if="due > 0" class="font-[650] text-sun-ink">· {{ due }} due</span>
+      <!-- One line of text, so a long due count wraps with it instead of jumping to its own line. -->
+      <span class="text-label font-normal text-ink-muted" data-test="topic-meta">
+        {{ topic.category.name }} · {{ pluralize(topic.subtopics.length, 'subtopic') }}
+        <span v-if="due > 0" class="font-[650] whitespace-nowrap text-sun-ink"
+          >· {{ due }} due</span
+        >
       </span>
     </span>
   </button>

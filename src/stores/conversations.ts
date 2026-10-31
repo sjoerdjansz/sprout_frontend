@@ -44,6 +44,12 @@ export interface ConversationSummary {
   last_activity_at: string
 }
 
+/** A conversation in a list: how many messages it has and its first three, oldest first. */
+export interface ConversationListItem extends ConversationSummary {
+  message_count: number
+  preview: Message[]
+}
+
 /** A conversation with all its messages, oldest first. */
 export interface Conversation extends ConversationSummary {
   messages: Message[]
@@ -77,6 +83,8 @@ export const useConversationsStore = defineStore('conversations', () => {
   const conversations = ref<ConversationSummary[]>([])
   /** The conversation that's open right now. */
   const conversation = ref<Conversation | null>(null)
+  /** The conversations about one topic, for the subtopic page's Sessions tab. */
+  const topicConversations = ref<ConversationListItem[]>([])
 
   // Keeps the history in step with a conversation we just got back, without refetching the list.
   function rememberInHistory(updatedConversation: Conversation): void {
@@ -100,6 +108,23 @@ export const useConversationsStore = defineStore('conversations', () => {
     conversations.value = await api<ConversationSummary[]>('/conversations')
   }
 
+  async function fetchTopicConversations(topicId: number): Promise<void> {
+    topicConversations.value = await api<ConversationListItem[]>(
+      `/conversations?topic_id=${topicId}`,
+    )
+  }
+
+  /** Deletes a conversation with its messages; cards and questions made from it stay. */
+  async function deleteConversation(id: number): Promise<void> {
+    await api<null>(`/conversations/${id}`, { method: 'DELETE' })
+
+    conversations.value = conversations.value.filter((existing) => existing.id !== id)
+    topicConversations.value = topicConversations.value.filter((existing) => existing.id !== id)
+    if (conversation.value?.id === id) {
+      conversation.value = null
+    }
+  }
+
   async function fetchConversation(id: number): Promise<Conversation> {
     const fetchedConversation = await api<Conversation>(`/conversations/${id}`)
     conversation.value = fetchedConversation
@@ -107,11 +132,14 @@ export const useConversationsStore = defineStore('conversations', () => {
     return fetchedConversation
   }
 
-  /** Starts a conversation with your first message; the tutor's reply comes back with it. */
-  async function startConversation(message: string): Promise<Conversation> {
+  /**
+   * Starts a conversation with your first message; the tutor's reply comes back with it. With a
+   * topic it continues that topic (an open practice session).
+   */
+  async function startConversation(message: string, topicId?: number): Promise<Conversation> {
     const startedConversation = await api<Conversation>('/conversations', {
       method: 'POST',
-      body: { message },
+      body: topicId === undefined ? { message } : { message, topic_id: topicId },
     })
     conversation.value = startedConversation
     rememberInHistory(startedConversation)
@@ -147,7 +175,10 @@ export const useConversationsStore = defineStore('conversations', () => {
   return {
     conversations,
     conversation,
+    topicConversations,
     fetchConversations,
+    fetchTopicConversations,
+    deleteConversation,
     fetchConversation,
     startConversation,
     sendMessage,

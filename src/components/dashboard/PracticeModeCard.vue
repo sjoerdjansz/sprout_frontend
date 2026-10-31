@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import BaseCard from '@/components/BaseCard.vue'
-import IconTile, { type Tint } from '@/components/IconTile.vue'
-import type { IconName } from '@/components/icons'
-
-export interface PracticeMode {
-  title: string
-  description: string
-  icon: IconName
-  tint: Tint
-}
+import IconTile from '@/components/IconTile.vue'
+import type { PracticeMode } from '@/lib/practiceModes'
 
 const { mode } = defineProps<{
   mode: PracticeMode
@@ -18,7 +11,7 @@ const { mode } = defineProps<{
 <template>
   <BaseCard interactive class="flex flex-col items-start gap-3">
     <IconTile :icon="mode.icon" :tint="mode.tint" />
-    <span class="text-heading text-ink">{{ mode.title }}</span>
-    <span class="text-label font-normal text-ink-muted">{{ mode.description }}</span>
+    <span class="text-heading text-ink">{{ mode.name }}</span>
+    <span class="text-label font-normal text-ink-muted">{{ mode.blurb }}</span>
   </BaseCard>
 </template>

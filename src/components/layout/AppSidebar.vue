@@ -6,18 +6,20 @@ import ChatHistory from '@/components/layout/ChatHistory.vue'
 import SidebarButton from '@/components/layout/SidebarButton.vue'
 import SidebarNavLink from '@/components/layout/SidebarNavLink.vue'
 import StreakNudge from '@/components/layout/StreakNudge.vue'
-import ThemeToggle from '@/components/layout/ThemeToggle.vue'
+import type { AvatarColor } from '@/stores/auth'
 import type { ConversationSummary } from '@/stores/conversations'
 
 const {
   userName,
   userInitials,
+  userColor = 'sun',
   conversations,
   historyError = null,
   collapsed,
 } = defineProps<{
   userName: string
   userInitials: string
+  userColor?: AvatarColor
   conversations: ConversationSummary[]
   historyError?: string | null
   /** Icons only: the chat history and the streak nudge hide until you expand it again. */
@@ -57,7 +59,12 @@ const emit = defineEmits<{
       :to="{ name: 'knowledge-map' }"
       :collapsed="collapsed"
     />
-    <SidebarNavLink icon="target" label="Practice center" :collapsed="collapsed" />
+    <SidebarNavLink
+      icon="target"
+      label="Practice center"
+      :to="{ name: 'practice' }"
+      :collapsed="collapsed"
+    />
     <SidebarNavLink icon="chart-line" label="Insights" :collapsed="collapsed" />
 
     <!-- Takes the free space and scrolls on its own, so the bottom of the sidebar stays put. -->
@@ -78,7 +85,12 @@ const emit = defineEmits<{
       class="mb-3"
     />
 
-    <SidebarNavLink icon="settings" label="Settings" :collapsed="collapsed" />
+    <SidebarNavLink
+      icon="settings"
+      label="Settings"
+      :to="{ name: 'settings' }"
+      :collapsed="collapsed"
+    />
 
     <!-- Who's signed in, so you know which account you're learning on. -->
     <p
@@ -87,7 +99,7 @@ const emit = defineEmits<{
       :title="collapsed ? userName : undefined"
       data-test="account"
     >
-      <UserAvatar :initials="userInitials" />
+      <UserAvatar :initials="userInitials" :color="userColor" />
       <span class="sr-only">Signed in as</span>
       <span class="min-w-0 truncate" :class="{ 'sr-only': collapsed }">{{ userName }}</span>
     </p>
@@ -99,6 +111,5 @@ const emit = defineEmits<{
       data-test="logout"
       @click="emit('logout')"
     />
-    <ThemeToggle :collapsed="collapsed" />
   </nav>
 </template>

@@ -6,7 +6,6 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader.vue'
 import PracticeModes from '@/components/dashboard/PracticeModes.vue'
 import RetentionQueue from '@/components/dashboard/RetentionQueue.vue'
 import TutorPrompt, { type LastSession } from '@/components/dashboard/TutorPrompt.vue'
-import WeeklyInsights from '@/components/dashboard/WeeklyInsights.vue'
 import { ApiError } from '@/lib/api'
 import { chatErrorMessage } from '@/lib/chatError'
 import { dayOverline, greeting } from '@/lib/greeting'
@@ -14,7 +13,7 @@ import { firstName, initials } from '@/lib/names'
 import { relativeTime } from '@/lib/relativeTime'
 import { useAuthStore } from '@/stores/auth'
 import { useConversationsStore } from '@/stores/conversations'
-import { practiceModes, progress, retentionQueue, weeklyStats } from '@/views/dashboardPlaceholders'
+import { progress, retentionQueue } from '@/views/dashboardPlaceholders'
 
 const auth = useAuthStore()
 const conversationsStore = useConversationsStore()
@@ -97,8 +96,6 @@ async function startConversation(text: string): Promise<void> {
       />
     </div>
 
-    <PracticeModes :modes="practiceModes" />
-
-    <WeeklyInsights :stats="weeklyStats" />
+    <PracticeModes />
   </AppLayout>
 </template>

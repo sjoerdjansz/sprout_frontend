@@ -11,7 +11,9 @@ const user: User = {
   id: 1,
   name: 'Ada Lovelace',
   email: 'ada@example.com',
+  pending_email: null,
   email_verified_at: '2026-10-29T12:00:00.000000Z',
+  avatar_color: 'sun',
   interests: ['maths'],
   wants_daily_reminder: true,
   created_at: '2026-10-29T12:00:00.000000Z',
@@ -56,8 +58,28 @@ describe('DashboardView', () => {
       'What do you want to understand today?',
       'Today’s retention queue',
       'Start a practice session',
-      'This week',
     ])
+  })
+
+  it('offers the same four ways to practise as the knowledge map', async () => {
+    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+
+    const wrapper = await mountDashboard()
+
+    const practice = wrapper.get('[aria-labelledby="practice-heading"]')
+    expect(
+      practice.findAll('button').map((card) => card.find('span:nth-of-type(2)').text()),
+    ).toEqual(['Flashcards', 'Retrieval quiz', 'Explain it', 'Open session'])
+  })
+
+  it('opens the practice setup with the mode you pick', async () => {
+    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+    const wrapper = await mountDashboard()
+
+    await wrapper.get('[data-test="practice-mode-feynman"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/practice?modes=feynman')
   })
 
   it('starts a conversation with your first message and opens it', async () => {

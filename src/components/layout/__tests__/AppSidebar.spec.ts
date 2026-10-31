@@ -17,14 +17,14 @@ describe('AppSidebar', () => {
     setActivePinia(createPinia())
   })
 
-  it('shows who is signed in, then log out and the theme at the bottom', () => {
+  it('shows who is signed in, then log out at the bottom', () => {
     const wrapper = mountSidebar(false)
 
     expect(wrapper.get('[data-test="account"]').text()).toContain('Ada Lovelace')
     expect(wrapper.get('[data-test="logout"]').text()).toBe('Log out')
 
     const bottom = wrapper.findAll('[data-test]').map((element) => element.attributes('data-test'))
-    expect(bottom.slice(-3)).toEqual(['account', 'logout', 'theme-toggle'])
+    expect(bottom.slice(-2)).toEqual(['account', 'logout'])
   })
 
   it('logs you out and asks to collapse', async () => {
@@ -46,6 +46,7 @@ describe('AppSidebar', () => {
       'aria-expanded': 'false',
     })
     expect(wrapper.get('a[href="/knowledge-map"]').attributes('title')).toBe('Knowledge map')
+    expect(wrapper.get('a[href="/practice"]').attributes('title')).toBe('Practice center')
     expect(wrapper.get('[data-test="logout"]').attributes('title')).toBe('Log out')
   })
 })

@@ -2,8 +2,11 @@
 import { watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 
 const auth = useAuthStore()
+// Applies your theme and reduce motion on every page, signed in or not.
+useThemeStore()
 const route = useRoute()
 const router = useRouter()
 

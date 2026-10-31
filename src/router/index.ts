@@ -8,6 +8,17 @@ import ConversationView from '@/views/ConversationView.vue'
 import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
+import SettingsView from '@/views/SettingsView.vue'
+import EmailConfirmView from '@/views/EmailConfirmView.vue'
+import ProfileSettings from '@/views/settings/ProfileSettings.vue'
+import AiSettings from '@/views/settings/AiSettings.vue'
+import LearningSettings from '@/views/settings/LearningSettings.vue'
+import ReminderSettings from '@/views/settings/ReminderSettings.vue'
+import AppearanceSettings from '@/views/settings/AppearanceSettings.vue'
+import DataSettings from '@/views/settings/DataSettings.vue'
+import SubtopicView from '@/views/SubtopicView.vue'
+import PracticeSetupView from '@/views/PracticeSetupView.vue'
+import PracticeSessionView from '@/views/PracticeSessionView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -40,6 +51,52 @@ const router = createRouter({
       name: 'knowledge-map',
       component: KnowledgeMapView,
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/subtopics/:id',
+      name: 'subtopic',
+      component: SubtopicView,
+      // A non-numeric id becomes NaN, which the API answers with its not found message.
+      props: (route) => ({ id: Number(route.params.id) }),
+      meta: { requiresAuth: true },
+    },
+    {
+      // Prefilled from the query: ?subtopic=26, ?topic=8 and ?modes=cards,retrieval.
+      path: '/practice',
+      name: 'practice',
+      component: PracticeSetupView,
+      meta: { requiresAuth: true },
+    },
+    {
+      // Runs the plan the setup page made; without one it sends you back there.
+      path: '/practice/session',
+      name: 'practice-session',
+      component: PracticeSessionView,
+      meta: { requiresAuth: true },
+    },
+    {
+      // One URL per section, so Back and reloading keep your place. Sections share the page's
+      // menu and its loaded settings.
+      path: '/settings',
+      name: 'settings',
+      component: SettingsView,
+      redirect: { name: 'settings-profile' },
+      meta: { requiresAuth: true },
+      children: [
+        { path: 'profile', name: 'settings-profile', component: ProfileSettings },
+        { path: 'ai', name: 'settings-ai', component: AiSettings },
+        { path: 'learning', name: 'settings-learning', component: LearningSettings },
+        { path: 'reminders', name: 'settings-reminders', component: ReminderSettings },
+        { path: 'appearance', name: 'settings-appearance', component: AppearanceSettings },
+        { path: 'data', name: 'settings-data', component: DataSettings },
+      ],
+    },
+    {
+      // The link in the email-change email points here (see ../API.md). Open to everyone: the
+      // token is the proof, so it also works on a device where you aren't signed in.
+      path: '/settings/email/confirm',
+      name: 'settings-email-confirm',
+      component: EmailConfirmView,
     },
     {
       path: '/login',

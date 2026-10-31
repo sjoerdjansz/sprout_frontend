@@ -25,13 +25,14 @@ const linkClasses = computed<string>(
 </script>
 
 <template>
-  <!-- RouterLink sets aria-current="page" on the page you're on. -->
+  <!-- RouterLink sets aria-current="page" on the page you're on; the highlight also stays on a
+       page's own sub pages (every settings section under Settings). -->
   <RouterLink
     v-if="to"
     :to="to"
     :title="collapsed ? label : undefined"
     :class="linkClasses"
-    exact-active-class="bg-surface text-ink shadow-sm"
+    active-class="bg-surface text-ink shadow-sm"
   >
     <BaseIcon :name="icon" />
     <span :class="{ 'sr-only': collapsed }">{{ label }}</span>

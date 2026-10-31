@@ -1,6 +1,26 @@
 @import 'tailwindcss';
 
 /*
+ * "Reduce motion" in your settings sets data-reduce-motion on <html>. These replace Tailwind's
+ * own variants so every motion-reduce: and motion-safe: class follows it as well as the system.
+ */
+@custom-variant motion-reduce {
+  @media (prefers-reduced-motion: reduce) {
+    @slot;
+  }
+  &:where([data-reduce-motion], [data-reduce-motion] *) {
+    @slot;
+  }
+}
+@custom-variant motion-safe {
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(:where([data-reduce-motion], [data-reduce-motion] *)) {
+      @slot;
+    }
+  }
+}
+
+/*
  * Sprout design tokens, mirrored from the design system's tokens.json
  * (https://claude.ai/artifact/Sda9GsiKyUZyqh3oBGB9Aa). Build with the semantic
  * roles (bg-canvas, text-ink, bg-primary ...); the brand palette is for illustration.
@@ -104,9 +124,6 @@
   --text-code--line-height: 20px;
   --text-code--font-weight: 400;
 
-  /* From here a page's side panel (rail) sits next to the content instead of below it. */
-  --breakpoint-rail: 1100px;
-
   /* 4px base: p-4 = 16px, matching space-4 */
   --spacing: 4px;
 
@@ -125,6 +142,36 @@
 
   --ease-default: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring: cubic-bezier(0.3, 1.4, 0.5, 1);
+
+  /* Toasts pop in on the springy curve (the design system's `sp-pop`). */
+  --animate-pop: pop 350ms var(--ease-spring);
+
+  @keyframes pop {
+    from {
+      transform: translateY(8px) scale(0.96);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  /* A wrong quiz answer shakes once (the design system's `sp-shake`). */
+  --animate-shake: shake 350ms ease;
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
+  }
 }
 
 /*
@@ -171,6 +218,10 @@
 @layer base {
   :root {
     color-scheme: light;
+    /* Every scroll area, app-wide (both properties inherit): a thin bar in a token colour on an
+       invisible track, so a scrollbar never covers content with a grey band. */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
   }
 
   body {

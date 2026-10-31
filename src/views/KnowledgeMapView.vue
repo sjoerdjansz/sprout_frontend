@@ -1,30 +1,39 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import BaseButton from '@/components/BaseButton.vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
-import PanelLayout from '@/components/knowledgeMap/PanelLayout.vue'
-import PracticePicker from '@/components/knowledgeMap/PracticePicker.vue'
-import SubtopicDetails from '@/components/knowledgeMap/SubtopicDetails.vue'
+import BaseToast from '@/components/BaseToast.vue'
+import FormError from '@/components/FormError.vue'
 import SubtopicList from '@/components/knowledgeMap/SubtopicList.vue'
-import TopicDetails from '@/components/knowledgeMap/TopicDetails.vue'
-import TopicForm, {
+import TopicFormDialog, {
   type TopicFormMode,
   type TopicFormValues,
-} from '@/components/knowledgeMap/TopicForm.vue'
+} from '@/components/knowledgeMap/TopicFormDialog.vue'
 import TopicLibrary from '@/components/knowledgeMap/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { useToast } from '@/composables/useToast'
+import { ApiError } from '@/lib/api'
 import {
+  describeAdded,
   filterTopics,
   librarySummary,
   needsAttention,
-  suggestPractice,
   usedCategories,
   visibleSubtopics,
   type LibraryFilters,
-  type PracticeSuggestion,
 } from '@/lib/knowledgeMap'
-import { useTopicsStore, type Category, type Subtopic, type Topic } from '@/stores/topics'
+import { useTopicsStore, type Category, type Topic } from '@/stores/topics'
 
+const route = useRoute()
+const router = useRouter()
 const topicsStore = useTopicsStore()
+const { toast, showToast } = useToast()
+
+type LoadState = 'loading' | 'loaded' | 'failed'
+
+const loadState = ref<LoadState>('loading')
+const loadError = ref('')
 
 const query = ref('')
 const categoryId = ref<number | 'all'>('all')
@@ -42,65 +51,76 @@ function clearFilters(): void {
   showOnlyAttention.value = false
 }
 
-interface Selection {
-  kind: 'topic' | 'subtopic'
-  id: number
-}
+/**
+ * The topic whose subtopics show under the library. It lives in the URL (`?topic=8`), so going
+ * back from a subtopic's page, or reloading, keeps your place. Without one, the first topic.
+ */
+const selectedTopicId = computed<number | null>({
+  get: () => {
+    const fromUrl = Number(route.query.topic)
+    const exists = topicsStore.topics.some((topic) => topic.id === fromUrl)
 
-// The design opens on a subtopic you're working on, so you see its facets straight away.
-const selection = ref<Selection>({ kind: 'subtopic', id: 101 })
+    return exists ? fromUrl : (topicsStore.topics[0]?.id ?? null)
+  },
+  // Replace, not push: picking topics shouldn't fill your back button.
+  set: (topicId) => {
+    void router.replace({ query: topicId === null ? {} : { topic: String(topicId) } })
+  },
+})
 
-interface FormState {
-  mode: TopicFormMode
-  values: TopicFormValues
-  /** The topic or subtopic being edited; null while adding. */
-  editingId: number | null
-}
+async function load(): Promise<void> {
+  loadState.value = 'loading'
 
-// Null while the panel shows details; the add and edit forms take the panel's place.
-const form = ref<FormState | null>(null)
-
-const selectedSubtopic = computed<Subtopic | null>(() => {
-  if (selection.value.kind !== 'subtopic') {
-    return null
+  try {
+    await topicsStore.fetchLibrary()
+    loadState.value = 'loaded'
+  } catch (caught) {
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+    loadError.value = caught.message
+    loadState.value = 'failed'
   }
-  const id = selection.value.id
+}
 
-  return (
-    topicsStore.topics.flatMap((topic) => topic.subtopics).find((subtopic) => subtopic.id === id) ??
-    null
-  )
+onMounted(() => {
+  void load()
 })
 
-// The selected topic, or the parent of the selected subtopic. Falls back to the first topic.
-const selectedTopic = computed<Topic | null>(() => {
-  const subtopic = selectedSubtopic.value
-  const topic = topicsStore.topics.find((candidate) =>
-    subtopic === null
-      ? candidate.id === selection.value.id
-      : candidate.subtopics.includes(subtopic),
-  )
+const subtopicList = useTemplateRef<InstanceType<typeof SubtopicList>>('subtopicList')
 
-  return topic ?? topicsStore.topics[0] ?? null
-})
+/**
+ * Picks a topic. On a narrow screen its subtopics sit below all the cards, so scroll them into
+ * view; when they're already on screen (a wide screen) nothing moves.
+ */
+async function selectTopic(topicId: number): Promise<void> {
+  selectedTopicId.value = topicId
+  await nextTick()
+
+  const list: unknown = subtopicList.value?.$el
+  if (!(list instanceof HTMLElement) || list.getBoundingClientRect().top < window.innerHeight) {
+    return
+  }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  list.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' })
+}
 
 const filteredTopics = computed<Topic[]>(() => filterTopics(topicsStore.topics, filters.value))
 
-// The subtopics belong to the selected card, so they hide when a filter hides that card.
-const showSubtopics = computed<boolean>(
-  () => selectedTopic.value !== null && filteredTopics.value.includes(selectedTopic.value),
-)
+/**
+ * The topic whose subtopics show: the one you picked, or, when a filter hides it, the first topic
+ * that's still visible. So a search for a subtopic shows that subtopic straight away.
+ */
+const shownTopic = computed<Topic | null>(() => {
+  const picked = filteredTopics.value.find((topic) => topic.id === selectedTopicId.value)
+
+  return picked ?? filteredTopics.value[0] ?? null
+})
 
 const summary = computed<string>(() => librarySummary(topicsStore.topics))
 
 const attentionCount = computed<number>(
   () => topicsStore.topics.flatMap((topic) => topic.subtopics).filter(needsAttention).length,
-)
-
-const suggestion = computed<PracticeSuggestion | null>(() =>
-  selectedTopic.value === null
-    ? null
-    : suggestPractice(selectedTopic.value, selectedSubtopic.value),
 )
 
 // Only categories that have topics get a chip; the form offers all of them.
@@ -116,184 +136,163 @@ const topicOptions = computed<SelectOption[]>(() =>
   topicsStore.topics.map((topic) => ({ value: String(topic.id), label: topic.title })),
 )
 
-// Remounts the practice picker, so it starts closed with the new suggestion.
-const selectionKey = computed<string>(() => `${selection.value.kind}-${selection.value.id}`)
+// --- Adding and editing, in a dialog
 
-function selectTopic(topicId: number): void {
-  selection.value = { kind: 'topic', id: topicId }
-  form.value = null
+interface FormState {
+  mode: TopicFormMode
+  values: TopicFormValues
 }
 
-function selectSubtopic(subtopicId: number): void {
-  selection.value = { kind: 'subtopic', id: subtopicId }
-  form.value = null
-}
+// Null while no dialog is open.
+const form = ref<FormState | null>(null)
+const saving = ref(false)
+const saveError = ref<ApiError | null>(null)
 
-function emptyValues(): TopicFormValues {
-  return {
-    title: '',
-    description: '',
-    notes: '',
-    // The category you're looking at, else the first one; with none at all you make one.
-    categoryId:
-      categoryId.value === 'all' ? (topicsStore.categories[0]?.id ?? null) : categoryId.value,
-    newCategoryName: '',
-    topicId: selectedTopic.value?.id ?? 0,
+function openForm(mode: TopicFormMode, topic: Topic | null): void {
+  saveError.value = null
+  form.value = {
+    mode,
+    values: {
+      title: mode === 'edit-topic' ? (topic?.title ?? '') : '',
+      description: mode === 'edit-topic' ? (topic?.description ?? '') : '',
+      notes: mode === 'edit-topic' ? (topic?.notes ?? '') : '',
+      // The topic's own category, the one you're filtering on, or the first one; with none at
+      // all you make one.
+      categoryId:
+        topic?.category.id ??
+        (categoryId.value === 'all' ? (topicsStore.categories[0]?.id ?? null) : categoryId.value),
+      newCategoryName: '',
+      topicId: topic?.id ?? 0,
+    },
   }
 }
 
-function openAddTopic(): void {
-  form.value = { mode: 'add-topic', values: emptyValues(), editingId: null }
-}
+async function saveForm(mode: TopicFormMode, values: TopicFormValues): Promise<void> {
+  if (mode === 'add-subtopic') {
+    const result = await topicsStore.addSubtopic({
+      topicId: values.topicId,
+      title: values.title,
+      description: values.description,
+      notes: values.notes,
+    })
+    selectedTopicId.value = result.subtopic.topic_id
+    if (result.added.flashcards + result.added.questions > 0) {
+      showToast({
+        title: `Added ${result.subtopic.title}`,
+        message: describeAdded(result.added),
+        tone: 'sprout',
+        icon: 'sparkles',
+      })
+    }
 
-function openAddSubtopic(): void {
-  form.value = { mode: 'add-subtopic', values: emptyValues(), editingId: null }
-}
-
-function openEdit(): void {
-  const topic = selectedTopic.value
-  if (topic === null) {
     return
   }
-  const subtopic = selectedSubtopic.value
 
-  form.value =
-    subtopic === null
-      ? {
-          mode: 'edit-topic',
-          values: {
-            title: topic.title,
-            description: topic.description,
-            notes: topic.notes,
-            categoryId: topic.categoryId,
-            newCategoryName: '',
-            topicId: topic.id,
-          },
-          editingId: topic.id,
-        }
-      : {
-          mode: 'edit-subtopic',
-          values: {
-            title: subtopic.title,
-            description: subtopic.description,
-            notes: subtopic.notes,
-            categoryId: topic.categoryId,
-            newCategoryName: '',
-            topicId: topic.id,
-          },
-          editingId: subtopic.id,
-        }
-}
-
-function save(values: TopicFormValues): void {
-  if (form.value === null) {
-    return
-  }
-  const { mode, editingId } = form.value
-  const isTopicForm = mode === 'add-topic' || mode === 'edit-topic'
-  // Only a main topic's form asks for a category, so only it can make a new one.
-  const newCategoryId =
-    isTopicForm && values.categoryId === null
-      ? topicsStore.addCategory(values.newCategoryName)
-      : null
   const topicInput = {
     title: values.title,
     description: values.description,
     notes: values.notes,
-    categoryId: values.categoryId ?? newCategoryId ?? 0,
+    categoryId: values.categoryId,
+    categoryName: values.newCategoryName,
   }
-  const subtopicInput = {
-    title: values.title,
-    description: values.description,
-    notes: values.notes,
-    topicId: values.topicId,
-  }
+  const topic =
+    mode === 'add-topic'
+      ? await topicsStore.addTopic(topicInput)
+      : await topicsStore.updateTopic(values.topicId, topicInput)
+  selectedTopicId.value = topic.id
+}
 
-  switch (mode) {
-    case 'add-topic':
-      selection.value = { kind: 'topic', id: topicsStore.addTopic(topicInput) }
-      break
-    case 'add-subtopic':
-      selection.value = { kind: 'subtopic', id: topicsStore.addSubtopic(subtopicInput) }
-      break
-    case 'edit-topic':
-      topicsStore.updateTopic(editingId ?? 0, topicInput)
-      break
-    case 'edit-subtopic':
-      topicsStore.updateSubtopic(editingId ?? 0, subtopicInput)
-      break
+async function save(values: TopicFormValues): Promise<void> {
+  if (form.value === null) {
+    return
   }
+  saving.value = true
+  saveError.value = null
 
-  // Clear the filters so what you just saved is in view, wherever it ended up.
-  clearFilters()
-  form.value = null
+  try {
+    await saveForm(form.value.mode, values)
+    // Clear the filters so what you just saved is in view.
+    clearFilters()
+    form.value = null
+  } catch (caught) {
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+    // Nothing was saved; the form keeps your values so you can fix them and try again.
+    saveError.value = caught
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
 <template>
-  <AppLayout aside-label="Topic details">
+  <AppLayout>
     <header class="flex flex-none flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
       <h1 class="font-display text-title-lg text-ink">Knowledge map</h1>
-      <p class="text-label font-normal text-ink-muted" data-test="summary">{{ summary }}</p>
+      <p
+        v-if="loadState === 'loaded'"
+        class="text-label font-normal text-ink-muted"
+        data-test="summary"
+      >
+        {{ summary }}
+      </p>
     </header>
 
-    <TopicLibrary
-      v-model:query="query"
-      v-model:category-id="categoryId"
-      v-model:needs-attention="showOnlyAttention"
-      :topics="filteredTopics"
-      :category-name="topicsStore.categoryName"
-      :filter-categories="filterCategories"
-      :selected-topic-id="selectedTopic?.id ?? null"
-      :attention-count="attentionCount"
-      @select="selectTopic"
-      @add-topic="openAddTopic"
-      @clear-filters="clearFilters"
-    />
+    <p v-if="loadState === 'loading'" class="text-ink-muted" aria-live="polite">
+      Loading your library…
+    </p>
 
-    <SubtopicList
-      v-if="showSubtopics && selectedTopic !== null"
-      :topic="selectedTopic"
-      :subtopics="visibleSubtopics(selectedTopic, filters)"
-      :selected-subtopic-id="selectedSubtopic?.id ?? null"
-      @select="selectSubtopic"
-      @add-subtopic="openAddSubtopic"
-    />
+    <div v-else-if="loadState === 'failed'" class="flex flex-col items-start gap-4">
+      <FormError :message="loadError" />
+      <BaseButton variant="secondary" icon="rotate-ccw" data-test="retry" @click="load">
+        Try again
+      </BaseButton>
+    </div>
 
-    <template #aside>
-      <TopicForm
-        v-if="form !== null"
-        :key="`${form.mode}-${selectionKey}`"
-        :mode="form.mode"
-        :initial-values="form.values"
-        :category-options="categoryOptions"
-        :topic-options="topicOptions"
-        @save="save"
-        @cancel="form = null"
+    <template v-else>
+      <TopicLibrary
+        v-model:query="query"
+        v-model:category-id="categoryId"
+        v-model:needs-attention="showOnlyAttention"
+        :topics="filteredTopics"
+        :library-is-empty="topicsStore.topics.length === 0"
+        :filter-categories="filterCategories"
+        :selected-topic-id="shownTopic?.id ?? null"
+        :attention-count="attentionCount"
+        @select="selectTopic"
+        @add-topic="openForm('add-topic', null)"
+        @clear-filters="clearFilters"
       />
 
-      <PanelLayout v-else-if="selectedTopic !== null && suggestion !== null">
-        <SubtopicDetails
-          v-if="selectedSubtopic !== null"
-          :topic="selectedTopic"
-          :subtopic="selectedSubtopic"
-          @edit="openEdit"
-        />
-        <TopicDetails
-          v-else
-          :topic="selectedTopic"
-          :category-name="topicsStore.categoryName(selectedTopic.categoryId)"
-          @edit="openEdit"
-        />
-
-        <template #footer>
-          <PracticePicker
-            :key="selectionKey"
-            :suggestion="suggestion"
-            :subject-title="selectedSubtopic?.title ?? selectedTopic.title"
-          />
-        </template>
-      </PanelLayout>
+      <SubtopicList
+        ref="subtopicList"
+        v-if="shownTopic !== null"
+        :topic="shownTopic"
+        :subtopics="visibleSubtopics(shownTopic, filters)"
+        @edit-topic="openForm('edit-topic', shownTopic)"
+        @add-subtopic="openForm('add-subtopic', shownTopic)"
+      />
     </template>
+
+    <TopicFormDialog
+      v-if="form !== null"
+      :mode="form.mode"
+      :initial-values="form.values"
+      :category-options="categoryOptions"
+      :topic-options="topicOptions"
+      :saving="saving"
+      :error="saveError"
+      @save="save"
+      @close="form = null"
+    />
+
+    <BaseToast
+      v-if="toast !== null"
+      :title="toast.title"
+      :message="toast.message"
+      :tone="toast.tone"
+      :icon="toast.icon"
+    />
   </AppLayout>
 </template>

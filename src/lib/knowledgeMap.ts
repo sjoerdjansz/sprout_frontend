@@ -1,11 +1,19 @@
 /*
  * The knowledge map's rules: when a subtopic counts as mastered or slipping, what needs your
- * attention, what to practise next, and which topics a search shows. Kept apart from the
+ * attention, and which topics a search shows. Kept apart from the
  * components so they stay presentational and the rules are easy to test.
  */
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
-import type { Category, FacetKey, FacetProgress, Subtopic, Topic } from '@/stores/topics'
+import { dueLabel } from '@/lib/dueDate'
+import type {
+  AddedMaterial,
+  Category,
+  FacetKey,
+  FacetProgress,
+  Subtopic,
+  Topic,
+} from '@/stores/topics'
 
 export interface Facet {
   key: FacetKey
@@ -24,17 +32,22 @@ export function pluralize(count: number, singular: string, plural = `${singular}
   return `${count} ${count === 1 ? singular : plural}`
 }
 
+/** "3 flashcards and 1 question": what Sprout made from a subtopic's notes. */
+export function describeAdded(added: AddedMaterial): string {
+  return `${pluralize(added.flashcards, 'flashcard')} and ${pluralize(added.questions, 'question')}`
+}
+
 export function holdingCount(subtopic: Subtopic): number {
   return facets.filter((facet) => subtopic.facets[facet.key].holding).length
 }
 
 /** Mastered means all three facets hold over time, not one good session. */
 export function isMastered(subtopic: Subtopic): boolean {
-  return !subtopic.isNew && !subtopic.slipping && holdingCount(subtopic) === facets.length
+  return !subtopic.is_new && !subtopic.slipping && holdingCount(subtopic) === facets.length
 }
 
 export function needsAttention(subtopic: Subtopic): boolean {
-  return subtopic.dueCards > 0 || subtopic.slipping
+  return subtopic.due_cards > 0 || subtopic.slipping
 }
 
 export function averageMastery(topic: Topic): number {
@@ -47,7 +60,7 @@ export function averageMastery(topic: Topic): number {
 }
 
 export function dueCards(topic: Topic): number {
-  return topic.subtopics.reduce((sum, subtopic) => sum + subtopic.dueCards, 0)
+  return topic.subtopics.reduce((sum, subtopic) => sum + subtopic.due_cards, 0)
 }
 
 export type FacetState = 'holding' | 'started' | 'not-started'
@@ -80,7 +93,7 @@ const levels = {
 const growingFrom = 60
 
 export function subtopicLevel(subtopic: Subtopic): Level {
-  if (subtopic.isNew) {
+  if (subtopic.is_new) {
     return levels.new
   }
   if (subtopic.slipping) {
@@ -93,20 +106,6 @@ export function subtopicLevel(subtopic: Subtopic): Level {
   return subtopic.mastery >= growingFrom ? levels.growing : levels.seedling
 }
 
-export function topicLevel(topic: Topic): Level {
-  if (topic.subtopics.length === 0) {
-    return levels.new
-  }
-  if (topic.subtopics.some((subtopic) => subtopic.slipping)) {
-    return levels.slipping
-  }
-  if (topic.subtopics.every(isMastered)) {
-    return levels.mastered
-  }
-
-  return averageMastery(topic) >= growingFrom ? levels.growing : levels.seedling
-}
-
 export interface Caption {
   text: string
   tone: 'subtle' | 'sun' | 'sprout'
@@ -114,23 +113,28 @@ export interface Caption {
 
 /** The one line under a subtopic's name: the most urgent thing about it. */
 export function subtopicCaption(subtopic: Subtopic): Caption {
-  if (subtopic.isNew) {
-    return { text: 'Not started yet', tone: 'subtle' }
+  // New cards are due straight away, so a subtopic you haven't started can need attention too.
+  if (subtopic.is_new) {
+    return subtopic.due_cards > 0
+      ? { text: `Not started yet · ${pluralize(subtopic.due_cards, 'card')} due`, tone: 'sun' }
+      : { text: 'Not started yet', tone: 'subtle' }
   }
   if (subtopic.slipping) {
-    return { text: `Slipping · ${pluralize(subtopic.dueCards, 'card')} due`, tone: 'sun' }
+    return { text: `Slipping · ${pluralize(subtopic.due_cards, 'card')} due`, tone: 'sun' }
   }
-  if (subtopic.dueCards > 0) {
-    return { text: `${pluralize(subtopic.dueCards, 'card')} due today`, tone: 'sun' }
+  if (subtopic.due_cards > 0) {
+    return { text: `${pluralize(subtopic.due_cards, 'card')} due today`, tone: 'sun' }
   }
   if (isMastered(subtopic)) {
     return { text: 'Mastered', tone: 'sprout' }
   }
 
-  return {
-    text: `Next review ${subtopic.nextReview ?? 'after your first session'}`,
-    tone: 'subtle',
-  }
+  const nextReview =
+    subtopic.next_review_on === null
+      ? 'after your first session'
+      : dueLabel(subtopic.next_review_on)
+
+  return { text: `Next review ${nextReview}`, tone: 'subtle' }
 }
 
 export interface LibraryFilters {
@@ -150,7 +154,7 @@ export function filterTopics(topics: Topic[], filters: LibraryFilters): Topic[] 
   const query = filters.query.trim().toLowerCase()
 
   return topics.filter((topic) => {
-    if (filters.categoryId !== 'all' && topic.categoryId !== filters.categoryId) {
+    if (filters.categoryId !== 'all' && topic.category.id !== filters.categoryId) {
       return false
     }
     if (
@@ -180,7 +184,7 @@ export function visibleSubtopics(topic: Topic, filters: LibraryFilters): Subtopi
 
 /** The categories worth a filter chip: the ones your topics use, in their own order. */
 export function usedCategories(categories: Category[], topics: Topic[]): Category[] {
-  return categories.filter((category) => topics.some((topic) => topic.categoryId === category.id))
+  return categories.filter((category) => topics.some((topic) => topic.category.id === category.id))
 }
 
 export function librarySummary(topics: Topic[]): string {
@@ -196,119 +200,30 @@ export function librarySummary(topics: Topic[]): string {
   ].join(' · ')
 }
 
-export type PracticeModeId = 'cards' | 'retrieval' | 'feynman' | 'open'
-
-export interface PracticeMode {
-  id: PracticeModeId
-  name: string
-  blurb: string
+export interface TopicAppearance {
   icon: IconName
   tint: Tint
-  /** The facet this mode trains; an open session trains all of them. */
-  facet: FacetKey | null
-  minutes: number
-  startLabel: string
 }
 
-export const practiceModes: PracticeMode[] = [
-  {
-    id: 'cards',
-    name: 'Flashcards',
-    blurb: 'Flip the cards and rate your recall.',
-    icon: 'layers',
-    tint: 'mint',
-    facet: 'cards',
-    minutes: 8,
-    startLabel: 'Start flashcards',
-  },
-  {
-    id: 'retrieval',
-    name: 'Retrieval quiz',
-    blurb: 'Multiple choice and open questions, from memory.',
-    icon: 'list-checks',
-    tint: 'sky',
-    facet: 'quiz',
-    minutes: 10,
-    startLabel: 'Start retrieval quiz',
-  },
-  {
-    id: 'feynman',
-    name: 'Explain it',
-    blurb: 'Explain it in your own words; I’ll find the gaps.',
-    icon: 'lightbulb',
-    tint: 'sun',
-    facet: 'explain',
-    minutes: 12,
-    startLabel: 'Start explaining',
-  },
-  {
-    id: 'open',
-    name: 'Open session',
-    blurb: 'Talk it through with the tutor and go deeper.',
-    icon: 'message-circle',
-    tint: 'peach',
-    facet: null,
-    minutes: 15,
-    startLabel: 'Start open session',
-  },
-]
-
-export function practiceMode(id: PracticeModeId): PracticeMode {
-  const mode = practiceModes.find((candidate) => candidate.id === id)
-  if (mode === undefined) {
-    throw new Error(`There is no practice mode ${id}.`)
-  }
-
-  return mode
+// The starter categories get an icon of their own; categories you make get the open book.
+const categoryIcons: Record<string, IconName> = {
+  science: 'sprout',
+  technology: 'zap',
+  maths: 'chart-no-axes-column',
+  languages: 'message-circle',
+  history: 'book-open',
+  'arts & culture': 'sparkles',
 }
 
-export interface PracticeSuggestion {
-  mode: PracticeMode
-  /** Finishes "Suggested: Flashcards — …" */
-  reason: string
-}
+const tints: Tint[] = ['mint', 'sun', 'peach', 'sky']
 
 /**
- * For a subtopic: train its weakest facet that isn't holding yet, untried facets first. For a
- * whole topic: review what's due, otherwise go deeper with the tutor.
+ * A topic's icon tile. Presentation only, so the API doesn't store it: the icon follows the
+ * category and the tints rotate through the library by id, so a topic keeps its colour.
  */
-export function suggestPractice(topic: Topic, subtopic: Subtopic | null): PracticeSuggestion {
-  if (subtopic === null) {
-    const due = dueCards(topic)
-
-    return due > 0
-      ? {
-          mode: practiceMode('cards'),
-          reason: `${pluralize(due, 'card')} ${due === 1 ? 'is' : 'are'} due across ${topic.title}.`,
-        }
-      : { mode: practiceMode('open'), reason: 'nothing is due, so go deeper.' }
-  }
-
-  // Untried facets count as -1, so they come before any practised one.
-  const weakest = facets
-    .filter((facet) => !subtopic.facets[facet.key].holding)
-    .sort(
-      (first, second) =>
-        (subtopic.facets[first.key].percent ?? -1) - (subtopic.facets[second.key].percent ?? -1),
-    )[0]
-
-  if (weakest === undefined) {
-    return {
-      mode: practiceMode('open'),
-      reason: 'all three facets are holding, so go deeper.',
-    }
-  }
-
-  const mode = practiceModes.find((candidate) => candidate.facet === weakest.key)
-  if (mode === undefined) {
-    throw new Error(`No practice mode trains ${weakest.key}.`)
-  }
-
+export function topicAppearance(topic: Topic): TopicAppearance {
   return {
-    mode,
-    reason:
-      subtopic.facets[weakest.key].percent === null
-        ? 'you haven’t tried this facet yet.'
-        : 'your weakest facet.',
+    icon: categoryIcons[topic.category.name.toLowerCase()] ?? 'book-open',
+    tint: tints[topic.id % tints.length] ?? 'mint',
   }
 }

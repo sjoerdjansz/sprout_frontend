@@ -4,11 +4,11 @@ import LibraryToolbar from '@/components/knowledgeMap/LibraryToolbar.vue'
 import TopicCard from '@/components/knowledgeMap/TopicCard.vue'
 import type { Category, Topic } from '@/stores/topics'
 
-const { topics, categoryName, filterCategories, selectedTopicId, attentionCount } = defineProps<{
+const { topics, libraryIsEmpty, filterCategories, selectedTopicId, attentionCount } = defineProps<{
   /** The topics that match the filters. */
   topics: Topic[]
-  /** Names a topic's category on its card. */
-  categoryName: (categoryId: number) => string
+  /** You have no topics at all, so there's nothing a filter could find. */
+  libraryIsEmpty: boolean
   /** The categories offered as filter chips. */
   filterCategories: Category[]
   selectedTopicId: number | null
@@ -29,7 +29,7 @@ const emit = defineEmits<{
 <template>
   <section
     aria-label="Topics"
-    class="flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-sm rail:min-h-0 rail:flex-[3_1_0]"
+    class="flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-sm"
   >
     <LibraryToolbar
       v-model:query="query"
@@ -40,9 +40,21 @@ const emit = defineEmits<{
       @add-topic="emit('addTopic')"
     />
 
-    <div class="flex-auto bg-canvas p-4 rail:min-h-0 rail:overflow-y-auto">
+    <div class="flex-auto bg-canvas p-4">
       <div
-        v-if="topics.length === 0"
+        v-if="libraryIsEmpty"
+        class="flex flex-col items-center gap-2.5 rounded-lg bg-surface-tint px-6 py-7 text-center"
+        data-test="empty-library"
+      >
+        <p class="text-heading text-ink">Your library is empty</p>
+        <p class="text-[14px] leading-5 text-ink-muted">
+          Add a topic, or save one from a conversation with the tutor.
+        </p>
+        <BaseButton size="sm" icon="plus" @click="emit('addTopic')">Add topic</BaseButton>
+      </div>
+
+      <div
+        v-else-if="topics.length === 0"
         class="flex flex-col items-center gap-2.5 rounded-lg bg-surface-tint px-6 py-7 text-center"
         data-test="no-results"
       >
@@ -65,7 +77,6 @@ const emit = defineEmits<{
           v-for="topic in topics"
           :key="topic.id"
           :topic="topic"
-          :category-name="categoryName(topic.categoryId)"
           :selected="topic.id === selectedTopicId"
           data-test="topic-card"
           @select="emit('select', topic.id)"
