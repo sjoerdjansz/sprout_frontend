@@ -88,6 +88,22 @@ export interface AddedMaterial {
   questions: number
 }
 
+/** A subtopic Sprout suggests from a topic's source (`POST /topics/{id}/subtopic-suggestions`). */
+export interface SubtopicSuggestion {
+  title: string
+  /** One line on what it covers; null when the AI gave none. */
+  description: string | null
+  /** The part of the source it covers, in Markdown; null for a topic without notes (no cards). */
+  notes: string | null
+}
+
+/** What adding several subtopics at once answers (`POST /topics/{id}/subtopics`). */
+export interface AddedSubtopics {
+  /** Only the added ones, in order. */
+  subtopics: Subtopic[]
+  added: AddedMaterial & { subtopics: number }
+}
+
 /** What adding, editing or generating for a subtopic answers. */
 export interface SubtopicSaveResult {
   subtopic: Subtopic
@@ -219,6 +235,30 @@ export const useTopicsStore = defineStore('topics', () => {
     }
   }
 
+  /** Asks the AI how the topic's saved description and notes split into subtopics. Saves nothing. */
+  async function suggestSubtopics(topicId: number): Promise<SubtopicSuggestion[]> {
+    const result = await api<{ suggestions: SubtopicSuggestion[] }>(
+      `/topics/${topicId}/subtopic-suggestions`,
+      { method: 'POST' },
+    )
+
+    return result.suggestions
+  }
+
+  /** Adds the subtopics you kept, at the end of the topic, with cards for the ones with notes. */
+  async function addSubtopics(
+    topicId: number,
+    subtopics: SubtopicSuggestion[],
+  ): Promise<AddedSubtopics> {
+    const result = await api<AddedSubtopics>(`/topics/${topicId}/subtopics`, {
+      method: 'POST',
+      body: { subtopics },
+    })
+    topics.value.find((topic) => topic.id === topicId)?.subtopics.push(...result.subtopics)
+
+    return result
+  }
+
   /** Asks the AI for cards and questions from the notes that the existing ones don't cover. */
   async function generateMaterial(subtopicId: number): Promise<SubtopicSaveResult> {
     const result = await api<SubtopicSaveResult>(`/subtopics/${subtopicId}/generate`, {
@@ -241,5 +281,7 @@ export const useTopicsStore = defineStore('topics', () => {
     fetchSubtopic,
     deleteSubtopic,
     generateMaterial,
+    suggestSubtopics,
+    addSubtopics,
   }
 })

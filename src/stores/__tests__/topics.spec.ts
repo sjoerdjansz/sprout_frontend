@@ -166,4 +166,41 @@ describe('topics store', () => {
     expect(fetchMock.mock.calls[0]?.[1]?.body).toBeUndefined()
     expect(result.added.flashcards).toBe(2)
   })
+
+  it('asks for subtopic suggestions from the saved topic, without a body', async () => {
+    const fetchMock = stubApi({
+      'POST /topics/1/subtopic-suggestions': Response.json({
+        suggestions: [{ title: 'Cadence', description: 'Steps per minute.', notes: '# Cadence' }],
+      }),
+    })
+
+    const suggestions = await useTopicsStore().suggestSubtopics(1)
+
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBeUndefined()
+    expect(suggestions.map((suggestion) => suggestion.title)).toEqual(['Cadence'])
+  })
+
+  it('adds the subtopics you kept at the end of the topic', async () => {
+    const fetchMock = stubApi({
+      'POST /topics/1/subtopics': Response.json(
+        {
+          subtopics: [makeSubtopic({ id: 601, title: 'Cadence' })],
+          added: { subtopics: 1, flashcards: 3, questions: 1 },
+        },
+        { status: 201 },
+      ),
+    })
+    const store = useTopicsStore()
+    store.topics = makeLibrary()
+
+    const result = await store.addSubtopics(1, [
+      { title: 'Cadence', description: null, notes: '# Cadence' },
+    ])
+
+    expect(requestBody(fetchMock)).toEqual({
+      subtopics: [{ title: 'Cadence', description: null, notes: '# Cadence' }],
+    })
+    expect(subtopicTitles(1)[subtopicTitles(1).length - 1]).toBe('Cadence')
+    expect(result.added).toEqual({ subtopics: 1, flashcards: 3, questions: 1 })
+  })
 })
