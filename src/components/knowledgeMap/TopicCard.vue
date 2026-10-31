@@ -1,15 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import IconTile from '@/components/IconTile.vue'
 import ProgressRing from '@/components/ProgressRing.vue'
 import TopicMenu from '@/components/knowledgeMap/TopicMenu.vue'
-import {
-  averageMastery,
-  dueCards,
-  pluralize,
-  topicAppearance,
-  type TopicAppearance,
-} from '@/lib/knowledgeMap'
+import { averageMastery, dueCards, pluralize } from '@/lib/knowledgeMap'
 import type { Topic } from '@/stores/topics'
 
 const { topic, selected } = defineProps<{
@@ -24,7 +17,6 @@ const emit = defineEmits<{
 
 const mastery = computed<number>(() => averageMastery(topic))
 const due = computed<number>(() => dueCards(topic))
-const appearance = computed<TopicAppearance>(() => topicAppearance(topic))
 </script>
 
 <template>
@@ -56,7 +48,7 @@ const appearance = computed<TopicAppearance>(() => topicAppearance(topic))
         <span class="text-label font-normal text-ink-muted" data-test="topic-meta">
           {{ topic.category.name }} · {{ pluralize(topic.subtopics.length, 'subtopic') }}
           <span v-if="due > 0" class="font-[650] whitespace-nowrap text-sun-ink"
-            >· {{ due }} due</span
+            >· {{ pluralize(due, 'card') }} due</span
           >
         </span>
       </span>

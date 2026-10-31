@@ -111,6 +111,8 @@ describe('KnowledgeMapView', () => {
     )
     expect(cardTitles(wrapper)).toHaveLength(4)
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
+    // Only flashcards have a review schedule, so the count says what it counts.
+    expect(wrapper.findAll('[data-test="topic-meta"]')[0]?.text()).toContain('· 9 cards due')
     expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration', 'Chlorophyll'])
     expect(wrapper.get('[data-test="topic-description"]').text()).toBe(
       'How living things work, from cells to whole ecosystems.',
