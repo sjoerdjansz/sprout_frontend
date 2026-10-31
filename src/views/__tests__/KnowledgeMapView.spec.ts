@@ -136,12 +136,24 @@ describe('KnowledgeMapView', () => {
     expect(chips.map((chip) => chip.text())).toEqual(['Science', 'Technology', 'Languages'])
     await chips[2]?.trigger('click')
     expect(cardTitles(wrapper)).toEqual([expect.stringContaining('Spanish')])
-    // Biology is filtered out, so its subtopics go too.
-    expect(wrapper.find('[data-test="subtopics-heading"]').exists()).toBe(false)
+    // Biology is filtered out, so the subtopics of the topic you can see show instead.
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Spanish')
 
     await wrapper.get('[data-test="category-all"]').trigger('click')
     await wrapper.get('[data-test="needs-attention"]').trigger('click')
     expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration'])
+  })
+
+  it('shows a subtopic you search for, even when another topic was picked', async () => {
+    const wrapper = await mountKnowledgeMap()
+
+    await wrapper.get('[data-test="search"]').setValue('recursion')
+
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Computer science')
+    expect(subtopicTitles(wrapper)).toEqual(['Recursion'])
+    expect(wrapper.get('[data-test="topic-card"][aria-pressed="true"]').text()).toContain(
+      'Computer science',
+    )
   })
 
   it('shows the subtopics of the topic you pick', async () => {

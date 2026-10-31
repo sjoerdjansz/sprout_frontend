@@ -87,16 +87,17 @@ onMounted(() => {
   void load()
 })
 
-const selectedTopic = computed<Topic | null>(
-  () => topicsStore.topics.find((topic) => topic.id === selectedTopicId.value) ?? null,
-)
-
 const filteredTopics = computed<Topic[]>(() => filterTopics(topicsStore.topics, filters.value))
 
-// The subtopics belong to the selected card, so they hide when a filter hides that card.
-const showSubtopics = computed<boolean>(
-  () => selectedTopic.value !== null && filteredTopics.value.includes(selectedTopic.value),
-)
+/**
+ * The topic whose subtopics show: the one you picked, or, when a filter hides it, the first topic
+ * that's still visible. So a search for a subtopic shows that subtopic straight away.
+ */
+const shownTopic = computed<Topic | null>(() => {
+  const picked = filteredTopics.value.find((topic) => topic.id === selectedTopicId.value)
+
+  return picked ?? filteredTopics.value[0] ?? null
+})
 
 const summary = computed<string>(() => librarySummary(topicsStore.topics))
 
@@ -239,7 +240,7 @@ async function save(values: TopicFormValues): Promise<void> {
         :topics="filteredTopics"
         :library-is-empty="topicsStore.topics.length === 0"
         :filter-categories="filterCategories"
-        :selected-topic-id="selectedTopicId"
+        :selected-topic-id="shownTopic?.id ?? null"
         :attention-count="attentionCount"
         @select="(topicId) => (selectedTopicId = topicId)"
         @add-topic="openForm('add-topic', null)"
@@ -247,11 +248,11 @@ async function save(values: TopicFormValues): Promise<void> {
       />
 
       <SubtopicList
-        v-if="showSubtopics && selectedTopic !== null"
-        :topic="selectedTopic"
-        :subtopics="visibleSubtopics(selectedTopic, filters)"
-        @edit-topic="openForm('edit-topic', selectedTopic)"
-        @add-subtopic="openForm('add-subtopic', selectedTopic)"
+        v-if="shownTopic !== null"
+        :topic="shownTopic"
+        :subtopics="visibleSubtopics(shownTopic, filters)"
+        @edit-topic="openForm('edit-topic', shownTopic)"
+        @add-subtopic="openForm('add-subtopic', shownTopic)"
       />
     </template>
 
