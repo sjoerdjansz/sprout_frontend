@@ -52,13 +52,17 @@ function rate(rating: Rating): void {
 
 const ratingKeys: Record<string, Rating> = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' }
 
-// Space flips and 1–4 rate, but not while you're on a control that has its own keys.
+// Space flips and 1–4 rate, also right after clicking the card. Not while typing, and Space
+// on a focused button or link already presses it (the card's own click flips it).
 function onKeydown(event: KeyboardEvent): void {
-  const target = event.target
-  if (target instanceof HTMLElement && target.closest('button, input, textarea, a')) {
+  const target = event.target instanceof HTMLElement ? event.target : null
+  if (target?.closest('input, textarea')) {
     return
   }
   if (event.key === ' ') {
+    if (target?.closest('button, a')) {
+      return
+    }
     event.preventDefault()
     flipped.value = !flipped.value
     return
@@ -79,7 +83,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     class="flex grow flex-col items-center justify-center gap-6 px-4 py-6 sm:px-8"
     data-test="flashcard-block"
   >
-    <div class="flex items-center gap-2">
+    <!-- A fixed height, so the card doesn't jump when a card has no badges. -->
+    <div class="flex min-h-6 items-center gap-2">
       <BaseBadge v-if="card.is_due" tone="sun" icon="repeat">Due today</BaseBadge>
       <BaseBadge v-if="card.last_reviewed_at === null" tone="sky" icon="sparkles">
         New card
