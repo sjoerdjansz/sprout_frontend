@@ -24,6 +24,7 @@ export const settingsSections: SettingsSection[] = [
   { id: 'learning', label: 'Learning', icon: 'brain', routeName: 'settings-learning' },
   { id: 'reminders', label: 'Reminders', icon: 'bell', routeName: 'settings-reminders' },
   { id: 'appearance', label: 'Appearance', icon: 'palette', routeName: 'settings-appearance' },
+  { id: 'data', label: 'Your data', icon: 'download', routeName: 'settings-data' },
 ]
 
 export interface RoleOption {

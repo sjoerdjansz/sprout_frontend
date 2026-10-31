@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { api } from '@/lib/api'
+import { api, apiDownload, type DownloadedFile } from '@/lib/api'
 import { useAuthStore, type AvatarColor } from '@/stores/auth'
 
 export type LearnerRole =
@@ -93,6 +93,21 @@ export const useSettingsStore = defineStore('settings', () => {
     return fetchedUsage
   }
 
+  /** Everything you have in Sprout, as one JSON file. */
+  async function exportLibrary(): Promise<DownloadedFile> {
+    return apiDownload('/user/export', 'sprout-export.json')
+  }
+
+  /** Your flashcards as CSV for Anki. */
+  async function exportFlashcards(): Promise<DownloadedFile> {
+    return apiDownload('/user/export/flashcards', 'sprout-flashcards.csv')
+  }
+
+  /** Wipes your learning history; can't be undone. */
+  async function resetProgress(): Promise<void> {
+    await api('/user/progress/reset', { method: 'POST' })
+  }
+
   /** "Today", streaks, usage months and reminder times follow your timezone, so keep it current. */
   async function syncTimezone(): Promise<void> {
     const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -102,5 +117,15 @@ export const useSettingsStore = defineStore('settings', () => {
     await updateSettings({ timezone: browserTimezone })
   }
 
-  return { settings, usage, fetchSettings, updateSettings, fetchUsage, syncTimezone }
+  return {
+    settings,
+    usage,
+    fetchSettings,
+    updateSettings,
+    fetchUsage,
+    exportLibrary,
+    exportFlashcards,
+    resetProgress,
+    syncTimezone,
+  }
 })
