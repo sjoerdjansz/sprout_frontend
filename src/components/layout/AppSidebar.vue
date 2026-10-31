@@ -6,7 +6,6 @@ import ChatHistory from '@/components/layout/ChatHistory.vue'
 import SidebarButton from '@/components/layout/SidebarButton.vue'
 import SidebarNavLink from '@/components/layout/SidebarNavLink.vue'
 import StreakNudge from '@/components/layout/StreakNudge.vue'
-import ThemeToggle from '@/components/layout/ThemeToggle.vue'
 import type { AvatarColor } from '@/stores/auth'
 import type { ConversationSummary } from '@/stores/conversations'
 
@@ -112,6 +111,5 @@ const emit = defineEmits<{
       data-test="logout"
       @click="emit('logout')"
     />
-    <ThemeToggle :collapsed="collapsed" />
   </nav>
 </template>

@@ -14,6 +14,7 @@ import ProfileSettings from '@/views/settings/ProfileSettings.vue'
 import AiSettings from '@/views/settings/AiSettings.vue'
 import LearningSettings from '@/views/settings/LearningSettings.vue'
 import ReminderSettings from '@/views/settings/ReminderSettings.vue'
+import AppearanceSettings from '@/views/settings/AppearanceSettings.vue'
 import SubtopicView from '@/views/SubtopicView.vue'
 import PracticeSetupView from '@/views/PracticeSetupView.vue'
 import PracticeSessionView from '@/views/PracticeSessionView.vue'
@@ -85,6 +86,7 @@ const router = createRouter({
         { path: 'ai', name: 'settings-ai', component: AiSettings },
         { path: 'learning', name: 'settings-learning', component: LearningSettings },
         { path: 'reminders', name: 'settings-reminders', component: ReminderSettings },
+        { path: 'appearance', name: 'settings-appearance', component: AppearanceSettings },
       ],
     },
     {

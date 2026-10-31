@@ -1,7 +1,14 @@
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
 import type { AvatarColor } from '@/stores/auth'
-import type { AiLevel, AiUsage, CardCount, LearnerRole, ReminderChannel } from '@/stores/settings'
+import type {
+  AiLevel,
+  AiUsage,
+  CardCount,
+  LearnerRole,
+  ReminderChannel,
+  ThemePreference,
+} from '@/stores/settings'
 
 /** A section of the settings page, each on its own URL (`/settings/<id>`). */
 export interface SettingsSection {
@@ -16,6 +23,7 @@ export const settingsSections: SettingsSection[] = [
   { id: 'ai', label: 'AI', icon: 'sparkles', routeName: 'settings-ai' },
   { id: 'learning', label: 'Learning', icon: 'brain', routeName: 'settings-learning' },
   { id: 'reminders', label: 'Reminders', icon: 'bell', routeName: 'settings-reminders' },
+  { id: 'appearance', label: 'Appearance', icon: 'palette', routeName: 'settings-appearance' },
 ]
 
 export interface RoleOption {
@@ -211,3 +219,15 @@ export function reminderTimes(savedTime: string): string[] {
 
   return times
 }
+
+export interface ThemeOption {
+  id: ThemePreference
+  name: string
+  icon: IconName
+}
+
+export const themeOptions: ThemeOption[] = [
+  { id: 'light', name: 'Light', icon: 'sun' },
+  { id: 'dark', name: 'Dark', icon: 'moon' },
+  { id: 'system', name: 'Match system', icon: 'settings' },
+]

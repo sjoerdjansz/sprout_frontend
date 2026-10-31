@@ -1,6 +1,26 @@
 @import 'tailwindcss';
 
 /*
+ * "Reduce motion" in your settings sets data-reduce-motion on <html>. These replace Tailwind's
+ * own variants so every motion-reduce: and motion-safe: class follows it as well as the system.
+ */
+@custom-variant motion-reduce {
+  @media (prefers-reduced-motion: reduce) {
+    @slot;
+  }
+  &:where([data-reduce-motion], [data-reduce-motion] *) {
+    @slot;
+  }
+}
+@custom-variant motion-safe {
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(:where([data-reduce-motion], [data-reduce-motion] *)) {
+      @slot;
+    }
+  }
+}
+
+/*
  * Sprout design tokens, mirrored from the design system's tokens.json
  * (https://claude.ai/artifact/Sda9GsiKyUZyqh3oBGB9Aa). Build with the semantic
  * roles (bg-canvas, text-ink, bg-primary ...); the brand palette is for illustration.

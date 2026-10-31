@@ -10,7 +10,8 @@
     <title>Sprout</title>
     <script>
       // Set the theme before the first paint so dark mode doesn't flash light.
-      // Same rule as initialTheme() in src/stores/theme.ts: your saved choice, otherwise your system.
+      // Same rule as cachedPreference() in src/stores/theme.ts: light or dark from your settings,
+      // otherwise (match system, or not loaded yet) your system.
       ;(function () {
         var theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
         var savedTheme = localStorage.getItem('sprout.theme')
