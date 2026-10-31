@@ -56,6 +56,14 @@ const emit = defineEmits<{
       </div>
     </div>
 
+    <p
+      v-if="topic.description"
+      class="max-w-180 text-[14px] leading-5 text-ink-muted"
+      data-test="topic-description"
+    >
+      {{ topic.description }}
+    </p>
+
     <ul
       class="flex flex-auto flex-col gap-0.5 rounded-lg border border-line bg-surface p-1.5 shadow-sm"
     >

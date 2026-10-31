@@ -84,6 +84,9 @@ describe('KnowledgeMapView', () => {
     expect(cardTitles(wrapper)).toHaveLength(4)
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
     expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration', 'Chlorophyll'])
+    expect(wrapper.get('[data-test="topic-description"]').text()).toBe(
+      'How living things work, from cells to whole ecosystems.',
+    )
     expect(wrapper.find('aside').exists()).toBe(false)
   })
 
