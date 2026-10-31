@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
+import { makePracticeSession } from '@/__tests__/practiceFixtures'
 import { makeSettings } from '@/__tests__/settingsFixtures'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeCategories, makeLibrary } from '@/__tests__/topicFixtures'
@@ -12,8 +13,8 @@ import PracticeSetupView from '../PracticeSetupView.vue'
 
 type Routes = Parameters<typeof stubApi>[0]
 
-// Photosynthesis (101) has a card and a multiple choice question; the other Biology subtopics
-// have nothing yet.
+// Photosynthesis (101) has a card, a multiple choice and an open question; the other Biology
+// subtopics have nothing yet.
 function material(): Routes {
   return {
     'GET /subtopics/101/flashcards': Response.json([makeFlashcard({ is_due: true })]),
@@ -29,6 +30,7 @@ async function mountSetup(url: string, routes: Routes = {}): Promise<VueWrapper>
   stubApi({
     'GET /topics': Response.json(makeLibrary()),
     'GET /categories': Response.json(makeCategories()),
+    'GET /practice-sessions/current': new Response(null, { status: 204 }),
     ...material(),
     ...routes,
   })
@@ -60,40 +62,49 @@ describe('PracticeSetupView', () => {
     expect(pressed(wrapper, 'mode-retrieval')).toBe(true)
     expect(pressed(wrapper, 'mode-cards')).toBe(false)
     expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Retrieval quiz')
-    expect(wrapper.text()).toContain('1 question')
+    expect(wrapper.text()).toContain('2 questions')
   })
 
-  it('mixes every mode that can run, with the open session last', async () => {
+  it('mixes every mode that can run except the open session, which you add yourself', async () => {
     const wrapper = await mountSetup('/practice?subtopic=101')
 
     await wrapper.get('[data-test="mode-mix"]').trigger('click')
 
     expect(pressed(wrapper, 'mode-mix')).toBe(true)
+    expect(pressed(wrapper, 'mode-open')).toBe(false)
     expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Mixed session')
     expect(wrapper.findAll('[data-test="summary-blocks"] li').map((item) => item.text())).toEqual([
       '1Flashcards1 card',
-      '2Retrieval quiz1 question',
+      '2Retrieval quiz2 questions',
       '3Explain it1 concept, 4 steps',
-      '4Open sessionAs long as you like',
     ])
-    // 0.4 + 1 + 12 + 15 minutes.
-    expect(wrapper.get('[data-test="summary-time"]').text()).toBe('About 28 min')
+    // 0.4 + 2 + 12 minutes.
+    expect(wrapper.get('[data-test="summary-time"]').text()).toBe('About 14 min')
 
-    // Switching the mix off keeps the first mode.
+    // The open session goes last, and the mix stays on.
+    await wrapper.get('[data-test="mode-open"]').trigger('click')
+    expect(wrapper.findAll('[data-test="summary-blocks"] li')[3]?.text()).toBe(
+      '4Open sessionAs long as you like',
+    )
+    expect(pressed(wrapper, 'mode-mix')).toBe(true)
+
+    // Switching the mix off keeps the first mode and the open session you added.
     await wrapper.get('[data-test="mode-mix"]').trigger('click')
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Flashcards')
+    expect(wrapper.findAll('[data-test="summary-blocks"] li').map((item) => item.text())).toEqual([
+      '1Flashcards1 card',
+      '2Open sessionAs long as you like',
+    ])
   })
 
-  it('says why a mode can’t run and leaves it out of the mix', async () => {
+  it('says why a mode can’t run, and offers no mix with only one other mode', async () => {
     const wrapper = await mountSetup('/practice?subtopic=102&modes=cards')
 
     expect(wrapper.get('[data-test="mode-cards"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-test="mode-cards"]').text()).toContain('No flashcards here yet.')
     // Cards can't run here, so the first mode that can is picked instead.
     expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Explain it')
-
-    await wrapper.get('[data-test="mode-mix"]').trigger('click')
-    expect(wrapper.findAll('[data-test="summary-blocks"] li')).toHaveLength(2)
+    // Only Explain it and the open session can run, and the mix leaves the open session out.
+    expect(wrapper.get('[data-test="mode-mix"]').attributes('disabled')).toBeDefined()
   })
 
   it('loads the cards of the whole topic and offers interleaving', async () => {
@@ -106,7 +117,9 @@ describe('PracticeSetupView', () => {
   })
 
   it('starts the session with the plan and opens it', async () => {
-    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards,retrieval')
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards,retrieval', {
+      'POST /practice-sessions': Response.json(makePracticeSession(), { status: 201 }),
+    })
 
     await wrapper.get('[data-test="start-session"]').trigger('click')
     await flushPromises()
@@ -116,11 +129,40 @@ describe('PracticeSetupView', () => {
     expect(router.currentRoute.value.name).toBe('practice-session')
   })
 
+  it('stays on the setup with the API’s message when the session can’t start', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
+      'POST /practice-sessions': Response.json(
+        {
+          message: 'The given data was invalid.',
+          errors: { topic_id: ['Pick one of your topics to practise.'] },
+        },
+        { status: 422 },
+      ),
+    })
+
+    await wrapper.get('[data-test="start-session"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('practice')
+    expect(wrapper.get('[data-test="form-error"]').text()).toContain('The given data was invalid.')
+  })
+
+  it('offers to pick up the session still going today', async () => {
+    const wrapper = await mountSetup('/practice', {
+      'GET /practice-sessions/current': Response.json(makePracticeSession()),
+    })
+
+    const current = wrapper.get('[data-test="current-session"]')
+    expect(current.text()).toContain('Photosynthesis')
+    expect(current.get('a').attributes('href')).toBe('/practice/session')
+  })
+
   it('starts from your learning defaults in settings', async () => {
     const wrapper = await mountSetup('/practice?topic=1&modes=cards,retrieval', {
       'GET /settings': Response.json(
         makeSettings({ session_size: 40, interleave_subtopics: false, hint_before_answer: false }),
       ),
+      'POST /practice-sessions': Response.json(makePracticeSession(), { status: 201 }),
     })
 
     expect(

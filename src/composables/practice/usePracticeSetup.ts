@@ -18,7 +18,7 @@ import {
   type PracticeOptions,
   type PracticeScope,
 } from '@/lib/practiceSession'
-import { usePracticeStore } from '@/stores/practice'
+import { usePracticeStore, type PracticeSession } from '@/stores/practice'
 import { useSettingsStore } from '@/stores/settings'
 import { useTopicsStore, type Topic } from '@/stores/topics'
 
@@ -44,9 +44,13 @@ export interface PracticeSetup {
   scopeLabel: ComputedRef<string>
   orderLabel: ComputedRef<string | null>
   showWholeTopicTip: ComputedRef<boolean>
+  /** The session still going today, to pick up instead of starting a new one. */
+  current: ComputedRef<PracticeSession | null>
+  starting: Ref<boolean>
+  startError: Ref<string>
   loadLibrary: () => Promise<void>
   loadMaterial: () => Promise<void>
-  start: () => void
+  start: () => Promise<void>
 }
 
 /**
@@ -66,6 +70,8 @@ export function usePracticeSetup(): PracticeSetup {
   const libraryError = ref('')
   const materialState = ref<LoadState>('loading')
   const materialError = ref('')
+  const starting = ref(false)
+  const startError = ref('')
 
   const topicId = ref(0)
   const subtopicId = ref<number | null>(null)
@@ -186,11 +192,22 @@ export function usePracticeSetup(): PracticeSetup {
     }
   }
 
+  // Picking up a session is a shortcut: if it can't be looked up, you can still start a new one.
+  async function findCurrentSession(): Promise<void> {
+    try {
+      await practiceStore.fetchCurrent()
+    } catch (caught) {
+      if (!(caught instanceof ApiError)) {
+        throw caught
+      }
+    }
+  }
+
   async function loadLibrary(): Promise<void> {
     libraryState.value = 'loading'
 
     try {
-      await Promise.all([topicsStore.fetchLibrary(), applyLearningDefaults()])
+      await Promise.all([topicsStore.fetchLibrary(), applyLearningDefaults(), findCurrentSession()])
       prefillFromUrl()
       libraryState.value = 'loaded'
     } catch (caught) {
@@ -243,12 +260,25 @@ export function usePracticeSetup(): PracticeSetup {
     () => void loadMaterial(),
   )
 
-  function start(): void {
-    if (scope.value === null) {
+  // Starting a new session finishes the one still going on the API.
+  async function start(): Promise<void> {
+    if (scope.value === null || starting.value) {
       return
     }
-    practiceStore.start(scope.value, options.value)
-    void router.push({ name: 'practice-session' })
+    starting.value = true
+    startError.value = ''
+
+    try {
+      await practiceStore.start(scope.value, options.value)
+      void router.push({ name: 'practice-session' })
+    } catch (caught) {
+      if (!(caught instanceof ApiError)) {
+        throw caught
+      }
+      startError.value = caught.message
+    } finally {
+      starting.value = false
+    }
   }
 
   return {
@@ -271,6 +301,9 @@ export function usePracticeSetup(): PracticeSetup {
     scopeLabel,
     orderLabel,
     showWholeTopicTip,
+    current: computed<PracticeSession | null>(() => practiceStore.current),
+    starting,
+    startError,
     loadLibrary,
     loadMaterial,
     start,

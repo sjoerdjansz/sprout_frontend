@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import BaseBadge from '@/components/BaseBadge.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
+import { techniqueBadges, type Technique } from '@/lib/techniques'
 import type { AvatarColor } from '@/stores/auth'
 
 const {
@@ -8,6 +10,7 @@ const {
   initials = '',
   avatarColor,
   typing = false,
+  technique = null,
 } = defineProps<{
   from: 'tutor' | 'user'
   /** The learner's initials, for their avatar. */
@@ -15,6 +18,8 @@ const {
   avatarColor?: AvatarColor
   /** Shows bouncing dots instead of the message while the tutor writes its reply. */
   typing?: boolean
+  /** The learning technique the tutor applies in this turn, named in a badge above it. */
+  technique?: Technique | null
 }>()
 </script>
 
@@ -47,7 +52,18 @@ const {
           :style="{ animationDelay: `${(dot - 1) * 150}ms` }"
         />
       </span>
-      <slot v-else />
+      <template v-else>
+        <BaseBadge
+          v-if="technique"
+          :tone="techniqueBadges[technique].tone"
+          :icon="techniqueBadges[technique].icon"
+          class="mb-2"
+          data-test="technique"
+        >
+          {{ techniqueBadges[technique].label }}
+        </BaseBadge>
+        <slot />
+      </template>
     </div>
   </div>
 </template>

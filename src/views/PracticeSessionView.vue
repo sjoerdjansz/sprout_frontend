@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import BaseBadge from '@/components/BaseBadge.vue'
+import BaseButton from '@/components/BaseButton.vue'
+import BaseToast from '@/components/BaseToast.vue'
+import FormError from '@/components/FormError.vue'
 import ExplainBlock from '@/components/practice/ExplainBlock.vue'
 import FlashcardBlock from '@/components/practice/FlashcardBlock.vue'
 import NextUp from '@/components/practice/NextUp.vue'
@@ -9,18 +13,25 @@ import QuizBlock from '@/components/practice/QuizBlock.vue'
 import PracticeTopBar from '@/components/practice/PracticeTopBar.vue'
 import SessionDone from '@/components/practice/SessionDone.vue'
 import SessionHeader, { type BlockProgress } from '@/components/practice/SessionHeader.vue'
+import { useToast } from '@/composables/useToast'
+import { ApiError } from '@/lib/api'
 import { cardsDone } from '@/lib/practiceSession'
 import { usePracticeStore } from '@/stores/practice'
 
 /*
  * A practice session, block by block (`../specs/practice-session.md`): each block, "Next up"
  * between blocks and the results at the end are phases of this one page, so the back button
- * never drops you halfway into a block. The plan comes from the setup page; without one
- * (a reload, a typed URL) you go back there.
+ * never drops you halfway into a block. The plan comes from the setup page; after a reload (or
+ * a typed URL) the session still going today is picked up again, otherwise you go to the setup.
  */
 
 const router = useRouter()
 const practice = usePracticeStore()
+const { toast, showToast } = useToast()
+
+type ResumeState = 'ready' | 'resuming' | 'failed'
+const resumeState = ref<ResumeState>(practice.plan === null ? 'resuming' : 'ready')
+const resumeError = ref('')
 
 const blockLabel = computed<string | null>(() => {
   const blocks = practice.plan?.blocks.length ?? 0
@@ -60,12 +71,45 @@ const progress = computed<BlockProgress | null>(() => {
   }
 })
 
-const minutes = computed<number>(() => {
-  const start = practice.startedAt?.getTime() ?? 0
-  const end = practice.endedAt?.getTime() ?? start
+const streakDays = computed<number>(() => practice.session?.streak_days ?? 0)
 
-  return Math.max(1, Math.round((end - start) / 60_000))
-})
+/**
+ * Runs a step that may finish the session on the API (End session, Finish here, the last
+ * block). If that fails you stay where you are, with the API's message, and can try again.
+ */
+async function finishing(step: () => Promise<void>): Promise<void> {
+  try {
+    await step()
+  } catch (caught) {
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+    showToast({
+      title: 'Your session isn’t finished yet',
+      message: caught.message,
+      tone: 'ember',
+      icon: 'rotate-ccw',
+    })
+  }
+}
+
+async function resume(): Promise<void> {
+  resumeState.value = 'resuming'
+  try {
+    const resumed = await practice.resume()
+    if (!resumed) {
+      void router.replace({ name: 'practice' })
+      return
+    }
+    resumeState.value = 'ready'
+  } catch (caught) {
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+    resumeError.value = caught.message
+    resumeState.value = 'failed'
+  }
+}
 
 function goHome(): void {
   void router.push({ name: 'home' })
@@ -94,23 +138,36 @@ function openSubtopic(subtopicId: number): void {
 
 onMounted(() => {
   if (practice.plan === null) {
-    void router.replace({ name: 'practice' })
+    void resume()
   }
 })
 
-// Results only live in this session, so leaving it starts the next one fresh.
+// Leaving clears this page's copy; a session that's still going can be picked up again.
 onBeforeUnmount(() => practice.reset())
 </script>
 
 <template>
-  <div v-if="practice.plan" class="flex min-h-svh flex-col bg-canvas text-ink">
+  <div v-if="resumeState !== 'ready'" class="flex min-h-svh flex-col bg-canvas text-ink">
+    <PracticeTopBar />
+    <main class="flex grow items-center justify-center px-4 py-8 sm:px-8">
+      <p v-if="resumeState === 'resuming'" class="text-ink-muted" aria-live="polite">
+        Picking up your session…
+      </p>
+      <div v-else class="flex flex-col items-start gap-4">
+        <FormError :message="resumeError" />
+        <BaseButton variant="secondary" icon="rotate-ccw" @click="resume">Try again</BaseButton>
+      </div>
+    </main>
+  </div>
+
+  <div v-else-if="practice.plan" class="flex min-h-svh flex-col bg-canvas text-ink">
     <template v-if="practice.phase === 'block' && practice.currentBlock && practice.currentResult">
       <SessionHeader
         :mode="practice.currentBlock.mode"
         :title="practice.plan.title"
         :block-label="blockLabel"
         :progress="progress"
-        @end="practice.end"
+        @end="finishing(practice.end)"
       />
 
       <FlashcardBlock
@@ -119,8 +176,7 @@ onBeforeUnmount(() => practice.reset())
         :cards="practice.currentBlock.cards"
         :ratings="practice.currentResult.ratings"
         :subtopic-titles="subtopicTitles"
-        @rate="practice.rateCard"
-        @finish="practice.finishBlock"
+        @finish="finishing(practice.finishBlock)"
       />
       <QuizBlock
         v-else-if="practice.currentBlock.mode === 'retrieval'"
@@ -129,24 +185,22 @@ onBeforeUnmount(() => practice.reset())
         :answers="practice.currentResult.answers"
         :subtopic-titles="subtopicTitles"
         :second-try="practice.plan.options.secondTry"
-        @answer="practice.answerQuestion"
-        @finish="practice.finishBlock"
+        @finish="finishing(practice.finishBlock)"
       />
       <ExplainBlock
         v-else-if="practice.currentBlock.mode === 'feynman'"
         :key="practice.blockIndex"
         :concept="practice.currentBlock.concept"
-        @explain="practice.addExplanation"
-        @finish="practice.finishBlock"
+        :explanations="practice.currentResult.explanations"
+        @finish="finishing(practice.finishBlock)"
       />
       <OpenBlock
         v-else-if="practice.currentBlock.mode === 'open'"
         :key="practice.blockIndex"
-        :topic-id="practice.currentBlock.topicId"
         :topic-title="practice.currentBlock.topicTitle"
         :subtopic-title="practice.currentBlock.subtopicTitle"
-        @sent="practice.countMessage"
-        @finish="practice.finishBlock"
+        :messages="practice.currentResult.messages"
+        @finish="finishing(practice.finishBlock)"
       />
     </template>
 
@@ -157,21 +211,33 @@ onBeforeUnmount(() => practice.reset())
         :next="practice.nextBlock"
         :position="nextBlockLabel"
         @start="practice.startNextBlock"
-        @skip="practice.skipNextBlock"
-        @finish="practice.end"
+        @skip="finishing(practice.skipNextBlock)"
+        @finish="finishing(practice.end)"
       />
     </template>
 
     <template v-else-if="practice.phase === 'done'">
-      <PracticeTopBar />
+      <PracticeTopBar>
+        <BaseBadge v-if="streakDays > 0" tone="sun" icon="flame" data-test="done-streak">
+          {{ streakDays }}-day streak
+        </BaseBadge>
+      </PracticeTopBar>
       <SessionDone
         :plan="practice.plan"
         :results="practice.results"
-        :minutes="minutes"
+        :session="practice.session"
         @home="goHome"
         @again="practiseAgain"
         @open-subtopic="openSubtopic"
       />
     </template>
+
+    <BaseToast
+      v-if="toast !== null"
+      :title="toast.title"
+      :message="toast.message"
+      :tone="toast.tone"
+      :icon="toast.icon"
+    />
   </div>
 </template>

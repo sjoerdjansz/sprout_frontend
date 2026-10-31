@@ -44,7 +44,6 @@ const {
   flush,
   removeCard,
   removeQuestion,
-  removeSession,
   removeNotes,
 } = useSubtopicMaterial(subtopic, actions)
 const cardEditor = useFlashcardEditor(actions)
@@ -165,9 +164,9 @@ watch(tab, () => {
         <SessionsPanel
           v-else-if="tab === 'sessions'"
           :sessions="sessions"
-          :topic-title="subtopic.topic.title"
+          :subtopic-id="subtopic.id"
+          :subtopic-title="subtopic.title"
           :user-initials="userInitials"
-          @remove="removeSession"
           @start="practise('open')"
         />
         <SourcesPanel

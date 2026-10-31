@@ -19,6 +19,12 @@ export interface QuestionOption {
   explanation: string | null
 }
 
+/** A part of an explanation Sprout asks about: `text` is quoted exactly from it. */
+export interface Gap {
+  text: string
+  note: string
+}
+
 /** Your most recent graded answer. */
 export interface LatestAnswer {
   /** What you typed, for open and Explain it questions. */
@@ -28,6 +34,8 @@ export interface LatestAnswer {
   score: number
   verdict: Verdict
   feedback: string
+  /** Explain it only: the gaps Sprout found; null for other questions. */
+  gaps: Gap[] | null
   answered_at: string
 }
 

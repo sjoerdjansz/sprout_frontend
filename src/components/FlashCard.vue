@@ -19,7 +19,7 @@ const flipped = defineModel<boolean>('flipped', { required: true })
   <!-- A 3D flip of 500ms; with reduced motion the faces swap with a fade instead. -->
   <button
     type="button"
-    class="group relative h-75 w-full max-w-130 cursor-pointer rounded-xl text-center perspective-[1400px] focus-visible:shadow-focus-ring focus-visible:outline-none"
+    class="group relative h-75 w-full max-w-140 cursor-pointer rounded-xl text-center perspective-[1400px] focus-visible:shadow-focus-ring focus-visible:outline-none"
     :aria-label="
       flipped ? 'Answer shown. Activate to see the question' : 'Activate to reveal the answer'
     "
@@ -68,7 +68,7 @@ const flipped = defineModel<boolean>('flipped', { required: true })
         </div>
         <p class="text-body-lg text-balance text-ink" data-test="flashcard-back">{{ back }}</p>
         <p class="absolute inset-x-0 bottom-5 text-caption font-normal text-ink-subtle">
-          How well did you know it?
+          Did you know it?
         </p>
       </div>
     </div>

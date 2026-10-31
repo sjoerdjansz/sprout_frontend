@@ -8,37 +8,28 @@ import { ApiError } from '@/lib/api'
 import { chatErrorMessage } from '@/lib/chatError'
 import { initials } from '@/lib/names'
 import { useAuthStore } from '@/stores/auth'
-import { useConversationsStore, type Message } from '@/stores/conversations'
+import { usePracticeStore, type PracticeMessage } from '@/stores/practice'
 
-const { topicId, topicTitle, subtopicTitle } = defineProps<{
-  topicId: number
+const { topicTitle, subtopicTitle, messages } = defineProps<{
   topicTitle: string
   /** The subtopic you picked; null for the whole topic. */
   subtopicTitle: string | null
+  /** This block's chat so far (also before a reload). */
+  messages: PracticeMessage[]
 }>()
 
 const emit = defineEmits<{
-  sent: []
   finish: []
 }>()
 
 const auth = useAuthStore()
-const conversationsStore = useConversationsStore()
+const practice = usePracticeStore()
 
-// The conversation this block started; the store's open conversation could be another one.
-const conversationId = ref<number | null>(null)
 const message = ref('')
 const pendingMessage = ref<string | null>(null)
 const sendError = ref<string | null>(null)
 
 const subject = computed<string>(() => subtopicTitle ?? topicTitle)
-
-const messages = computed<Message[]>(() =>
-  conversationsStore.conversation !== null &&
-  conversationsStore.conversation.id === conversationId.value
-    ? conversationsStore.conversation.messages
-    : [],
-)
 
 const suggestions = computed<Suggestion[]>(() => [
   {
@@ -65,8 +56,8 @@ async function scrollToNewest(): Promise<void> {
   bottom.value?.scrollIntoView({ block: 'end', behavior: 'smooth' })
 }
 
-// The first message starts a conversation about the topic ("Continue learning"); the rest
-// go to that conversation.
+// The practice tutor knows your cards and open questions on the scope. Its messages belong to
+// this practice session, not to your chat history.
 async function send(text: string): Promise<void> {
   pendingMessage.value = text
   message.value = ''
@@ -74,13 +65,7 @@ async function send(text: string): Promise<void> {
   void scrollToNewest()
 
   try {
-    if (conversationId.value === null) {
-      const started = await conversationsStore.startConversation(text, topicId)
-      conversationId.value = started.id
-    } else {
-      await conversationsStore.sendMessage(conversationId.value, text)
-    }
-    emit('sent')
+    await practice.sendMessage(text)
   } catch (caught) {
     if (!(caught instanceof ApiError)) {
       throw caught
@@ -94,8 +79,12 @@ async function send(text: string): Promise<void> {
   }
 }
 
-// The practice pages have no sidebar to load you, and the chat shows your initials.
 onMounted(async () => {
+  // A session picked up again shows its chat; you go on from the newest message.
+  if (messages.length > 0) {
+    void scrollToNewest()
+  }
+  // The practice pages have no sidebar to load you, and the chat shows your initials.
   if (auth.user !== null) {
     return
   }
@@ -115,8 +104,8 @@ onMounted(async () => {
       <p
         class="self-center rounded-full bg-surface-tint px-3.5 py-2 text-center text-caption font-semibold text-sprout-ink"
       >
-        Talk {{ subject }} through with the tutor. It asks before it tells. This chat also goes in
-        your chat history.
+        Talk {{ subject }} through with the tutor. It knows your cards and open questions, and it
+        asks before it tells.
       </p>
 
       <ChatThread

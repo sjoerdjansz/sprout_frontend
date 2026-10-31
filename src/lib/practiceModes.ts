@@ -43,7 +43,7 @@ export const practiceModes: PracticeMode[] = [
   {
     id: 'retrieval',
     name: 'Retrieval quiz',
-    blurb: 'Multiple-choice questions, from memory.',
+    blurb: 'Answer questions from memory; Sprout checks them.',
     icon: 'list-checks',
     tint: 'sky',
     unit: 'questions',

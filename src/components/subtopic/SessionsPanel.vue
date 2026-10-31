@@ -4,24 +4,24 @@ import BaseButton from '@/components/BaseButton.vue'
 import MaterialToolbar from '@/components/subtopic/MaterialToolbar.vue'
 import SessionRow from '@/components/subtopic/SessionRow.vue'
 import { filterSessions } from '@/lib/subtopicPage'
-import type { ConversationListItem } from '@/stores/conversations'
+import type { PracticeSession } from '@/stores/practice'
 
-const { sessions, topicTitle, userInitials } = defineProps<{
-  sessions: ConversationListItem[]
-  /** Sessions belong to the whole topic, not to one subtopic. */
-  topicTitle: string
+const { sessions, subtopicId, subtopicTitle, userInitials } = defineProps<{
+  /** Practice sessions in which this subtopic was practised, latest first. */
+  sessions: PracticeSession[]
+  subtopicId: number
+  subtopicTitle: string
   userInitials: string
 }>()
 
 const emit = defineEmits<{
-  remove: [session: ConversationListItem]
   start: []
 }>()
 
 const query = ref('')
 const expandedId = ref<number | null>(null)
 
-const shownSessions = computed<ConversationListItem[]>(() => filterSessions(sessions, query.value))
+const shownSessions = computed<PracticeSession[]>(() => filterSessions(sessions, query.value))
 
 function toggle(sessionId: number): void {
   expandedId.value = expandedId.value === sessionId ? null : sessionId
@@ -29,7 +29,6 @@ function toggle(sessionId: number): void {
 </script>
 
 <template>
-  <!-- No filter chips: a conversation doesn't record which techniques it used. -->
   <MaterialToolbar v-model:query="query" search-label="Search sessions">
     <BaseButton size="sm" icon="message-circle" data-test="new-session" @click="emit('start')">
       New session
@@ -37,7 +36,7 @@ function toggle(sessionId: number): void {
   </MaterialToolbar>
 
   <p class="px-5 pt-3 text-caption font-normal text-ink-subtle" data-test="sessions-scope">
-    Your conversations with the tutor about {{ topicTitle }}, the whole topic.
+    Your practice sessions with {{ subtopicTitle }}, also the ones on its whole topic.
   </p>
 
   <ul class="flex flex-col gap-0.5 p-2">
@@ -45,10 +44,10 @@ function toggle(sessionId: number): void {
       v-for="session in shownSessions"
       :key="session.id"
       :session="session"
+      :subtopic-id="subtopicId"
       :expanded="expandedId === session.id"
       :user-initials="userInitials"
       @toggle="toggle(session.id)"
-      @remove="emit('remove', session)"
     />
     <li
       v-if="shownSessions.length === 0"
