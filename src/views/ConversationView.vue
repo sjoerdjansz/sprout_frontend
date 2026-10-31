@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
 import FormError from '@/components/FormError.vue'
 import TextLink from '@/components/TextLink.vue'
 import ChatComposer from '@/components/chat/ChatComposer.vue'
 import ChatThread from '@/components/chat/ChatThread.vue'
+import ContinueLearning from '@/components/conversation/ContinueLearning.vue'
 import ConversationHeader from '@/components/conversation/ConversationHeader.vue'
 import SaveTopicDialog from '@/components/conversation/SaveTopicDialog.vue'
 import SavedNotice from '@/components/conversation/SavedNotice.vue'
@@ -28,6 +30,7 @@ const { id } = defineProps<{
 const auth = useAuthStore()
 const conversationsStore = useConversationsStore()
 const topicsStore = useTopicsStore()
+const router = useRouter()
 
 type LoadState = 'loading' | 'loaded' | 'not-found' | 'failed'
 
@@ -107,6 +110,33 @@ async function send(text: string): Promise<void> {
   } finally {
     pendingMessage.value = null
     void scrollToNewest()
+  }
+}
+
+// A saved conversation is read-only: your next message starts a new one on the same topic,
+// which then opens on its own page.
+async function continueLearning(text: string): Promise<void> {
+  const topicId = conversation.value?.topic?.id
+  if (topicId === undefined) {
+    return
+  }
+  pendingMessage.value = text
+  message.value = ''
+  sendError.value = null
+  void scrollToNewest()
+
+  try {
+    const continued = await conversationsStore.startConversation(text, topicId)
+    await router.push({ name: 'conversation', params: { id: continued.id } })
+  } catch (caught) {
+    if (!(caught instanceof ApiError)) {
+      throw caught
+    }
+    // Nothing was stored, so give your text back to send again.
+    message.value = text
+    sendError.value = chatErrorMessage(caught)
+  } finally {
+    pendingMessage.value = null
   }
 }
 
@@ -196,7 +226,17 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
         />
 
         <div ref="bottom" class="sticky bottom-0 flex flex-col gap-3 bg-canvas pt-2 pb-6">
-          <SavedNotice v-if="conversation.is_saved" :result="saveResult" />
+          <template v-if="conversation.is_saved">
+            <SavedNotice :result="saveResult" />
+            <ContinueLearning
+              v-if="conversation.topic"
+              v-model="message"
+              :topic-title="conversation.topic.title"
+              :disabled="pendingMessage !== null"
+              :error="sendError"
+              @send="continueLearning"
+            />
+          </template>
 
           <template v-else>
             <FormError v-if="openSaveError" :message="openSaveError" />

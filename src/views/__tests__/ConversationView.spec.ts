@@ -158,11 +158,72 @@ describe('ConversationView', () => {
 
     const wrapper = await mountConversation()
 
-    expect(wrapper.find('[data-test="composer-input"]').exists()).toBe(false)
+    // The only composer left starts a new conversation (Continue learning).
+    expect(wrapper.findAll('[data-test="composer-input"]')).toHaveLength(1)
+    expect(wrapper.find('[data-test="continue"] [data-test="composer-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="open-save"]').exists()).toBe(false)
     expect(wrapper.get('[data-test="saved-notice"]').text()).toContain(
       'This conversation is saved to your knowledge map.',
     )
+  })
+
+  it('continues learning on a saved topic in a new conversation', async () => {
+    const savedTopic = { id: 12, title: 'Biomechanics of running' }
+    const fetchMock = stubApi({
+      'GET /user': Response.json(user),
+      'GET /conversations': Response.json([makeSummary({ is_saved: true, topic: savedTopic })]),
+      'GET /conversations/10': Response.json(
+        makeConversation({ is_saved: true, topic: savedTopic }),
+      ),
+      'POST /conversations': () =>
+        Response.json(makeConversation({ id: 13, topic: savedTopic }), { status: 201 }),
+      'GET /conversations/13': Response.json(makeConversation({ id: 13, topic: savedTopic })),
+    })
+    const wrapper = await mountConversation()
+
+    expect(wrapper.get('[data-test="continue"]').text()).toContain(
+      'Your next message starts a new conversation on Biomechanics of running.',
+    )
+    await wrapper.get('[data-test="composer-input"]').setValue('Let’s add sprinting')
+    await wrapper.get('[data-test="composer-send"]').trigger('click')
+    await flushPromises()
+
+    const startCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url).endsWith('/conversations') && init?.method === 'POST',
+    )
+    expect(JSON.parse(String(startCall?.[1]?.body))).toEqual({
+      message: 'Let’s add sprinting',
+      topic_id: 12,
+    })
+    expect(router.currentRoute.value.path).toBe('/conversations/13')
+  })
+
+  it('keeps your text when continuing fails', async () => {
+    const savedTopic = { id: 12, title: 'Biomechanics of running' }
+    stubApi({
+      'GET /user': Response.json(user),
+      'GET /conversations': Response.json([makeSummary({ is_saved: true, topic: savedTopic })]),
+      'GET /conversations/10': Response.json(
+        makeConversation({ is_saved: true, topic: savedTopic }),
+      ),
+      'POST /conversations': () =>
+        Response.json(
+          { message: 'The tutor can’t answer right now. Try again in a moment.' },
+          { status: 503 },
+        ),
+    })
+    const wrapper = await mountConversation()
+
+    await wrapper.get('[data-test="composer-input"]').setValue('Let’s add sprinting')
+    await wrapper.get('[data-test="composer-send"]').trigger('click')
+    await flushPromises()
+
+    const input = wrapper.get('[data-test="composer-input"]').element as HTMLTextAreaElement
+    expect(input.value).toBe('Let’s add sprinting')
+    expect(wrapper.get('[data-test="form-error"]').text()).toBe(
+      'The tutor can’t answer right now. Try again in a moment.',
+    )
+    expect(router.currentRoute.value.path).toBe('/conversations/10')
   })
 
   it('keeps the review closed and says why when your categories don’t load', async () => {
