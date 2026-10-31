@@ -38,10 +38,10 @@ export function attachmentProblem(file: File): string | null {
   return null
 }
 
-/** "820 bytes", "482 KB", "2.4 MB". */
+/** "1 byte", "820 bytes", "482 KB", "2.4 MB". */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
-    return `${bytes} bytes`
+    return bytes === 1 ? '1 byte' : `${bytes} bytes`
   }
   if (bytes < 1024 * 1024) {
     return `${Math.round(bytes / 1024)} KB`

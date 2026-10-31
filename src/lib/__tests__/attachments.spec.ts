@@ -34,6 +34,7 @@ describe('attachmentProblem', () => {
 
 describe('formatFileSize', () => {
   it('shows bytes, kilobytes or megabytes', () => {
+    expect(formatFileSize(1)).toBe('1 byte')
     expect(formatFileSize(820)).toBe('820 bytes')
     expect(formatFileSize(482113)).toBe('471 KB')
     expect(formatFileSize(2.4 * 1024 * 1024)).toBe('2.4 MB')
