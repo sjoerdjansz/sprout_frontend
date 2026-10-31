@@ -187,7 +187,7 @@ const generalError = computed<string | null>(() => {
           rows="2"
           data-test="goal-description"
         />
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid gap-4 sm:grid-cols-2">
           <BaseInput
             v-model="deadline"
             label="Deadline"

@@ -76,6 +76,8 @@ describe('ConversationView', () => {
     expect(wrapper.get('h1').text()).toBe('Biomechanics of running')
     expect(wrapper.findAll('[data-test="chat-message"]')).toHaveLength(2)
     expect(wrapper.get('[data-test="chat-thread"] strong').text()).toBe('sport')
+    // At phone width the composer sits at the bottom, without the tab bar under it.
+    expect(wrapper.find('[data-test="tab-bar"]').exists()).toBe(false)
   })
 
   it('shows the tutor typing while it answers, then its reply', async () => {

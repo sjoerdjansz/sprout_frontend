@@ -191,7 +191,8 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
   <!-- In place, so the URL you opened stays (see ../specs/not-found.md). -->
   <NotFoundView v-if="loadState === 'not-found'" />
 
-  <AppLayout v-else>
+  <!-- No tab bar at phone width: the composer sits at the bottom, as in a chat app. -->
+  <AppLayout v-else :tab-bar="false">
     <div class="mx-auto flex w-full max-w-190 grow flex-col gap-6">
       <p v-if="loadState === 'loading'" class="text-ink-muted" aria-live="polite">
         Loading your conversation…
@@ -219,7 +220,7 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
           class="grow"
         />
 
-        <div ref="bottom" class="sticky bottom-0 flex flex-col gap-3 bg-canvas pt-2 pb-6">
+        <div ref="bottom" class="sticky bottom-0 flex flex-col gap-3 bg-canvas pt-2 pb-4 md:pb-6">
           <template v-if="conversation.is_saved">
             <SavedNotice :result="saveResult" />
             <ContinueLearning

@@ -35,7 +35,7 @@ const {
     <UserAvatar v-else :initials="initials" :color="avatarColor" size="md" />
 
     <div
-      class="max-w-[min(560px,86%)] px-5 py-3.5 text-body-lg text-ink"
+      class="max-w-[min(560px,86%)] px-4 py-3.5 text-body-lg text-ink md:px-5"
       :class="
         from === 'tutor'
           ? 'rounded-lg rounded-bl-xs bg-surface-tint'
