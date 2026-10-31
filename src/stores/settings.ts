@@ -33,6 +33,17 @@ export interface Settings {
   timezone: string
 }
 
+/** Your AI calls this calendar month, per kind, as returned by `GET /settings/usage`. */
+export interface AiUsage {
+  /** `YYYY-MM`, in your timezone. */
+  month: string
+  tutor_replies: number
+  answers_checked: number
+  explain_feedback: number
+  card_batches: number
+  total: number
+}
+
 /** What `PATCH /settings` takes: only the fields a section changes. */
 export type SettingsChanges = Partial<Omit<Settings, 'learner_role'>> & {
   learner_role?: LearnerRole
@@ -40,6 +51,7 @@ export type SettingsChanges = Partial<Omit<Settings, 'learner_role'>> & {
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Settings | null>(null)
+  const usage = ref<AiUsage | null>(null)
 
   // The app shell and the settings page both ask for the settings when they mount; they share
   // one request.
@@ -74,6 +86,13 @@ export const useSettingsStore = defineStore('settings', () => {
     return updatedSettings
   }
 
+  async function fetchUsage(): Promise<AiUsage> {
+    const fetchedUsage = await api<AiUsage>('/settings/usage')
+    usage.value = fetchedUsage
+
+    return fetchedUsage
+  }
+
   /** "Today", streaks, usage months and reminder times follow your timezone, so keep it current. */
   async function syncTimezone(): Promise<void> {
     const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -83,5 +102,5 @@ export const useSettingsStore = defineStore('settings', () => {
     await updateSettings({ timezone: browserTimezone })
   }
 
-  return { settings, fetchSettings, updateSettings, syncTimezone }
+  return { settings, usage, fetchSettings, updateSettings, fetchUsage, syncTimezone }
 })

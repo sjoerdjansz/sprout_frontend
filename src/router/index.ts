@@ -11,6 +11,7 @@ import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import EmailConfirmView from '@/views/EmailConfirmView.vue'
 import ProfileSettings from '@/views/settings/ProfileSettings.vue'
+import AiSettings from '@/views/settings/AiSettings.vue'
 import SubtopicView from '@/views/SubtopicView.vue'
 import PracticeSetupView from '@/views/PracticeSetupView.vue'
 import PracticeSessionView from '@/views/PracticeSessionView.vue'
@@ -77,7 +78,10 @@ const router = createRouter({
       component: SettingsView,
       redirect: { name: 'settings-profile' },
       meta: { requiresAuth: true },
-      children: [{ path: 'profile', name: 'settings-profile', component: ProfileSettings }],
+      children: [
+        { path: 'profile', name: 'settings-profile', component: ProfileSettings },
+        { path: 'ai', name: 'settings-ai', component: AiSettings },
+      ],
     },
     {
       // The link in the email-change email points here (see ../API.md). Open to everyone: the
