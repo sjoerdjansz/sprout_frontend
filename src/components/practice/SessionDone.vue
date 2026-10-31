@@ -5,6 +5,7 @@ import BaseButton from '@/components/BaseButton.vue'
 import StatTile from '@/components/StatTile.vue'
 import { practiceMode, type PracticeMode } from '@/lib/practiceModes'
 import {
+  isBlockComplete,
   resultLine,
   slippedItems,
   summariseCards,
@@ -30,9 +31,11 @@ const practised = computed<BlockResult[]>(() =>
   results.filter((result) => result.status === 'started' || result.status === 'finished'),
 )
 
-// Everything you planned ran to the end (skipping a block on purpose counts as planned).
 const ranToTheEnd = computed<boolean>(() =>
-  results.every((result) => result.status === 'finished' || result.status === 'skipped'),
+  plan.blocks.every((block, index) => {
+    const result = results[index]
+    return result !== undefined && isBlockComplete(block, result)
+  }),
 )
 
 const headline = computed<string>(() => {

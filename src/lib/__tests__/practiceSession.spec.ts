@@ -6,6 +6,7 @@ import {
   cardsDone,
   emptyResult,
   estimateMinutes,
+  isBlockComplete,
   pickCards,
   pickConcept,
   pickQuestions,
@@ -229,6 +230,20 @@ describe('practice session rules', () => {
     expect(summariseCards(ratings)).toEqual({ reviewed: 2, fromMemory: 1, again: 1 })
     expect(cardsDone(ratings)).toBe(2)
     expect(cardsDone(ratings.slice(0, 2))).toBe(1)
+  })
+
+  it('calls a block complete only when everything in it was done, or it was skipped', () => {
+    const block = {
+      mode: 'cards' as const,
+      cards: [makeFlashcard({ id: 1 }), makeFlashcard({ id: 2 })],
+    }
+    const halfway = { ...emptyResult('cards'), status: 'finished' as const }
+    halfway.ratings = [{ card: makeFlashcard({ id: 1 }), rating: 'good' }]
+
+    expect(isBlockComplete(block, halfway)).toBe(false)
+    expect(isBlockComplete(block, { ...halfway, status: 'skipped' })).toBe(true)
+    halfway.ratings.push({ card: makeFlashcard({ id: 2 }), rating: 'easy' })
+    expect(isBlockComplete(block, halfway)).toBe(true)
   })
 
   it('reads a block’s result in one line', () => {

@@ -377,6 +377,27 @@ export function cardsDone(ratings: CardRating[]): number {
   return [...latest.values()].filter((rating) => rating !== 'again').length
 }
 
+/**
+ * You did everything the block planned: every card done, every question answered, both
+ * explanations written, at least one message. Skipping a block on purpose counts as done.
+ */
+export function isBlockComplete(block: PracticeBlock, result: BlockResult): boolean {
+  if (result.status === 'skipped') {
+    return true
+  }
+
+  switch (block.mode) {
+    case 'cards':
+      return cardsDone(result.ratings) >= block.cards.length
+    case 'retrieval':
+      return result.answers.length >= block.questions.length
+    case 'feynman':
+      return result.explanations.length >= 2
+    case 'open':
+      return result.messagesSent > 0
+  }
+}
+
 export interface QuizSummary {
   right: number
   secondTry: number
