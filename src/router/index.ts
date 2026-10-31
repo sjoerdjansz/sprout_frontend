@@ -9,6 +9,7 @@ import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
 import SubtopicView from '@/views/SubtopicView.vue'
+import PracticeSetupView from '@/views/PracticeSetupView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -48,6 +49,13 @@ const router = createRouter({
       component: SubtopicView,
       // A non-numeric id becomes NaN, which the API answers with its not found message.
       props: (route) => ({ id: Number(route.params.id) }),
+      meta: { requiresAuth: true },
+    },
+    {
+      // Prefilled from the query: ?subtopic=26, ?topic=8 and ?modes=cards,retrieval.
+      path: '/practice',
+      name: 'practice',
+      component: PracticeSetupView,
       meta: { requiresAuth: true },
     },
     {
