@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
 import { makeDone, makePracticeSession } from '@/__tests__/practiceFixtures'
-import { dateFromToday } from '@/__tests__/topicFixtures'
+import { dateFromToday, makeSource } from '@/__tests__/topicFixtures'
 import {
   answerText,
   filterFlashcards,
   filterQuestions,
   filterSessions,
+  filterSources,
   flashcardStatus,
   lastReview,
   sessionActivity,
   sessionTitle,
+  sourceLabel,
   wordCount,
 } from '../subtopicPage'
 
@@ -122,5 +124,34 @@ describe('subtopic page rules', () => {
 
   it('counts the words in your notes', () => {
     expect(wordCount('  Plants use\nlight.  ')).toBe(3)
+  })
+})
+
+describe('sources', () => {
+  const tutor = makeSource({ id: 1, type: 'tutor', content: 'Leaves look **green**.' })
+  const own = makeSource({ id: 2, type: 'own', content: 'My own words on light.' })
+  const file = makeSource({
+    id: 3,
+    type: 'file',
+    content: 'Chloroplasts hold chlorophyll.',
+    material: { id: 10, original_filename: 'Lecture 1.pdf' },
+  })
+
+  it('names each source after where it came from', () => {
+    expect([tutor, own, file].map(sourceLabel)).toEqual([
+      'From the chat',
+      'Your notes',
+      'From Lecture 1.pdf',
+    ])
+  })
+
+  it('finds sources by label or content, and filters them by kind', () => {
+    const sources = [tutor, own, file]
+
+    expect(filterSources(sources, 'lecture', 'all')).toEqual([file])
+    expect(filterSources(sources, 'GREEN', 'all')).toEqual([tutor])
+    expect(filterSources(sources, 'chat', 'all')).toEqual([tutor])
+    expect(filterSources(sources, '', 'own')).toEqual([own])
+    expect(filterSources(sources, 'light', 'file')).toEqual([])
   })
 })

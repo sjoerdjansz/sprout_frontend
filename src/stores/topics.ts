@@ -268,6 +268,14 @@ export const useTopicsStore = defineStore('topics', () => {
     }
   }
 
+  /**
+   * Removes one of a subtopic's sources; its cards and questions stay. Fetch the subtopic again for
+   * the new `sources`, `source_count` and (after removing your own notes) `notes`.
+   */
+  async function removeSource(subtopicId: number, sourceId: number): Promise<void> {
+    await api<null>(`/subtopics/${subtopicId}/sources/${sourceId}`, { method: 'DELETE' })
+  }
+
   /** Asks the AI how the topic's saved description and notes split into subtopics. Saves nothing. */
   async function suggestSubtopics(topicId: number): Promise<SubtopicSuggestion[]> {
     const result = await api<{ suggestions: SubtopicSuggestion[] }>(
@@ -322,6 +330,7 @@ export const useTopicsStore = defineStore('topics', () => {
     updateSubtopic,
     fetchSubtopic,
     deleteSubtopic,
+    removeSource,
     generateMaterial,
     suggestSubtopics,
     addSubtopics,

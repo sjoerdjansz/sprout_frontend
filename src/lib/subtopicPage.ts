@@ -14,6 +14,7 @@ import { ratingLabels } from '@/lib/ratings'
 import type { Flashcard } from '@/stores/flashcards'
 import type { PracticeSession } from '@/stores/practice'
 import type { Question, QuestionType, Verdict } from '@/stores/questions'
+import type { SourceType, SubtopicSource } from '@/stores/topics'
 
 function matches(text: string | null, query: string): boolean {
   return text !== null && text.toLowerCase().includes(query)
@@ -210,4 +211,47 @@ export function filterSessions(sessions: PracticeSession[], query: string): Prac
 
 export function wordCount(text: string): number {
   return text.split(/\s+/).filter((word) => word !== '').length
+}
+
+/** "From the chat", "Your notes" or "From Lecture 1.pdf": where a source came from. */
+export function sourceLabel(source: SubtopicSource): string {
+  switch (source.type) {
+    case 'tutor':
+      return 'From the chat'
+    case 'own':
+      return 'Your notes'
+    case 'file':
+      return `From ${source.material?.original_filename ?? 'a file'}`
+  }
+}
+
+/** Each kind of source keeps its own icon and tint, so a row says what it is at a glance. */
+export const sourceLooks: Record<SourceType, { kind: string; icon: IconName; tint: Tint }> = {
+  tutor: { kind: 'Chat notes', icon: 'message-circle', tint: 'mint' },
+  own: { kind: 'Notes', icon: 'pencil', tint: 'sun' },
+  file: { kind: 'Part of a file', icon: 'file-text', tint: 'sky' },
+}
+
+export type SourceFilter = 'all' | SourceType
+
+export const sourceFilters: { id: SourceFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'tutor', label: 'Chat' },
+  { id: 'own', label: 'Your notes' },
+  { id: 'file', label: 'Files' },
+]
+
+/** A source is found by its label (a file's name) or by what it says. */
+export function filterSources(
+  sources: SubtopicSource[],
+  query: string,
+  filter: SourceFilter,
+): SubtopicSource[] {
+  const search = normalized(query)
+
+  return sources.filter(
+    (source) =>
+      (filter === 'all' || source.type === filter) &&
+      (search === '' || matches(sourceLabel(source), search) || matches(source.content, search)),
+  )
 }
