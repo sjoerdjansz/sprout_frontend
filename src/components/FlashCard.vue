@@ -19,7 +19,7 @@ const flipped = defineModel<boolean>('flipped', { required: true })
   <!-- A 3D flip of 500ms; with reduced motion the faces swap with a fade instead. -->
   <button
     type="button"
-    class="group relative h-75 w-full max-w-130 cursor-pointer rounded-xl text-center perspective-[1400px] focus-visible:shadow-focus-ring focus-visible:outline-none"
+    class="group relative h-75 w-full max-w-140 cursor-pointer rounded-xl text-center perspective-[1400px] focus-visible:shadow-focus-ring focus-visible:outline-none"
     :aria-label="
       flipped ? 'Answer shown. Activate to see the question' : 'Activate to reveal the answer'
     "
