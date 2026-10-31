@@ -100,6 +100,10 @@ describe('SubtopicView', () => {
       '1',
     ])
     expect(wrapper.get('[data-test="practice"]').attributes('disabled')).toBeDefined()
+    // Back to the knowledge map with this topic picked.
+    expect(wrapper.get('[data-test="crumb-topic"]').attributes('href')).toBe(
+      '/knowledge-map?topic=1',
+    )
   })
 
   it('shows the not found page for a subtopic that is not yours', async () => {

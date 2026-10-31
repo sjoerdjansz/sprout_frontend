@@ -41,7 +41,11 @@ const crumbClasses =
       Knowledge map
     </RouterLink>
     <span aria-hidden="true" class="text-ink-subtle">/</span>
-    <RouterLink :to="{ name: 'knowledge-map' }" :class="crumbClasses">
+    <RouterLink
+      :to="{ name: 'knowledge-map', query: { topic: subtopic.topic.id } }"
+      :class="crumbClasses"
+      data-test="crumb-topic"
+    >
       {{ subtopic.topic.title }}
     </RouterLink>
     <span aria-hidden="true" class="text-ink-subtle">/</span>

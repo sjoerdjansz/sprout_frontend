@@ -46,6 +46,7 @@ async function selectTopic(wrapper: VueWrapper, title: string): Promise<void> {
     .findAll('[data-test="topic-card"]')
     .find((candidate) => candidate.text().includes(title))
   await card?.trigger('click')
+  await flushPromises()
 }
 
 async function submitForm(wrapper: VueWrapper): Promise<void> {
@@ -150,6 +151,23 @@ describe('KnowledgeMapView', () => {
 
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
     expect(subtopicTitles(wrapper)).toEqual(['The periodic table', 'Chemical bonds'])
+  })
+
+  it('keeps the topic you picked in the URL, so coming back shows it again', async () => {
+    await router.push('/knowledge-map?topic=2')
+    const wrapper = await mountKnowledgeMap()
+
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
+
+    await selectTopic(wrapper, 'Spanish')
+    expect(router.currentRoute.value.query).toEqual({ topic: '4' })
+  })
+
+  it('falls back to the first topic for a topic that is not in your library', async () => {
+    await router.push('/knowledge-map?topic=999')
+    const wrapper = await mountKnowledgeMap()
+
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
   })
 
   it('adds a topic in a dialog and shows it', async () => {

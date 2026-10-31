@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
 import BaseToast from '@/components/BaseToast.vue'
@@ -24,6 +25,8 @@ import {
 } from '@/lib/knowledgeMap'
 import { useTopicsStore, type Category, type Topic } from '@/stores/topics'
 
+const route = useRoute()
+const router = useRouter()
 const topicsStore = useTopicsStore()
 const { toast, showToast } = useToast()
 
@@ -48,15 +51,28 @@ function clearFilters(): void {
   showOnlyAttention.value = false
 }
 
-// The topic whose subtopics show under the library.
-const selectedTopicId = ref<number | null>(null)
+/**
+ * The topic whose subtopics show under the library. It lives in the URL (`?topic=8`), so going
+ * back from a subtopic's page, or reloading, keeps your place. Without one, the first topic.
+ */
+const selectedTopicId = computed<number | null>({
+  get: () => {
+    const fromUrl = Number(route.query.topic)
+    const exists = topicsStore.topics.some((topic) => topic.id === fromUrl)
+
+    return exists ? fromUrl : (topicsStore.topics[0]?.id ?? null)
+  },
+  // Replace, not push: picking topics shouldn't fill your back button.
+  set: (topicId) => {
+    void router.replace({ query: topicId === null ? {} : { topic: String(topicId) } })
+  },
+})
 
 async function load(): Promise<void> {
   loadState.value = 'loading'
 
   try {
     await topicsStore.fetchLibrary()
-    selectedTopicId.value = topicsStore.topics[0]?.id ?? null
     loadState.value = 'loaded'
   } catch (caught) {
     if (!(caught instanceof ApiError)) {
