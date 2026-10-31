@@ -41,11 +41,12 @@ const appearance = computed<TopicAppearance>(() => topicAppearance(topic))
       <span class="font-display text-[19px] leading-6 font-semibold tracking-[-0.015em] text-ink">
         {{ topic.title }}
       </span>
-      <span class="flex flex-wrap gap-1.5 text-label font-normal text-ink-muted">
-        <span>
-          {{ topic.category.name }} · {{ pluralize(topic.subtopics.length, 'subtopic') }}
-        </span>
-        <span v-if="due > 0" class="font-[650] text-sun-ink">· {{ due }} due</span>
+      <!-- One line of text, so a long due count wraps with it instead of jumping to its own line. -->
+      <span class="text-label font-normal text-ink-muted" data-test="topic-meta">
+        {{ topic.category.name }} · {{ pluralize(topic.subtopics.length, 'subtopic') }}
+        <span v-if="due > 0" class="font-[650] whitespace-nowrap text-sun-ink"
+          >· {{ due }} due</span
+        >
       </span>
     </span>
   </button>
