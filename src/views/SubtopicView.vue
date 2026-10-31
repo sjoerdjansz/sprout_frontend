@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseTabs, { type TabItem } from '@/components/BaseTabs.vue'
 import BaseToast from '@/components/BaseToast.vue'
@@ -20,6 +21,7 @@ import { useSubtopicLoader } from '@/composables/subtopic/useSubtopicLoader'
 import { useSubtopicMaterial } from '@/composables/subtopic/useSubtopicMaterial'
 import { useToast } from '@/composables/useToast'
 import { initials } from '@/lib/names'
+import type { PracticeModeId } from '@/lib/practiceModes'
 import { useAuthStore } from '@/stores/auth'
 import NotFoundView from '@/views/NotFoundView.vue'
 
@@ -28,6 +30,7 @@ const { id } = defineProps<{
 }>()
 
 const auth = useAuthStore()
+const router = useRouter()
 const { toast, showToast } = useToast()
 
 const { loadState, loadError, actionError, subtopic, load, actions } = useSubtopicLoader(() => id)
@@ -90,6 +93,15 @@ watch(
   { immediate: true },
 )
 
+// The practice setup, prefilled with this subtopic (and a mode, from Quiz me now or New session).
+function practise(mode?: PracticeModeId): void {
+  const query: Record<string, string> = { subtopic: String(id) }
+  if (mode !== undefined) {
+    query.modes = mode
+  }
+  void router.push({ name: 'practice', query })
+}
+
 watch(tab, () => {
   actions.clearActionError()
   cardEditor.close()
@@ -113,7 +125,12 @@ watch(tab, () => {
     </div>
 
     <div v-else-if="subtopic !== null" class="flex flex-col gap-3.5">
-      <SubtopicHeader :subtopic="subtopic" @edit="edit.open" @delete="deletion.open" />
+      <SubtopicHeader
+        :subtopic="subtopic"
+        @practice="practise()"
+        @edit="edit.open"
+        @delete="deletion.open"
+      />
 
       <BaseTabs v-model="tab" :items="tabs" label="Materials" class="self-start" />
 
@@ -143,6 +160,7 @@ watch(tab, () => {
           v-else-if="tab === 'questions'"
           :questions="questions"
           @remove="removeQuestion"
+          @quiz="practise('retrieval')"
         />
         <SessionsPanel
           v-else-if="tab === 'sessions'"
@@ -150,6 +168,7 @@ watch(tab, () => {
           :topic-title="subtopic.topic.title"
           :user-initials="userInitials"
           @remove="removeSession"
+          @start="practise('open')"
         />
         <SourcesPanel
           v-else

@@ -99,11 +99,30 @@ describe('SubtopicView', () => {
       '1',
       '1',
     ])
-    expect(wrapper.get('[data-test="practice"]').attributes('disabled')).toBeDefined()
     // Back to the knowledge map with this topic picked.
     expect(wrapper.get('[data-test="crumb-topic"]').attributes('href')).toBe(
       '/knowledge-map?topic=1',
     )
+  })
+
+  it('opens the practice setup with this subtopic, and a mode from the tabs', async () => {
+    const wrapper = await mountSubtopic()
+
+    await wrapper.get('[data-test="practice"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/practice?subtopic=101')
+
+    await router.push('/subtopics/101')
+    await openTab(wrapper, 'questions')
+    await wrapper.get('[data-test="quiz-me"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/practice?subtopic=101&modes=retrieval')
+
+    await router.push('/subtopics/101')
+    await openTab(wrapper, 'sessions')
+    await wrapper.get('[data-test="new-session"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.fullPath).toBe('/practice?subtopic=101&modes=open')
   })
 
   it('shows the not found page for a subtopic that is not yours', async () => {

@@ -57,7 +57,12 @@ const emit = defineEmits<{
       :to="{ name: 'knowledge-map' }"
       :collapsed="collapsed"
     />
-    <SidebarNavLink icon="target" label="Practice center" :collapsed="collapsed" />
+    <SidebarNavLink
+      icon="target"
+      label="Practice center"
+      :to="{ name: 'practice' }"
+      :collapsed="collapsed"
+    />
     <SidebarNavLink icon="chart-line" label="Insights" :collapsed="collapsed" />
 
     <!-- Takes the free space and scrolls on its own, so the bottom of the sidebar stays put. -->

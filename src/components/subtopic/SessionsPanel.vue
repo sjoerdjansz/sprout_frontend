@@ -15,6 +15,7 @@ const { sessions, topicTitle, userInitials } = defineProps<{
 
 const emit = defineEmits<{
   remove: [session: ConversationListItem]
+  start: []
 }>()
 
 const query = ref('')
@@ -30,8 +31,7 @@ function toggle(sessionId: number): void {
 <template>
   <!-- No filter chips: a conversation doesn't record which techniques it used. -->
   <MaterialToolbar v-model:query="query" search-label="Search sessions">
-    <!-- No practice sessions yet (see ../specs/subtopic-page.md). -->
-    <BaseButton size="sm" icon="message-circle" disabled title="Coming soon">
+    <BaseButton size="sm" icon="message-circle" data-test="new-session" @click="emit('start')">
       New session
     </BaseButton>
   </MaterialToolbar>

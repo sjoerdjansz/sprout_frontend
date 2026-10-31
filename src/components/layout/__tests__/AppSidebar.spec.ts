@@ -46,6 +46,7 @@ describe('AppSidebar', () => {
       'aria-expanded': 'false',
     })
     expect(wrapper.get('a[href="/knowledge-map"]').attributes('title')).toBe('Knowledge map')
+    expect(wrapper.get('a[href="/practice"]').attributes('title')).toBe('Practice center')
     expect(wrapper.get('[data-test="logout"]').attributes('title')).toBe('Log out')
   })
 })

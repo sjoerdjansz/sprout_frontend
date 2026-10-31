@@ -1,18 +1,32 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import SectionHeading from '@/components/SectionHeading.vue'
 import TextLink from '@/components/TextLink.vue'
 import PracticeModeCard from '@/components/dashboard/PracticeModeCard.vue'
-import { practiceModes } from '@/lib/practiceModes'
+import { practiceModes, type PracticeModeId } from '@/lib/practiceModes'
+
+const router = useRouter()
+
+// A card opens the practice setup with that mode picked; you choose what to practise there.
+function practise(mode: PracticeModeId): void {
+  void router.push({ name: 'practice', query: { modes: mode } })
+}
 </script>
 
 <template>
   <section aria-labelledby="practice-heading" class="flex flex-col gap-4">
     <SectionHeading title="Start a practice session" heading-id="practice-heading">
-      <TextLink>Open practice center</TextLink>
+      <TextLink :to="{ name: 'practice' }">Open practice center</TextLink>
     </SectionHeading>
 
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-4">
-      <PracticeModeCard v-for="mode in practiceModes" :key="mode.id" :mode="mode" />
+      <PracticeModeCard
+        v-for="mode in practiceModes"
+        :key="mode.id"
+        :mode="mode"
+        :data-test="`practice-mode-${mode.id}`"
+        @click="practise(mode.id)"
+      />
     </div>
   </section>
 </template>

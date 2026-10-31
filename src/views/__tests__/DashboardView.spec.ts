@@ -70,6 +70,16 @@ describe('DashboardView', () => {
     ).toEqual(['Flashcards', 'Retrieval quiz', 'Explain it', 'Open session'])
   })
 
+  it('opens the practice setup with the mode you pick', async () => {
+    stubApi({ 'GET /user': Response.json(user), 'GET /conversations': Response.json([]) })
+    const wrapper = await mountDashboard()
+
+    await wrapper.get('[data-test="practice-mode-feynman"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/practice?modes=feynman')
+  })
+
   it('starts a conversation with your first message and opens it', async () => {
     let answerTutor: (response: Response) => void = () => {}
     const fetchMock = stubApi({

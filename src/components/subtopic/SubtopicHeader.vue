@@ -16,6 +16,7 @@ const { subtopic } = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  practice: []
   edit: []
   delete: []
 }>()
@@ -101,8 +102,7 @@ const crumbClasses =
     </div>
 
     <div class="flex items-center gap-1.5">
-      <!-- No practice sessions yet (see ../specs/subtopic-page.md). -->
-      <BaseButton icon-right="arrow-right" disabled title="Coming soon" data-test="practice">
+      <BaseButton icon-right="arrow-right" data-test="practice" @click="emit('practice')">
         Practice
       </BaseButton>
       <BaseIconButton

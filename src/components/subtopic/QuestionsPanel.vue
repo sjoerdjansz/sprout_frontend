@@ -12,6 +12,7 @@ const { questions } = defineProps<{
 
 const emit = defineEmits<{
   remove: [question: Question]
+  quiz: []
 }>()
 
 const query = ref('')
@@ -35,8 +36,9 @@ function toggle(questionId: number): void {
     search-label="Search questions"
     :filters="questionFilters"
   >
-    <!-- No practice sessions yet (see ../specs/subtopic-page.md). -->
-    <BaseButton size="sm" icon="list-checks" disabled title="Coming soon">Quiz me now</BaseButton>
+    <BaseButton size="sm" icon="list-checks" data-test="quiz-me" @click="emit('quiz')">
+      Quiz me now
+    </BaseButton>
   </MaterialToolbar>
 
   <ul class="flex flex-col gap-0.5 p-2">
