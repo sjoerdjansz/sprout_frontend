@@ -5,8 +5,14 @@ import BaseIcon from '@/components/BaseIcon.vue'
 // Native attributes (rows, placeholder, data-test ...) belong on the <textarea>, not the wrapper.
 defineOptions({ inheritAttrs: false })
 
-const { label, error } = defineProps<{
+const {
+  label,
+  error,
+  hideLabel = false,
+} = defineProps<{
   label: string
+  /** For screen readers only, when the label is shown next to other controls. */
+  hideLabel?: boolean
   /** Says what to do next; turns the border ember. */
   error?: string
 }>()
@@ -19,7 +25,9 @@ const errorId = `${textareaId}-error`
 
 <template>
   <div class="flex w-full flex-col gap-1.5">
-    <label :for="textareaId" class="text-label text-ink">{{ label }}</label>
+    <label :for="textareaId" class="text-label text-ink" :class="{ 'sr-only': hideLabel }">{{
+      label
+    }}</label>
 
     <textarea
       :id="textareaId"

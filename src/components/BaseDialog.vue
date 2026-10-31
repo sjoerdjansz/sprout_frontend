@@ -2,8 +2,14 @@
 import { onMounted, useId, useTemplateRef } from 'vue'
 import BaseIconButton from '@/components/BaseIconButton.vue'
 
-const { title, closable = true } = defineProps<{
+const {
+  title,
+  closable = true,
+  size = 'md',
+} = defineProps<{
   title: string
+  /** `lg` for a form with room to write, like notes. */
+  size?: 'md' | 'lg'
   /** False while something is in progress that closing would interrupt. */
   closable?: boolean
 }>()
@@ -38,7 +44,8 @@ function onCancel(event: Event): void {
   <dialog
     ref="dialog"
     :aria-labelledby="titleId"
-    class="m-auto max-h-[90svh] w-[min(640px,calc(100vw-32px))] overflow-y-auto rounded-xl border border-line bg-surface p-0 text-ink shadow-lg backdrop:bg-onyx/40"
+    class="m-auto max-h-[90svh] overflow-y-auto rounded-xl border border-line bg-surface p-0 text-ink shadow-lg backdrop:bg-onyx/40"
+    :class="size === 'lg' ? 'w-[min(880px,calc(100vw-32px))]' : 'w-[min(640px,calc(100vw-32px))]'"
     @cancel="onCancel"
   >
     <div class="flex flex-col gap-6 p-7">

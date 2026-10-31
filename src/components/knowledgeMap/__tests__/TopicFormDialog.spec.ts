@@ -145,4 +145,37 @@ describe('TopicFormDialog', () => {
         .text(),
     ).toBe('Connect your AI key to start learning.')
   })
+
+  it('says honestly what happens with the notes of a topic and of a subtopic', () => {
+    expect(mountForm('edit-topic').text()).toContain('Kept with your topic.')
+    expect(mountForm('add-subtopic').text()).toContain(
+      'Sprout turns these into flashcards and questions when you save.',
+    )
+  })
+
+  it('counts the notes against the limit and previews them as Markdown', async () => {
+    const wrapper = mountForm('add-subtopic')
+
+    await wrapper.get('[data-test="notes"]').setValue('**Light** and water')
+    expect(wrapper.get('[data-test="notes-count"]').text()).toBe('19 / 10,000')
+
+    await wrapper.get('[data-test="tab-preview"]').trigger('click')
+    expect(wrapper.get('[data-test="notes-preview"] strong').text()).toBe('Light')
+
+    await wrapper.get('[data-test="tab-write"]').trigger('click')
+    await wrapper.get('[data-test="notes"]').setValue('a'.repeat(10_001))
+    expect(wrapper.get('[data-test="notes-count"]').classes()).toContain('text-ember-ink')
+  })
+
+  it('says it makes cards while a subtopic with new notes saves', () => {
+    const values = { ...emptyValues, title: 'Light', notes: 'Plants use light.' }
+
+    expect(
+      mountForm('add-subtopic', values, { saving: true }).get('[data-test="save"]').text(),
+    ).toBe('Saving and making cards…')
+    // The same notes as before make nothing new.
+    expect(
+      mountForm('edit-subtopic', values, { saving: true }).get('[data-test="save"]').text(),
+    ).toBe('Saving…')
+  })
 })
