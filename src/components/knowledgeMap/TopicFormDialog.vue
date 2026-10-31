@@ -115,8 +115,10 @@ function save(): void {
 <template>
   <BaseDialog :title="titles[mode]" :closable="!saving" @close="emit('close')">
     <form class="flex flex-col gap-5" novalidate @submit.prevent="save">
+      <!-- The dialog focuses this when it opens, instead of its close button. -->
       <BaseInput
         v-model="title"
+        autofocus
         label="Name"
         :placeholder="isSubtopic ? 'e.g. The Calvin cycle' : 'e.g. Astronomy'"
         :error="error?.fieldError('title')"

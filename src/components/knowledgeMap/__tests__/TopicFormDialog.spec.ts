@@ -77,6 +77,12 @@ describe('TopicFormDialog', () => {
     ])
   })
 
+  it('puts the focus on the name when it opens', () => {
+    const wrapper = mountForm('add-topic')
+
+    expect(wrapper.get('[data-test="name"]').attributes('autofocus')).toBeDefined()
+  })
+
   it('makes a category of your own, which needs a name', async () => {
     const wrapper = mountForm('add-topic')
     await wrapper.get('[data-test="name"]').setValue('Guitar')
