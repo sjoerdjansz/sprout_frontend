@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { makeListItem } from '@/__tests__/conversationFixtures'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
+import { makeDone, makePracticeSession } from '@/__tests__/practiceFixtures'
 import { dateFromToday } from '@/__tests__/topicFixtures'
 import {
   answerText,
@@ -9,8 +9,8 @@ import {
   filterSessions,
   flashcardStatus,
   lastReview,
-  sessionMinutes,
-  sessionSnippet,
+  sessionActivity,
+  sessionTitle,
   wordCount,
 } from '../subtopicPage'
 
@@ -70,22 +70,54 @@ describe('subtopic page rules', () => {
     expect(ids('sunlight gives', 'all')).toEqual([18, 19])
   })
 
-  it('finds sessions by title or by what was said', () => {
-    const running = makeListItem()
-    const leaves = makeListItem({ id: 12, title: 'Why leaves are green' })
-
-    expect(filterSessions([running, leaves], 'LEAVES').map((session) => session.id)).toEqual([12])
-    expect(filterSessions([running, leaves], 'injuries')).toHaveLength(2)
-  })
-
-  it('sums up a session in minutes and one line', () => {
-    const session = makeListItem({
-      started_at: '2026-10-30T13:00:00.000000Z',
-      last_activity_at: '2026-10-30T13:14:20.000000Z',
+  it('names a practice session and sums up what you did in it', () => {
+    const cards = makePracticeSession({
+      done: makeDone({
+        flashcard_reviews: [
+          { flashcard_id: 41, rating: 'again', reviewed_at: '' },
+          { flashcard_id: 41, rating: 'good', reviewed_at: '' },
+        ],
+        answers: [
+          { question_id: 17, option_id: 60, score: null, verdict: 'not_quite', answered_at: '' },
+        ],
+      }),
+    })
+    const mixed = makePracticeSession({
+      plan: {
+        modes: ['retrieval', 'open'],
+        card_ids: [],
+        question_ids: [],
+        explain_subtopic_id: null,
+      },
     })
 
-    expect(sessionMinutes(session)).toBe(14)
-    expect(sessionSnippet(session)).toBe('Great choice! What draws you to it: sport or injuries?')
+    expect(sessionTitle(cards)).toBe('Flashcards')
+    expect(sessionTitle(mixed)).toBe('Mixed session')
+    // A card rated twice is one card; a wrong first pick without its second try isn't answered.
+    expect(sessionActivity(cards)).toBe('1 card')
+    expect(sessionActivity(mixed)).toBe('Nothing practised yet')
+  })
+
+  it('finds sessions by how you practised or by what was said', () => {
+    const cards = makePracticeSession()
+    const chat = makePracticeSession({
+      id: 53,
+      plan: { modes: ['open'], card_ids: [], question_ids: [], explain_subtopic_id: null },
+      done: makeDone({
+        messages: [
+          {
+            id: 1,
+            role: 'tutor',
+            content: 'Why are leaves green?',
+            technique: null,
+            created_at: '',
+          },
+        ],
+      }),
+    })
+
+    expect(filterSessions([cards, chat], 'LEAVES').map((session) => session.id)).toEqual([53])
+    expect(filterSessions([cards, chat], 'flashcards').map((session) => session.id)).toEqual([52])
   })
 
   it('counts the words in your notes', () => {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ApiError } from '@/lib/api'
 import { useConversationsStore, type ReviewedDraft } from '../conversations'
-import { makeConversation, makeListItem, makeSummary } from '@/__tests__/conversationFixtures'
+import { makeConversation, makeSummary } from '@/__tests__/conversationFixtures'
 import { stubApi } from '@/__tests__/stubApi'
 
 const apiUrl = import.meta.env.VITE_API_URL
@@ -150,29 +150,5 @@ describe('conversations store', () => {
 
     await expect(store.startConversation('Hello')).rejects.toBeInstanceOf(ApiError)
     expect(store.conversations).toEqual([])
-  })
-
-  it('fetches the conversations about one topic, with their first messages', async () => {
-    stubApi({ 'GET /conversations?topic_id=8': Response.json([makeListItem()]) })
-    const store = useConversationsStore()
-
-    await store.fetchTopicConversations(8)
-
-    expect(store.topicConversations[0]?.message_count).toBe(7)
-    expect(store.topicConversations[0]?.preview).toHaveLength(2)
-  })
-
-  it('deletes a conversation from the history and the topic list', async () => {
-    stubApi({ 'DELETE /conversations/10': new Response(null, { status: 204 }) })
-    const store = useConversationsStore()
-    store.conversations = [makeSummary(), makeSummary({ id: 7 })]
-    store.topicConversations = [makeListItem()]
-    store.conversation = makeConversation()
-
-    await store.deleteConversation(10)
-
-    expect(store.conversations.map((summary) => summary.id)).toEqual([7])
-    expect(store.topicConversations).toEqual([])
-    expect(store.conversation).toBeNull()
   })
 })

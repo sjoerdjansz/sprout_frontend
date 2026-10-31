@@ -1,7 +1,7 @@
 import { computed, ref, toValue, type ComputedRef, type MaybeRefOrGetter, type Ref } from 'vue'
 import { ApiError } from '@/lib/api'
-import { useConversationsStore } from '@/stores/conversations'
 import { useFlashcardsStore } from '@/stores/flashcards'
+import { usePracticeStore } from '@/stores/practice'
 import { useQuestionsStore } from '@/stores/questions'
 import { useTopicsStore, type SubtopicDetail } from '@/stores/topics'
 
@@ -20,7 +20,7 @@ export interface SubtopicPageActions {
 }
 
 /**
- * Loads the subtopic page (the subtopic, then its cards, questions and its topic's sessions) and
+ * Loads the subtopic page (the subtopic, then its cards, questions and its practice sessions) and
  * decides what a failed request means for the page.
  */
 export function useSubtopicLoader(id: MaybeRefOrGetter<number>): {
@@ -35,7 +35,7 @@ export function useSubtopicLoader(id: MaybeRefOrGetter<number>): {
   const topicsStore = useTopicsStore()
   const flashcardsStore = useFlashcardsStore()
   const questionsStore = useQuestionsStore()
-  const conversationsStore = useConversationsStore()
+  const practiceStore = usePracticeStore()
 
   const loadState = ref<LoadState>('loading')
   const loadError = ref('')
@@ -53,11 +53,11 @@ export function useSubtopicLoader(id: MaybeRefOrGetter<number>): {
     }
 
     try {
-      const loaded = await topicsStore.fetchSubtopic(subtopicId)
+      await topicsStore.fetchSubtopic(subtopicId)
       await Promise.all([
         flashcardsStore.fetchFlashcards(subtopicId),
         questionsStore.fetchQuestions(subtopicId),
-        conversationsStore.fetchTopicConversations(loaded.topic.id),
+        practiceStore.fetchSubtopicSessions(subtopicId),
       ])
       loadState.value = 'loaded'
     } catch (caught) {

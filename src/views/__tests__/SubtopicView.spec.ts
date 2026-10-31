@@ -2,8 +2,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import router from '@/router'
-import { makeListItem } from '@/__tests__/conversationFixtures'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
+import { makeDone, makePracticeSession } from '@/__tests__/practiceFixtures'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeLibrary, makeSubtopic, makeSubtopicDetail } from '@/__tests__/topicFixtures'
 import { undoWindow } from '@/composables/useUndoableDelete'
@@ -44,7 +44,40 @@ async function mountSubtopic(routes: Routes = {}): Promise<VueWrapper> {
       makeFlashcard({ id: 42, front: 'Which gas is released?', paused: true }),
     ]),
     'GET /subtopics/101/questions': Response.json([makeQuestion(), makeOpenQuestion()]),
-    'GET /conversations?topic_id=1': Response.json([makeListItem({ id: 12, title: 'Leaves' })]),
+    'GET /subtopics/101/practice-sessions': Response.json([
+      makePracticeSession({
+        plan: {
+          modes: ['cards', 'open'],
+          card_ids: [41],
+          question_ids: [],
+          explain_subtopic_id: null,
+        },
+        done: makeDone({
+          flashcard_reviews: [{ flashcard_id: 41, rating: 'good', reviewed_at: '' }],
+          messages: [
+            { id: 301, role: 'user', content: 'Quiz me', technique: null, created_at: '' },
+            {
+              id: 302,
+              role: 'tutor',
+              content: 'What do leaves need?',
+              technique: null,
+              created_at: '',
+            },
+          ],
+        }),
+        xp_earned: 1,
+        subtopics: [
+          {
+            id: 101,
+            title: 'Photosynthesis',
+            mastery_before: 20,
+            mastery_after: 28,
+            next_review_on: null,
+          },
+        ],
+      }),
+      makePracticeSession({ id: 50, is_finished: true }),
+    ]),
     ...routes,
   })
   await router.push('/subtopics/101')
@@ -98,7 +131,7 @@ describe('SubtopicView', () => {
     expect(wrapper.findAll('[data-test="tab-count"]').map((count) => count.text())).toEqual([
       '2',
       '2',
-      '1',
+      '2',
       '1',
     ])
     // Back to the knowledge map with this topic picked.
@@ -303,22 +336,25 @@ describe('SubtopicView', () => {
     expect(wrapper.get('[data-test="empty"]').text()).toBe('No questions match this filter.')
   })
 
-  it("lists the topic's sessions and continues one in the chat", async () => {
-    const wrapper = await mountSubtopic({ 'DELETE /conversations/12': noContent })
+  it('lists the practice sessions, shows their chat and continues the one still going', async () => {
+    const wrapper = await mountSubtopic()
 
     await openTab(wrapper, 'sessions')
-    expect(wrapper.get('[data-test="sessions-scope"]').text()).toContain('Biology, the whole topic')
-    expect(wrapper.get('[data-test="continue-session"]').attributes('href')).toBe(
-      '/conversations/12',
+    const [going, done] = wrapper.findAll('[data-test="session"]')
+    expect(going?.text()).toContain('Mixed session')
+    expect(going?.text()).toContain('1 card · 1 message')
+    expect(going?.get('[data-test="session-mastery"]').text()).toBe('Mastery 20% → 28%')
+    expect(going?.get('[data-test="continue-session"]').attributes('href')).toBe(
+      '/practice/session',
     )
+    // A finished session can't be picked up again.
+    expect(done?.find('[data-test="continue-session"]').exists()).toBe(false)
 
-    await wrapper.get('[data-test="toggle-session"]').trigger('click')
+    await going?.get('[data-test="toggle-session"]').trigger('click')
     expect(wrapper.findAll('[data-test="chat-message"]')).toHaveLength(2)
 
-    await wrapper.get('[data-test="delete-session"]').trigger('click')
-    expect(wrapper.get('[data-test="empty"]').text()).toBe(
-      'No sessions yet. Start one and it shows up here.',
-    )
+    await wrapper.get('[data-test="search"]').setValue('leaves need')
+    expect(wrapper.findAll('[data-test="session"]')).toHaveLength(1)
   })
 
   it('removes the notes as a source, with a chance to undo', async () => {

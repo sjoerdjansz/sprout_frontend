@@ -1,8 +1,8 @@
 import { computed, type ComputedRef, type Ref } from 'vue'
 import type { SubtopicPageActions } from '@/composables/subtopic/useSubtopicLoader'
 import { useUndoableDelete, type UndoableDelete } from '@/composables/useUndoableDelete'
-import { useConversationsStore, type ConversationListItem } from '@/stores/conversations'
 import { useFlashcardsStore, type Flashcard } from '@/stores/flashcards'
+import { usePracticeStore, type PracticeSession } from '@/stores/practice'
 import { useQuestionsStore, type Question } from '@/stores/questions'
 import { useTopicsStore, type SubtopicDetail } from '@/stores/topics'
 
@@ -16,7 +16,7 @@ export function useSubtopicMaterial(
 ): {
   cards: ComputedRef<Flashcard[]>
   questions: ComputedRef<Question[]>
-  sessions: ComputedRef<ConversationListItem[]>
+  sessions: ComputedRef<PracticeSession[]>
   /** The only source for now; null when there are none (or they're being removed). */
   notes: ComputedRef<string | null>
   pending: Ref<UndoableDelete | null>
@@ -24,13 +24,12 @@ export function useSubtopicMaterial(
   flush: () => void
   removeCard: (card: Flashcard) => void
   removeQuestion: (question: Question) => void
-  removeSession: (session: ConversationListItem) => void
   removeNotes: () => void
 } {
   const topicsStore = useTopicsStore()
   const flashcardsStore = useFlashcardsStore()
   const questionsStore = useQuestionsStore()
-  const conversationsStore = useConversationsStore()
+  const practiceStore = usePracticeStore()
   const { pending, isHidden, schedule, undo, flush } = useUndoableDelete(actions.failAction)
 
   const cards = computed<Flashcard[]>(() =>
@@ -39,9 +38,8 @@ export function useSubtopicMaterial(
   const questions = computed<Question[]>(() =>
     questionsStore.questions.filter((question) => !isHidden(`question-${question.id}`)),
   )
-  const sessions = computed<ConversationListItem[]>(() =>
-    conversationsStore.topicConversations.filter((session) => !isHidden(`session-${session.id}`)),
-  )
+  // Practice sessions are a record of what you did, so they can't be deleted.
+  const sessions = computed<PracticeSession[]>(() => practiceStore.subtopicSessions)
   const notes = computed<string | null>(() =>
     subtopic.value?.notes && !isHidden('notes') ? subtopic.value.notes : null,
   )
@@ -65,14 +63,6 @@ export function useSubtopicMaterial(
         await questionsStore.deleteQuestion(question.id)
         await actions.refreshHeader()
       },
-    })
-  }
-
-  function removeSession(session: ConversationListItem): void {
-    schedule({
-      key: `session-${session.id}`,
-      title: 'Session deleted',
-      run: () => conversationsStore.deleteConversation(session.id),
     })
   }
 
@@ -108,7 +98,6 @@ export function useSubtopicMaterial(
     flush,
     removeCard,
     removeQuestion,
-    removeSession,
     removeNotes,
   }
 }

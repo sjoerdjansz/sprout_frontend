@@ -8,9 +8,11 @@ import type { BadgeTone } from '@/components/BaseBadge.vue'
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
 import { dueLabel } from '@/lib/dueDate'
+import { pluralize } from '@/lib/knowledgeMap'
+import { practiceMode } from '@/lib/practiceModes'
 import { capitalize } from '@/lib/text'
-import type { ConversationListItem } from '@/stores/conversations'
 import type { Flashcard } from '@/stores/flashcards'
+import type { PracticeSession } from '@/stores/practice'
 import type { Question, QuestionType, Verdict } from '@/stores/questions'
 
 function matches(text: string | null, query: string): boolean {
@@ -165,11 +167,35 @@ export const questionTypeLooks: Record<QuestionType, Look & { tint: Tint }> = {
   feynman: { label: 'Explain it', icon: 'lightbulb', tint: 'sun' },
 }
 
-/** A session is found by its title or by what was said in its first messages. */
-export function filterSessions(
-  sessions: ConversationListItem[],
-  query: string,
-): ConversationListItem[] {
+/** "Flashcards", or "Mixed session" for several ways to practise. */
+export function sessionTitle(session: PracticeSession): string {
+  const [only, ...others] = session.plan.modes
+
+  return only === undefined || others.length > 0 ? 'Mixed session' : practiceMode(only).name
+}
+
+/** What you did in it: "12 cards · 3 questions · 1 explanation · 4 messages". */
+export function sessionActivity(session: PracticeSession): string {
+  const done = session.done
+  const cards = new Set(done.flashcard_reviews.map((review) => review.flashcard_id)).size
+  const questions = done.answers.filter((answer) => answer.score !== null).length
+  const explanations = done.explanations.length
+  const messages = done.messages.filter((message) => message.role === 'user').length
+
+  const parts = [
+    cards > 0 ? pluralize(cards, 'card') : null,
+    questions > 0 ? pluralize(questions, 'question') : null,
+    explanations > 0 ? pluralize(explanations, 'explanation') : null,
+    messages > 0 ? pluralize(messages, 'message') : null,
+  ]
+
+  const activity = parts.filter((part) => part !== null).join(' · ')
+
+  return activity === '' ? 'Nothing practised yet' : activity
+}
+
+/** A session is found by how you practised or by what was said with the tutor. */
+export function filterSessions(sessions: PracticeSession[], query: string): PracticeSession[] {
   const search = normalized(query)
   if (search === '') {
     return sessions
@@ -177,29 +203,9 @@ export function filterSessions(
 
   return sessions.filter(
     (session) =>
-      matches(session.title, search) ||
-      session.preview.some((message) => matches(message.content, search)),
+      matches(sessionTitle(session), search) ||
+      session.done.messages.some((message) => matches(message.content, search)),
   )
-}
-
-/**
- * One line to recognise a session by: what the tutor said first, without Markdown marks (the
- * preview below it renders them).
- */
-export function sessionSnippet(session: ConversationListItem): string {
-  const first = session.preview.find((message) => message.role === 'tutor') ?? session.preview[0]
-
-  return (first?.content ?? '')
-    .replace(/[*_`#>]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/** From the start to the last activity, at least a minute. */
-export function sessionMinutes(session: ConversationListItem): number {
-  const milliseconds = Date.parse(session.last_activity_at) - Date.parse(session.started_at)
-
-  return Math.max(1, Math.round(milliseconds / 60000))
 }
 
 export function wordCount(text: string): number {
