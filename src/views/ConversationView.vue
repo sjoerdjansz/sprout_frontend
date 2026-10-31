@@ -3,7 +3,6 @@ import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
 import FormError from '@/components/FormError.vue'
-import TextLink from '@/components/TextLink.vue'
 import ChatComposer from '@/components/chat/ChatComposer.vue'
 import ChatThread from '@/components/chat/ChatThread.vue'
 import ContinueLearning from '@/components/conversation/ContinueLearning.vue'
@@ -22,6 +21,7 @@ import {
   type SaveResult,
 } from '@/stores/conversations'
 import { useTopicsStore } from '@/stores/topics'
+import NotFoundView from '@/views/NotFoundView.vue'
 
 const { id } = defineProps<{
   id: number
@@ -188,20 +188,14 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
 </script>
 
 <template>
-  <AppLayout>
+  <!-- In place, so the URL you opened stays (see ../specs/not-found.md). -->
+  <NotFoundView v-if="loadState === 'not-found'" />
+
+  <AppLayout v-else>
     <div class="mx-auto flex w-full max-w-190 grow flex-col gap-6">
       <p v-if="loadState === 'loading'" class="text-ink-muted" aria-live="polite">
         Loading your conversation…
       </p>
-
-      <div v-else-if="loadState === 'not-found'" class="flex flex-col items-start gap-3">
-        <h1 class="font-display text-title-lg text-ink">This conversation isn’t here</h1>
-        <!-- Our own copy: the 404 is ours to explain, whatever the API's message says. -->
-        <p class="text-ink-muted" data-test="not-found">
-          We couldn’t find that conversation. Check the link, or head back to your dashboard.
-        </p>
-        <TextLink :to="{ name: 'home' }" icon-right="arrow-right">Back to your dashboard</TextLink>
-      </div>
 
       <div v-else-if="loadState === 'failed'" class="flex flex-col items-start gap-4">
         <FormError :message="loadError" />
