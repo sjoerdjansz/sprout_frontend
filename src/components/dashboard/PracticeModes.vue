@@ -17,7 +17,7 @@ function practise(mode: PracticeModeId): void {
     <SectionHeading title="Start a practice session" heading-id="practice-heading">
     </SectionHeading>
 
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(min(200px,100%),1fr))] gap-4">
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] md:gap-4">
       <PracticeModeCard
         v-for="mode in practiceModes"
         :key="mode.id"

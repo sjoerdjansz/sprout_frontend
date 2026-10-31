@@ -48,7 +48,7 @@ function onCancel(event: Event): void {
     :class="size === 'lg' ? 'w-[min(880px,calc(100vw-32px))]' : 'w-[min(640px,calc(100vw-32px))]'"
     @cancel="onCancel"
   >
-    <div class="flex flex-col gap-6 p-7">
+    <div class="flex flex-col gap-6 p-5 md:p-7">
       <div class="flex items-start justify-between gap-4">
         <h2 :id="titleId" class="font-display text-title-lg">{{ title }}</h2>
         <BaseIconButton
