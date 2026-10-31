@@ -69,8 +69,12 @@ function stepClasses(index: number): { chip: string; dot: string } {
     class="flex grow flex-col justify-center gap-6 px-4 py-6 sm:px-8 lg:flex-row"
     data-test="explain-block"
   >
-    <aside aria-label="Steps" class="flex flex-col gap-1.5 lg:w-60 lg:flex-none">
-      <ol class="flex flex-col gap-1.5">
+    <aside
+      aria-label="Steps"
+      class="mx-auto flex w-full max-w-190 flex-col gap-1.5 lg:mx-0 lg:w-60 lg:flex-none"
+    >
+      <!-- A compact row on narrow screens, a rail with captions next to the work on wide ones. -->
+      <ol class="flex flex-wrap gap-1.5 lg:flex-col">
         <li
           v-for="(each, index) in steps"
           :key="each.name"
@@ -87,7 +91,9 @@ function stepClasses(index: number): { chip: string; dot: string } {
           </span>
           <span class="flex flex-col">
             <b>{{ each.name }}</b>
-            <span class="text-caption font-normal opacity-80">{{ each.caption }}</span>
+            <span class="hidden text-caption font-normal opacity-80 lg:inline">{{
+              each.caption
+            }}</span>
           </span>
         </li>
       </ol>
@@ -98,7 +104,7 @@ function stepClasses(index: number): { chip: string; dot: string } {
       </p>
     </aside>
 
-    <section class="flex w-full max-w-190 min-w-0 flex-col gap-4">
+    <section class="mx-auto flex w-full max-w-190 min-w-0 flex-col gap-4 lg:mx-0">
       <template v-if="step === 2">
         <div class="flex flex-col gap-1.5">
           <span class="text-overline text-sun-ink">STEP 2 · EXPLAIN IT SIMPLY</span>

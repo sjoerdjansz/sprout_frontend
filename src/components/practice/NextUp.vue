@@ -27,6 +27,13 @@ const emit = defineEmits<{
 
 const previousMode = computed<PracticeMode>(() => practiceMode(previous.mode))
 const nextMode = computed<PracticeMode>(() => practiceMode(next.mode))
+
+const previousTitle = computed<string>(
+  () => `${previousMode.value.name} ${previous.status === 'skipped' ? 'skipped' : 'done'}.`,
+)
+const previousLine = computed<string>(() =>
+  previous.status === 'skipped' ? '' : `${resultLine(previous)}.`,
+)
 </script>
 
 <!-- Between two blocks of a mixed session: how the last one went and what comes next. -->
@@ -40,10 +47,8 @@ const nextMode = computed<PracticeMode>(() => practiceMode(next.mode))
           <BaseIcon name="check" :size="16" />
         </span>
         <span>
-          <b class="text-ink"
-            >{{ previousMode.name }} {{ previous.status === 'skipped' ? 'skipped' : 'done' }}.</b
-          >
-          <template v-if="previous.status !== 'skipped'"> {{ resultLine(previous) }}.</template>
+          <b class="text-ink">{{ previousTitle }}</b>
+          {{ previousLine }}
         </span>
       </p>
 

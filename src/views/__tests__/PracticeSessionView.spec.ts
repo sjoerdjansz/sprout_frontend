@@ -42,7 +42,7 @@ function material(): PracticeMaterial {
   }
 }
 
-async function mountSession(modes: PracticeModeId[]): Promise<VueWrapper> {
+async function mountSession(modes: PracticeModeId[], attachTo?: HTMLElement): Promise<VueWrapper> {
   const practice = usePracticeStore()
   practice.material = material()
   const options: PracticeOptions = {
@@ -54,7 +54,7 @@ async function mountSession(modes: PracticeModeId[]): Promise<VueWrapper> {
   }
   practice.start(scope, options)
   await router.push('/practice/session')
-  const wrapper = mount(PracticeSessionView, { global: { plugins: [router] } })
+  const wrapper = mount(PracticeSessionView, { global: { plugins: [router] }, attachTo })
   await flushPromises()
 
   return wrapper
@@ -126,6 +126,18 @@ describe('PracticeSessionView', () => {
     expect(usePracticeStore().results[0]?.ratings[0]?.rating).toBe('good')
   })
 
+  it('rates with 1–4 right after you click the card', async () => {
+    // Attached, so the key press bubbles from the card up to the window.
+    const wrapper = await mountSession(['cards'], document.body)
+
+    const card = wrapper.get('[data-test="flashcard"]')
+    await card.trigger('click')
+    await card.trigger('keydown', { key: '1' })
+
+    expect(usePracticeStore().results[0]?.ratings[0]?.rating).toBe('again')
+    wrapper.unmount()
+  })
+
   it('shows "next up" between the blocks of a mixed session', async () => {
     const wrapper = await mountSession(['cards', 'retrieval'])
 
@@ -139,6 +151,10 @@ describe('PracticeSessionView', () => {
 
     await wrapper.get('[data-test="skip-next"]').trigger('click')
     expect(wrapper.find('[data-test="session-done"]').exists()).toBe(true)
+    // The cards were left halfway, so it wasn't everything you planned.
+    expect(wrapper.get('[data-test="done-headline"]').text()).toBe(
+      'Good stop. Here’s what you did.',
+    )
   })
 
   it('gives a second try after a wrong pick and shows the answer after the second', async () => {
