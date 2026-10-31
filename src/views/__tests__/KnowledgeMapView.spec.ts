@@ -294,6 +294,27 @@ describe('KnowledgeMapView', () => {
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology basics')
   })
 
+  it("edits any topic from its card's menu", async () => {
+    const wrapper = await mountKnowledgeMap({
+      'PUT /topics/2': Response.json(makeTopic({ id: 2, title: 'Chemistry basics' })),
+    })
+
+    const menuButton = wrapper.get('[data-test="topic-menu"][aria-label="More for Chemistry"]')
+    await menuButton.trigger('click')
+    expect(menuButton.attributes('aria-expanded')).toBe('true')
+
+    await wrapper.get('[data-test="topic-menu-edit"]').trigger('click')
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false)
+    expect(wrapper.get('dialog h2').text()).toBe('Edit topic')
+    expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe('Chemistry')
+
+    await wrapper.get('[data-test="name"]').setValue('Chemistry basics')
+    await submitForm(wrapper)
+
+    expect(sentBody('PUT /topics/2')).toMatchObject({ title: 'Chemistry basics' })
+    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry basics')
+  })
+
   it('adds a subtopic to the topic and says Sprout is making its cards', async () => {
     const respiration = makeSubtopic({
       id: 501,
