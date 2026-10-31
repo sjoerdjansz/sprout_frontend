@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
+import MobileDrawer from '@/components/layout/MobileDrawer.vue'
 import MobileTabBar from '@/components/layout/MobileTabBar.vue'
 import MobileTopBar from '@/components/layout/MobileTopBar.vue'
 import { ApiError } from '@/lib/api'
@@ -19,6 +21,18 @@ const auth = useAuthStore()
 const conversationsStore = useConversationsStore()
 const settingsStore = useSettingsStore()
 const sidebarStore = useSidebarStore()
+
+const route = useRoute()
+
+// The navigation drawer at phone width. Most links open another page with its own layout, but
+// one conversation to the next keeps this page, so close it whenever the URL changes.
+const menuOpen = ref(false)
+watch(
+  () => route.fullPath,
+  () => {
+    menuOpen.value = false
+  },
+)
 
 const userName = computed<string>(() => auth.user?.name ?? '')
 const historyError = ref<string | null>(null)
@@ -82,7 +96,21 @@ onMounted(() => {
     class="flex min-h-svh flex-col transition-[grid-template-columns] duration-250 ease-default motion-reduce:transition-none md:grid md:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]"
     :style="{ '--sidebar-width': sidebarStore.collapsed ? '72px' : '232px' }"
   >
-    <MobileTopBar :menu-open="false" class="sticky top-0 z-10 md:hidden" />
+    <MobileTopBar
+      :menu-open="menuOpen"
+      class="sticky top-0 z-10 md:hidden"
+      @open-menu="menuOpen = true"
+    />
+    <MobileDrawer
+      v-if="menuOpen"
+      :user-name="userName"
+      :user-initials="initials(userName)"
+      :user-color="auth.user?.avatar_color"
+      :conversations="conversationsStore.conversations"
+      :history-error="historyError"
+      @close="menuOpen = false"
+      @logout="auth.logout()"
+    />
 
     <div class="sticky top-0 hidden h-svh md:block">
       <AppSidebar
@@ -104,6 +132,11 @@ onMounted(() => {
       <slot />
     </main>
 
-    <MobileTabBar v-if="tabBar" class="sticky bottom-0 z-10 md:hidden" data-test="tab-bar" />
+    <MobileTabBar
+      v-if="tabBar"
+      class="sticky bottom-0 z-10 md:hidden"
+      data-test="tab-bar"
+      @more="menuOpen = true"
+    />
   </div>
 </template>
