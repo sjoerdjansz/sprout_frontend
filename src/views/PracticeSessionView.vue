@@ -172,7 +172,7 @@ onBeforeUnmount(() => practice.reset())
 
       <FlashcardBlock
         v-if="practice.currentBlock.mode === 'cards'"
-        :key="practice.blockIndex"
+        :key="`cards-${practice.blockIndex}`"
         :cards="practice.currentBlock.cards"
         :ratings="practice.currentResult.ratings"
         :subtopic-titles="subtopicTitles"
@@ -180,7 +180,7 @@ onBeforeUnmount(() => practice.reset())
       />
       <QuizBlock
         v-else-if="practice.currentBlock.mode === 'retrieval'"
-        :key="practice.blockIndex"
+        :key="`retrieval-${practice.blockIndex}`"
         :questions="practice.currentBlock.questions"
         :answers="practice.currentResult.answers"
         :subtopic-titles="subtopicTitles"
@@ -189,14 +189,14 @@ onBeforeUnmount(() => practice.reset())
       />
       <ExplainBlock
         v-else-if="practice.currentBlock.mode === 'feynman'"
-        :key="practice.blockIndex"
+        :key="`feynman-${practice.blockIndex}`"
         :concept="practice.currentBlock.concept"
         :explanations="practice.currentResult.explanations"
         @finish="finishing(practice.finishBlock)"
       />
       <OpenBlock
         v-else-if="practice.currentBlock.mode === 'open'"
-        :key="practice.blockIndex"
+        :key="`open-${practice.blockIndex}`"
         :topic-title="practice.currentBlock.topicTitle"
         :subtopic-title="practice.currentBlock.subtopicTitle"
         :messages="practice.currentResult.messages"
