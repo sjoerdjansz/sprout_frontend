@@ -9,6 +9,7 @@ const { topicTitle } = defineProps<{
 
 const emit = defineEmits<{
   edit: []
+  delete: []
 }>()
 
 const isOpen = ref(false)
@@ -42,9 +43,13 @@ function toggle(): void {
   }
 }
 
-function pickEdit(): void {
+function pick(item: 'edit' | 'delete'): void {
   close()
-  emit('edit')
+  if (item === 'edit') {
+    emit('edit')
+  } else {
+    emit('delete')
+  }
 }
 
 onBeforeUnmount(close)
@@ -71,10 +76,21 @@ onBeforeUnmount(close)
         role="menuitem"
         class="flex h-11 cursor-pointer items-center gap-2.5 rounded-sm px-3 text-left text-body-strong text-ink hover:bg-surface-sunken"
         data-test="topic-menu-edit"
-        @click="pickEdit"
+        @click="pick('edit')"
       >
         <BaseIcon name="pencil" :size="18" />
         Edit topic
+      </button>
+      <!-- Ember like every destructive act; the dialog behind it asks you to confirm. -->
+      <button
+        type="button"
+        role="menuitem"
+        class="flex h-11 cursor-pointer items-center gap-2.5 rounded-sm px-3 text-left text-body-strong text-ember-ink hover:bg-ember-soft"
+        data-test="topic-menu-delete"
+        @click="pick('delete')"
+      >
+        <BaseIcon name="trash-2" :size="18" />
+        Delete topic
       </button>
     </div>
   </div>

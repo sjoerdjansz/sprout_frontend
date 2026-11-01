@@ -26,6 +26,17 @@ describe('TopicMenu', () => {
     expect(menu.find('[role="menu"]').exists()).toBe(false)
   })
 
+  it('reports Delete topic', async () => {
+    const menu = mountMenu()
+
+    await menu.get('[data-test="topic-menu"]').trigger('click')
+    await menu.get('[data-test="topic-menu-delete"]').trigger('click')
+
+    expect(menu.emitted('delete')).toHaveLength(1)
+    expect(menu.emitted('edit')).toBeUndefined()
+    expect(menu.find('[role="menu"]').exists()).toBe(false)
+  })
+
   it('closes on Escape', async () => {
     const menu = mountMenu()
 

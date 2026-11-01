@@ -22,6 +22,7 @@ const needsAttention = defineModel<boolean>('needsAttention', { required: true }
 const emit = defineEmits<{
   select: [topicId: number]
   editTopic: [topicId: number]
+  deleteTopic: [topicId: number]
   addTopic: []
   clearFilters: []
 }>()
@@ -81,6 +82,7 @@ const emit = defineEmits<{
           :selected="topic.id === selectedTopicId"
           @select="emit('select', topic.id)"
           @edit="emit('editTopic', topic.id)"
+          @delete="emit('deleteTopic', topic.id)"
         />
       </div>
     </div>

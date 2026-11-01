@@ -13,6 +13,7 @@ const { topic, selected } = defineProps<{
 const emit = defineEmits<{
   select: []
   edit: []
+  delete: []
 }>()
 
 const mastery = computed<number>(() => averageMastery(topic))
@@ -38,7 +39,7 @@ const due = computed<number>(() => dueCards(topic))
         <!--    We'll decice if we want this later    -->
         <!--          <IconTile :icon="appearance.icon" :tint="appearance.tint" />-->
         <ProgressRing :value="mastery" :size="48" :label="`${topic.title} mastery ${mastery}%`" />
-        <TopicMenu :topic-title="topic.title" class="" @edit="emit('edit')" />
+        <TopicMenu :topic-title="topic.title" @edit="emit('edit')" @delete="emit('delete')" />
       </span>
       <span class="flex flex-col gap-0.75">
         <span class="font-display text-[19px] leading-6 font-semibold tracking-[-0.015em] text-ink">
