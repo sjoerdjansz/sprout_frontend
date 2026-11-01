@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { api } from '@/lib/api'
+import { ApiError, api } from '@/lib/api'
 import type { Goal } from '@/stores/conversations'
 
 /*
@@ -256,9 +256,36 @@ export const useTopicsStore = defineStore('topics', () => {
     return fetchedSubtopic
   }
 
+  /**
+   * Deletes a topic with its subtopics and everything about them. Can't be undone. Its chats and
+   * practice sessions go too; their stores forget them with `forgetTopic`.
+   */
+  async function deleteTopic(topicId: number): Promise<void> {
+    try {
+      await api<null>(`/topics/${topicId}`, { method: 'DELETE' })
+    } catch (caught) {
+      // A 404 means it's already gone (deleted elsewhere): what you asked for, so carry on.
+      if (!(caught instanceof ApiError) || caught.status !== 404) {
+        throw caught
+      }
+    }
+
+    topics.value = topics.value.filter((topic) => topic.id !== topicId)
+    if (subtopic.value?.topic_id === topicId) {
+      subtopic.value = null
+    }
+  }
+
   /** Deletes a subtopic with its cards, questions and progress. Can't be undone. */
   async function deleteSubtopic(subtopicId: number): Promise<void> {
-    await api<null>(`/subtopics/${subtopicId}`, { method: 'DELETE' })
+    try {
+      await api<null>(`/subtopics/${subtopicId}`, { method: 'DELETE' })
+    } catch (caught) {
+      // A 404 means it's already gone (deleted elsewhere): what you asked for, so carry on.
+      if (!(caught instanceof ApiError) || caught.status !== 404) {
+        throw caught
+      }
+    }
 
     for (const topic of topics.value) {
       topic.subtopics = topic.subtopics.filter((existing) => existing.id !== subtopicId)
@@ -329,6 +356,7 @@ export const useTopicsStore = defineStore('topics', () => {
     addSubtopic,
     updateSubtopic,
     fetchSubtopic,
+    deleteTopic,
     deleteSubtopic,
     removeSource,
     generateMaterial,

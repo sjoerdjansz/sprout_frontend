@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
-import { generatingMessage } from '@/lib/knowledgeMap'
+import { generatingMessage } from '@/lib/topics'
 import type { GenerationStatus } from '@/stores/topics'
 
 const { status, checkError = null } = defineProps<{

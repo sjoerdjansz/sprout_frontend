@@ -3,13 +3,7 @@
  * today's retention queue and how long reviewing them takes. All of it comes from `GET /topics`.
  */
 import type { Tint } from '@/components/IconTile.vue'
-import {
-  averageMastery,
-  dueCards,
-  isMastered,
-  needsAttention,
-  topicAppearance,
-} from '@/lib/knowledgeMap'
+import { averageMastery, dueCards, isMastered, needsAttention, topicAppearance } from '@/lib/topics'
 import { practiceMode } from '@/lib/practiceModes'
 import type { Topic } from '@/stores/topics'
 

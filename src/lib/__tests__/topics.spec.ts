@@ -8,7 +8,7 @@ import {
   topicAppearance,
   usedCategories,
   visibleSubtopics,
-} from '@/lib/knowledgeMap'
+} from '@/lib/topics'
 import { makeCategories, makeLibrary, makeTopic } from '@/__tests__/topicFixtures'
 import type { Subtopic, Topic } from '@/stores/topics'
 
@@ -32,7 +32,7 @@ function subtopicNamed(title: string): Subtopic {
   return subtopic
 }
 
-describe('knowledge map rules', () => {
+describe('topics page rules', () => {
   it('only calls a subtopic mastered when all three facets hold', () => {
     expect(subtopicLevel(subtopicNamed('Big-O notation')).label).toBe('Mastered')
     expect(subtopicLevel(subtopicNamed('Chlorophyll')).label).toBe('Growing')

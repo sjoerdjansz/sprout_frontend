@@ -41,7 +41,7 @@ import LostSproutArt from '@/components/notFound/LostSproutArt.vue'
               Take me home
             </RouterLink>
             <RouterLink
-              :to="{ name: 'knowledge-map' }"
+              :to="{ name: 'topics' }"
               class="inline-flex h-13 items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-6 text-base font-semibold whitespace-nowrap text-ink shadow-xs transition duration-150 ease-default hover:bg-surface-sunken active:translate-y-px"
               data-test="library-link"
             >

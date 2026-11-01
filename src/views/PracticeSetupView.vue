@@ -62,12 +62,10 @@ onMounted(() => {
     >
       <h2 class="font-display text-title">Nothing to practise yet</h2>
       <p class="text-ink-muted">
-        Practice runs on the topics in your knowledge map. Start a chat with the tutor or add a
-        topic yourself, then come back.
+        Practice runs on your topics. Start a chat with the tutor or add a topic yourself, then come
+        back.
       </p>
-      <TextLink :to="{ name: 'knowledge-map' }" icon-right="arrow-right">
-        Open your knowledge map
-      </TextLink>
+      <TextLink :to="{ name: 'topics' }" icon-right="arrow-right"> Open your topics </TextLink>
     </div>
 
     <div v-else class="flex w-full max-w-280 flex-col gap-6 lg:flex-row lg:items-start">
@@ -126,9 +124,9 @@ onMounted(() => {
         </template>
         <FormError v-if="setup.startError.value" :message="setup.startError.value" />
         <SessionSummary
-          :blocks="setup.blocks.value"
-          :scope="setup.scopeLabel.value"
-          :order="setup.orderLabel.value"
+          :blocks="setup.summary.value.blocks"
+          :scope="setup.summary.value.scopeLabel"
+          :order="setup.summary.value.orderLabel"
           :loading="setup.materialState.value === 'loading'"
           :second-try="setup.secondTry.value"
           :no-modes="modes.length === 0"

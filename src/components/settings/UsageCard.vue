@@ -56,9 +56,6 @@ const emit = defineEmits<{
           :data-test="`usage-${kind.key}`"
         />
       </div>
-      <p class="text-label font-normal text-ink-subtle">
-        One AI call is one time Sprout’s AI worked for you, counted per kind.
-      </p>
     </template>
   </SettingsCard>
 </template>

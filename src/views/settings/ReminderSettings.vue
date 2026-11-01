@@ -24,10 +24,7 @@ const timeOptions = computed<SelectOption[]>(() =>
 </script>
 
 <template>
-  <SettingsCard
-    title="Reminders"
-    subtitle="Gentle. One a day at most, and never when you’ve already practised."
-  >
+  <SettingsCard title="Reminders">
     <div>
       <SettingRow name="Daily reminder" description="A nudge when cards are due.">
         <div class="flex items-center gap-3">
@@ -50,10 +47,7 @@ const timeOptions = computed<SelectOption[]>(() =>
       >
         <BaseSwitch v-model="streak" label="Streak at risk" hide-label data-test="streak" />
       </SettingRow>
-      <SettingRow
-        name="Weekly insights"
-        description="A short summary every Sunday: what held, what slipped."
-      >
+      <SettingRow name="Weekly insights" description="A short summary every Sunday.">
         <BaseSwitch v-model="weekly" label="Weekly insights" hide-label data-test="weekly" />
       </SettingRow>
       <SettingRow name="Where" description="Push on this device, email, or both.">
@@ -62,11 +56,6 @@ const timeOptions = computed<SelectOption[]>(() =>
     </div>
 
     <FormError v-if="error" :message="error" />
-    <!-- Stored only; nothing sends reminders yet (../specs/settings.md). -->
-    <p class="text-caption font-normal text-ink-subtle" data-test="not-sent-yet">
-      Saved to your account. Sprout doesn’t send reminders yet; these choices are ready for when it
-      does.
-    </p>
   </SettingsCard>
 
   <BaseToast v-if="toast !== null" :title="toast.title" :tone="toast.tone" :icon="toast.icon" />

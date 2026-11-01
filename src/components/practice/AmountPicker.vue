@@ -53,10 +53,6 @@ const hasQuestions = computed<boolean>(() => modes.includes('retrieval'))
       label="Mix subtopics together (interleaving)"
       data-test="interleave"
     />
-    <BaseSwitch
-      v-model="dueFirst"
-      label="What’s due first"
-      data-test="due-first"
-    />
+    <BaseSwitch v-model="dueFirst" label="What’s due first" data-test="due-first" />
   </div>
 </template>

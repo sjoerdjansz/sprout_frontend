@@ -186,9 +186,18 @@ export const useConversationsStore = defineStore('conversations', () => {
     return result
   }
 
+  /** A deleted topic took its conversations with it on the API; drop them here too. */
+  function forgetTopic(topicId: number): void {
+    conversations.value = conversations.value.filter((summary) => summary.topic?.id !== topicId)
+    if (conversation.value?.topic?.id === topicId) {
+      conversation.value = null
+    }
+  }
+
   return {
     conversations,
     conversation,
+    forgetTopic,
     fetchConversations,
     fetchConversation,
     startConversation,

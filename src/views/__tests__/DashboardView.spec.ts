@@ -70,7 +70,7 @@ describe('DashboardView', () => {
     ])
   })
 
-  it('offers the same four ways to practise as the knowledge map', async () => {
+  it('offers the same four ways to practise as the topics page', async () => {
     stubApi({
       'GET /user': Response.json(user),
       'GET /topics': Response.json([]),
@@ -99,7 +99,7 @@ describe('DashboardView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/practice?modes=feynman')
   })
 
-  it('opens the practice setup from Open practice center', async () => {
+  it('opens the practice setup from Open practice', async () => {
     stubApi({
       'GET /user': Response.json(user),
       'GET /topics': Response.json([]),
@@ -153,12 +153,12 @@ describe('DashboardView', () => {
       expect(wrapper.find('[data-test="start-review"]').exists()).toBe(false)
     })
 
-    it('points to the knowledge map when your library is empty', async () => {
+    it('points to your topics when your library is empty', async () => {
       stubLibrary(Response.json([]))
       const wrapper = await mountDashboard()
 
       const empty = wrapper.get('[data-test="queue-empty-library"]')
-      expect(empty.get('a').attributes('href')).toBe('/knowledge-map')
+      expect(empty.get('a').attributes('href')).toBe('/topics')
       expect(wrapper.find('[data-test="mastered-topics"]').exists()).toBe(false)
     })
 

@@ -2,9 +2,9 @@
 import { computed } from 'vue'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseSwitch from '@/components/BaseSwitch.vue'
-import { pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/topics'
 import { wordCount } from '@/lib/subtopicPage'
-import type { SuggestionRow } from '@/composables/knowledgeMap/useSubtopicSuggestions'
+import type { SuggestionRow } from '@/composables/topics/useSubtopicSuggestions'
 
 const {
   row,

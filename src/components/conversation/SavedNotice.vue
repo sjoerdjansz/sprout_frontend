@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import BaseIcon from '@/components/BaseIcon.vue'
-import { generatingMessage, pluralize } from '@/lib/knowledgeMap'
+import { generatingMessage, pluralize } from '@/lib/topics'
 import type { SaveResult } from '@/stores/conversations'
 
 const {
@@ -44,20 +44,20 @@ const summary = computed<string | null>(() => {
     <div class="flex flex-col gap-0.5">
       <p v-if="summary" class="text-body-strong">{{ summary }}</p>
       <p v-if="generatingCount > 0" class="text-body" data-test="saved-generating">
-        {{ generatingMessage }} They show up on your knowledge map in a moment.
+        {{ generatingMessage }} They show up in your topics in a moment.
       </p>
       <p v-else-if="failedCount > 0" class="text-body" data-test="saved-failed">
         Sprout couldn't make cards for {{ pluralize(failedCount, 'subtopic') }}.
         <RouterLink
           v-if="result !== null"
-          :to="{ name: 'knowledge-map', query: { topic: result.topic.id } }"
+          :to="{ name: 'topics', query: { topic: result.topic.id } }"
           class="rounded-sm font-semibold underline"
         >
-          Open your knowledge map
+          Open your topics
         </RouterLink>
         to try again.
       </p>
-      <p v-else class="text-body">This conversation is saved to your knowledge map.</p>
+      <p v-else class="text-body">This conversation is saved to your topics.</p>
       <p v-if="checkError" class="text-body" data-test="check-error">
         {{ checkError }} Sprout keeps checking in the meantime.
       </p>

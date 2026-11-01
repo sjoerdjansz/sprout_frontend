@@ -5,15 +5,19 @@ import BaseButton from '@/components/BaseButton.vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
 import BaseToast from '@/components/BaseToast.vue'
 import FormError from '@/components/FormError.vue'
-import SubtopicList from '@/components/knowledgeMap/SubtopicList.vue'
-import SubtopicSuggestionsDialog from '@/components/knowledgeMap/SubtopicSuggestionsDialog.vue'
+import DeleteTopicDialog from '@/components/topics/DeleteTopicDialog.vue'
+import DeleteSubtopicDialog from '@/components/subtopic/DeleteSubtopicDialog.vue'
+import SubtopicList from '@/components/topics/SubtopicList.vue'
+import SubtopicSuggestionsDialog from '@/components/topics/SubtopicSuggestionsDialog.vue'
 import TopicFormDialog, {
   type TopicFormMode,
   type TopicFormValues,
-} from '@/components/knowledgeMap/TopicFormDialog.vue'
-import TopicLibrary from '@/components/knowledgeMap/TopicLibrary.vue'
+} from '@/components/topics/TopicFormDialog.vue'
+import TopicLibrary from '@/components/topics/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useSubtopicSuggestions } from '@/composables/knowledgeMap/useSubtopicSuggestions'
+import { useDeleteSubtopicFromList } from '@/composables/topics/useDeleteSubtopicFromList'
+import { useDeleteTopic } from '@/composables/topics/useDeleteTopic'
+import { useSubtopicSuggestions } from '@/composables/topics/useSubtopicSuggestions'
 import { useGenerationPolling } from '@/composables/useGenerationPolling'
 import { useToast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
@@ -24,7 +28,7 @@ import {
   usedCategories,
   visibleSubtopics,
   type LibraryFilters,
-} from '@/lib/knowledgeMap'
+} from '@/lib/topics'
 import { useTopicsStore, type Category, type Topic } from '@/stores/topics'
 
 const route = useRoute()
@@ -32,6 +36,8 @@ const router = useRouter()
 const topicsStore = useTopicsStore()
 const { toast, showToast } = useToast()
 const suggestions = useSubtopicSuggestions(showToast)
+const deleteTopic = useDeleteTopic(showToast)
+const deleteSubtopic = useDeleteSubtopicFromList(showToast)
 
 type LoadState = 'loading' | 'loaded' | 'failed'
 
@@ -154,6 +160,8 @@ const topicOptions = computed<SelectOption[]>(() =>
 interface FormState {
   mode: TopicFormMode
   values: TopicFormValues
+  /** The subtopic being edited; null for the other forms. */
+  subtopicId: number | null
 }
 
 // Null while no dialog is open.
@@ -177,6 +185,31 @@ function openForm(mode: TopicFormMode, topic: Topic | null): void {
       newCategoryName: '',
       topicId: topic?.id ?? 0,
     },
+    subtopicId: null,
+  }
+}
+
+// The library has the subtopic's own notes, so the form opens without asking the API first.
+function editSubtopicById(subtopicId: number): void {
+  const topic = topicsStore.topics.find((candidate) =>
+    candidate.subtopics.some((subtopic) => subtopic.id === subtopicId),
+  )
+  const subtopic = topic?.subtopics.find((candidate) => candidate.id === subtopicId)
+  if (topic === undefined || subtopic === undefined) {
+    return
+  }
+  saveError.value = null
+  form.value = {
+    mode: 'edit-subtopic',
+    values: {
+      title: subtopic.title,
+      description: subtopic.description ?? '',
+      notes: subtopic.notes ?? '',
+      categoryId: topic.category.id,
+      newCategoryName: '',
+      topicId: topic.id,
+    },
+    subtopicId,
   }
 }
 
@@ -192,7 +225,21 @@ async function saveForm(
   mode: TopicFormMode,
   values: TopicFormValues,
   initialNotes: string,
+  subtopicId: number | null,
 ): Promise<SavedSource> {
+  if (mode === 'edit-subtopic' && subtopicId !== null) {
+    const result = await topicsStore.updateSubtopic(subtopicId, {
+      topicId: values.topicId,
+      title: values.title,
+      description: values.description,
+      notes: values.notes,
+    })
+    // It may have moved to another topic: show the one it's in now.
+    selectedTopicId.value = result.subtopic.topic_id
+
+    return null
+  }
+
   if (mode === 'add-subtopic') {
     const result = await topicsStore.addSubtopic({
       topicId: values.topicId,
@@ -240,7 +287,12 @@ async function save(values: TopicFormValues): Promise<void> {
   saveError.value = null
 
   try {
-    const savedSource = await saveForm(form.value.mode, values, form.value.values.notes)
+    const savedSource = await saveForm(
+      form.value.mode,
+      values,
+      form.value.values.notes,
+      form.value.subtopicId,
+    )
     // Clear the filters so what you just saved is in view.
     clearFilters()
     form.value = null
@@ -263,7 +315,7 @@ async function save(values: TopicFormValues): Promise<void> {
 <template>
   <AppLayout>
     <header class="flex flex-none flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-      <h1 class="font-display text-title-lg text-ink">Knowledge map</h1>
+      <h1 class="font-display text-title-lg text-ink">Topics</h1>
       <p
         v-if="loadState === 'loaded'"
         class="text-label font-normal text-ink-muted"
@@ -296,6 +348,7 @@ async function save(values: TopicFormValues): Promise<void> {
         :attention-count="attentionCount"
         @select="selectTopic"
         @edit-topic="editTopicById"
+        @delete-topic="deleteTopic.open"
         @add-topic="openForm('add-topic', null)"
         @clear-filters="clearFilters"
       />
@@ -311,8 +364,9 @@ async function save(values: TopicFormValues): Promise<void> {
         v-if="shownTopic !== null"
         :topic="shownTopic"
         :subtopics="visibleSubtopics(shownTopic, filters)"
-        @edit-topic="openForm('edit-topic', shownTopic)"
         @add-subtopic="openForm('add-subtopic', shownTopic)"
+        @edit-subtopic="editSubtopicById"
+        @delete-subtopic="deleteSubtopic.open"
       />
     </template>
 
@@ -326,6 +380,25 @@ async function save(values: TopicFormValues): Promise<void> {
       :error="saveError"
       @save="save"
       @close="form = null"
+    />
+
+    <DeleteTopicDialog
+      v-if="deleteTopic.topic.value !== null"
+      :title="deleteTopic.topic.value.title"
+      :subtopic-count="deleteTopic.topic.value.subtopics.length"
+      :deleting="deleteTopic.deleting.value"
+      :error="deleteTopic.error.value"
+      @confirm="deleteTopic.confirm"
+      @close="deleteTopic.close"
+    />
+
+    <DeleteSubtopicDialog
+      v-if="deleteSubtopic.subtopic.value !== null"
+      :title="deleteSubtopic.subtopic.value.title"
+      :deleting="deleteSubtopic.deleting.value"
+      :error="deleteSubtopic.error.value"
+      @confirm="deleteSubtopic.confirm"
+      @close="deleteSubtopic.close"
     />
 
     <SubtopicSuggestionsDialog

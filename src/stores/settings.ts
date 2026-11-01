@@ -100,7 +100,7 @@ export const useSettingsStore = defineStore('settings', () => {
     return apiDownload('/user/export', 'sprout-export.json')
   }
 
-  /** Your flashcards as CSV for Anki. */
+  /** Your flashcards as CSV. */
   async function exportFlashcards(): Promise<DownloadedFile> {
     return apiDownload('/user/export/flashcards', 'sprout-flashcards.csv')
   }

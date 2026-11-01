@@ -34,10 +34,14 @@ describe('MobileDrawer', () => {
     expect(wrapper.get('[data-test="account"]').text()).toContain('Ada Lovelace')
     const links = wrapper.findAll('[data-test="drawer-link"]')
     expect(links).toHaveLength(5)
-    expect(links[0]?.text()).toContain('Dashboard')
-    expect(links[0]?.text()).toContain('Chat, today’s queue, progress')
-    // There's no AI key to manage any more (the artboard still says so).
-    expect(links[4]?.text()).toContain('Profile, effort, reminders, appearance')
+    // Just the names: no line under each, as the artboard had.
+    expect(links.map((link) => link.text())).toEqual([
+      'Dashboard',
+      'Topics',
+      'Practice',
+      'Insights',
+      'Settings',
+    ])
     expect(wrapper.get('[data-test="history-item"]').text()).toBe('Biomechanics of running')
   })
 

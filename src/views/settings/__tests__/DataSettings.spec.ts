@@ -42,7 +42,7 @@ describe('DataSettings', () => {
     vi.unstubAllGlobals()
   })
 
-  it('exports your library as JSON and your cards for Anki', async () => {
+  it('exports your library as JSON and your cards as CSV', async () => {
     const { wrapper } = await mountSettings('/settings/data', {
       'GET /user/export': download('{}', 'sprout-export-2026-10-31.json', 'application/json'),
       'GET /user/export/flashcards': download('', 'sprout-flashcards-2026-10-31.csv', 'text/csv'),

@@ -9,23 +9,18 @@ describe('MobileTabBar', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
-    // The knowledge map is only for signed-in users.
+    // The topics page is only for signed-in users.
     useAuthStore().setToken('1|abc')
   })
 
   it('links to the main pages and marks the one you’re on', async () => {
-    await router.push('/knowledge-map')
+    await router.push('/topics')
     const wrapper = mount(MobileTabBar, { global: { plugins: [router] } })
     await flushPromises()
 
     const tabs = wrapper.findAll('[data-test="tab"]')
-    expect(tabs.map((tab) => tab.text())).toEqual(['Home', 'Map', 'Practice', 'Insights'])
-    expect(tabs.map((tab) => tab.attributes('href'))).toEqual([
-      '/',
-      '/knowledge-map',
-      '/practice',
-      '#',
-    ])
+    expect(tabs.map((tab) => tab.text())).toEqual(['Home', 'Topics', 'Practice', 'Insights'])
+    expect(tabs.map((tab) => tab.attributes('href'))).toEqual(['/', '/topics', '/practice', '#'])
     expect(tabs[1]?.attributes('aria-current')).toBe('page')
     expect(tabs[0]?.attributes('aria-current')).toBeUndefined()
   })

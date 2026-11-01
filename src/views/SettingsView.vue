@@ -7,10 +7,8 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import SettingsMenu from '@/components/settings/SettingsMenu.vue'
 import { ApiError } from '@/lib/api'
 import { settingsSections } from '@/lib/settingsOptions'
-import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 
-const auth = useAuthStore()
 const settingsStore = useSettingsStore()
 
 type LoadState = 'loading' | 'loaded' | 'failed'
@@ -42,7 +40,7 @@ onMounted(load)
     <div class="flex flex-col gap-6 md:flex-row md:gap-7">
       <aside class="flex flex-col gap-3 md:w-55 md:flex-none">
         <h1 class="font-display text-title-lg text-ink md:pl-3">Settings</h1>
-        <SettingsMenu :sections="settingsSections" @logout="auth.logout()" />
+        <SettingsMenu :sections="settingsSections" />
       </aside>
 
       <div class="flex min-w-0 max-w-200 flex-auto flex-col gap-5">

@@ -29,6 +29,6 @@ describe('NotFoundView', () => {
 
     expect(wrapper.get('[data-test="not-found-title"]').text()).toBe('Oops. A little lost.')
     expect(wrapper.get('[data-test="home-link"]').attributes('href')).toBe('/')
-    expect(wrapper.get('[data-test="library-link"]').attributes('href')).toBe('/knowledge-map')
+    expect(wrapper.get('[data-test="library-link"]').attributes('href')).toBe('/topics')
   })
 })

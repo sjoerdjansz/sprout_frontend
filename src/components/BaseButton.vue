@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import type { IconName } from '@/components/icons'
 
-type Variant = 'primary' | 'secondary' | 'ghost'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type Size = 'sm' | 'md' | 'lg'
 
 const {
@@ -27,6 +27,8 @@ const variantClasses: Record<Variant, string> = {
   secondary: 'border-line-strong bg-surface text-ink shadow-xs hover:bg-surface-sunken',
   // For toolbars and inside cards: no ground or shadow until you hover.
   ghost: 'bg-transparent text-ink hover:bg-surface-sunken',
+  // Only for destructive acts, and always behind a confirm.
+  danger: 'bg-ember text-on-ember shadow-xs hover:bg-ember-ink',
 }
 
 const sizeClasses: Record<Size, string> = {

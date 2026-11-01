@@ -37,9 +37,7 @@ describe('SavedNotice', () => {
     expect(wrapper.get('[data-test="saved-failed"]').text()).toContain(
       "Sprout couldn't make cards for 1 subtopic.",
     )
-    expect(wrapper.get('[data-test="saved-failed"] a').attributes('href')).toBe(
-      '/knowledge-map?topic=12',
-    )
+    expect(wrapper.get('[data-test="saved-failed"] a').attributes('href')).toBe('/topics?topic=12')
   })
 
   it('shows why asking for the status failed', () => {

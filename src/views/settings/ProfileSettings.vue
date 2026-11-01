@@ -53,7 +53,7 @@ function discardChanges(): void {
   <p v-if="draft === null" class="text-ink-muted" aria-live="polite">Loading your profile…</p>
 
   <form v-else class="flex flex-col gap-5" novalidate @submit.prevent="saveProfile">
-    <SettingsCard title="Profile" subtitle="How Sprout addresses you, and where it sends things.">
+    <SettingsCard title="Profile">
       <div class="flex flex-wrap items-center gap-4">
         <UserAvatar :initials="initials(draft.name)" :color="draft.avatarColor" size="lg" />
         <div class="flex flex-col items-start gap-1.5">

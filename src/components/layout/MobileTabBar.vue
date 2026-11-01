@@ -12,7 +12,7 @@ interface Tab {
 
 const tabs: Tab[] = [
   { icon: 'house', label: 'Home', to: { name: 'home' } },
-  { icon: 'network', label: 'Map', to: { name: 'knowledge-map' } },
+  { icon: 'network', label: 'Topics', to: { name: 'topics' } },
   { icon: 'target', label: 'Practice', to: { name: 'practice' } },
   { icon: 'chart-line', label: 'Insights' },
 ]

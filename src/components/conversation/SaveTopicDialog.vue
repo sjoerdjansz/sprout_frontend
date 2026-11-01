@@ -54,7 +54,7 @@ const categoryChoices = computed<SelectOption[]>(() => [
 ])
 
 // The tutor's suggestion is usually one of your categories by name, otherwise a new one. Without
-// a suggestion it starts on your first category, as the knowledge map's form does.
+// a suggestion it starts on your first category, as the topics page's form does.
 function initialCategoryChoice(): string {
   const suggestion = draft?.category?.toLowerCase() ?? null
   const suggested = categories?.find((category) => category.name.toLowerCase() === suggestion)
@@ -146,7 +146,7 @@ const generalError = computed<string | null>(() => {
 </script>
 
 <template>
-  <BaseDialog title="Save to your knowledge map" :closable="!saving" @close="emit('close')">
+  <BaseDialog title="Save to your topics" :closable="!saving" @close="emit('close')">
     <form class="flex flex-col gap-6" novalidate @submit.prevent="save">
       <p class="text-ink-muted">
         Check what the tutor put together. When you save, I’ll turn every subtopic into flashcards

@@ -40,14 +40,11 @@ onMounted(loadUsage)
 </script>
 
 <template>
-  <SettingsCard
-    title="AI"
-    subtitle="The AI is part of Sprout. There’s no key to connect and nothing to pay for separately."
-  >
+  <SettingsCard title="AI Tutor">
     <div>
       <SettingRow
         name="Effort"
-        description="How much thought the tutor puts into each answer, feedback and new card."
+        description="How much thought the tutor puts into each answer, feedback and new flashcards."
       >
         <BaseTabs
           v-model="effort"

@@ -71,9 +71,7 @@ const emit = defineEmits<{
       <p class="text-label font-normal text-ink-muted">
         Ask the tutor about something new and save it, or add a topic yourself.
       </p>
-      <TextLink :to="{ name: 'knowledge-map' }" icon-right="arrow-right">
-        Open knowledge map
-      </TextLink>
+      <TextLink :to="{ name: 'topics' }" icon-right="arrow-right"> Open your topics </TextLink>
     </div>
 
     <div

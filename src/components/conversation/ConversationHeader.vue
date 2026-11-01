@@ -8,7 +8,7 @@ const {
   canSave,
 } = defineProps<{
   title: string
-  /** The knowledge map topic this conversation belongs to, once saved or when continuing one. */
+  /** The topic this conversation belongs to, once saved or when continuing one. */
   topicTitle?: string | null
   /** A saved conversation is read-only and can't be saved again. */
   canSave: boolean
@@ -33,7 +33,7 @@ const emit = defineEmits<{
       data-test="open-save"
       @click="emit('save')"
     >
-      Save to knowledge map
+      Save to topics
     </BaseButton>
   </header>
 </template>

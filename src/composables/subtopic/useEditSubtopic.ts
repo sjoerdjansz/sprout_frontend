@@ -1,6 +1,6 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
-import type { TopicFormValues } from '@/components/knowledgeMap/TopicFormDialog.vue'
+import type { TopicFormValues } from '@/components/topics/TopicFormDialog.vue'
 import type { SubtopicPageActions } from '@/composables/subtopic/useSubtopicLoader'
 import { ApiError } from '@/lib/api'
 import { useTopicsStore, type SubtopicDetail } from '@/stores/topics'

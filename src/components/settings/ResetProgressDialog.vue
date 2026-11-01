@@ -29,6 +29,7 @@ const emit = defineEmits<{
         Cancel
       </BaseButton>
       <BaseButton
+        variant="danger"
         icon="rotate-ccw"
         :disabled="resetting"
         data-test="confirm-reset"

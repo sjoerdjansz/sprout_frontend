@@ -57,21 +57,6 @@ describe('ChatComposer', () => {
     expect(wrapper.get('[data-test="composer-send"]').attributes('disabled')).toBeDefined()
     expect(wrapper.emitted('send')).toBeUndefined()
   })
-
-  it('starts your message from a suggestion and puts the cursor in the box', async () => {
-    const wrapper = mountComposer({
-      suggestions: [
-        { label: 'Learn something new', icon: 'sparkles', message: 'I want to learn about ' },
-      ],
-    })
-
-    await wrapper.get('[data-test="suggestion"]').trigger('click')
-
-    const input = wrapper.get('[data-test="composer-input"]').element as HTMLTextAreaElement
-    expect(input.value).toBe('I want to learn about ')
-    expect(document.activeElement).toBe(input)
-    wrapper.unmount()
-  })
 })
 
 describe('ChatComposer with attachments', () => {

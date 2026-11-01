@@ -45,8 +45,8 @@ describe('AppSidebar', () => {
       'aria-label': 'Expand sidebar',
       'aria-expanded': 'false',
     })
-    expect(wrapper.get('a[href="/knowledge-map"]').attributes('title')).toBe('Knowledge map')
-    expect(wrapper.get('a[href="/practice"]').attributes('title')).toBe('Practice center')
+    expect(wrapper.get('a[href="/topics"]').attributes('title')).toBe('Topics')
+    expect(wrapper.get('a[href="/practice"]').attributes('title')).toBe('Practice')
     expect(wrapper.get('[data-test="logout"]').attributes('title')).toBe('Log out')
   })
 })

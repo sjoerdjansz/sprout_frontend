@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 import { ApiError } from '@/lib/api'
 import { useTopicsStore } from '@/stores/topics'
 
-/** Deleting the whole subtopic after you confirm it, then going back to the knowledge map. */
+/** Deleting the whole subtopic after you confirm it, then going back to the topics page. */
 export function useDeleteSubtopic(
   subtopicId: () => number,
   /** Drops deletes still waiting for their undo window: they go with the subtopic anyway. */
@@ -40,16 +40,10 @@ export function useDeleteSubtopic(
 
     try {
       await topicsStore.deleteSubtopic(subtopicId())
-      await router.push({ name: 'knowledge-map' })
+      await router.push({ name: 'topics' })
     } catch (caught) {
       if (!(caught instanceof ApiError)) {
         throw caught
-      }
-      // Already gone (deleted elsewhere): the knowledge map is where you'd end up anyway.
-      if (caught.status === 404) {
-        await router.push({ name: 'knowledge-map' })
-
-        return
       }
       error.value = caught.message
     } finally {
