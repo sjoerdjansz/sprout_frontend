@@ -99,7 +99,7 @@ describe('DashboardView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/practice?modes=feynman')
   })
 
-  it('opens the practice setup from Open practice center', async () => {
+  it('opens the practice setup from Open practice', async () => {
     stubApi({
       'GET /user': Response.json(user),
       'GET /topics': Response.json([]),

@@ -16,9 +16,7 @@ function practise(mode: PracticeModeId): void {
 <template>
   <section aria-labelledby="practice-heading" class="flex flex-col gap-4">
     <SectionHeading title="Start a practice session" heading-id="practice-heading">
-      <TextLink :to="{ name: 'practice' }" data-test="practice-center"
-        >Open practice center</TextLink
-      >
+      <TextLink :to="{ name: 'practice' }" data-test="practice-center">Open practice</TextLink>
     </SectionHeading>
 
     <div class="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] md:gap-4">

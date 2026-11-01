@@ -52,7 +52,7 @@ const links: DrawerLink[] = [
   },
   {
     icon: 'target',
-    label: 'Practice center',
+    label: 'Practice',
     description: 'Feynman, flashcards, quizzes',
     to: { name: 'practice' },
   },
