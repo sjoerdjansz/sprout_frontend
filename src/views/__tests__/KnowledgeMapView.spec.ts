@@ -5,7 +5,11 @@ import router from '@/router'
 import { stubApi } from '@/__tests__/stubApi'
 import { makeCategories, makeLibrary, makeSubtopic, makeTopic } from '@/__tests__/topicFixtures'
 import { pollInterval } from '@/composables/useGenerationPolling'
+import { makeSummary } from '@/__tests__/conversationFixtures'
+import { makePracticeSession } from '@/__tests__/practiceFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
+import { useConversationsStore } from '@/stores/conversations'
+import { usePracticeStore } from '@/stores/practice'
 import KnowledgeMapView from '../KnowledgeMapView.vue'
 
 const user: User = {
@@ -543,6 +547,97 @@ describe('KnowledgeMapView', () => {
         false,
       )
       expect(titleInputs(wrapper)).toEqual(['Cadence', 'Stride length'])
+    })
+  })
+
+  describe('deleting a topic', () => {
+    async function openDelete(wrapper: VueWrapper, topicTitle: string): Promise<void> {
+      await wrapper
+        .get(`[data-test="topic-menu"][aria-label="More for ${topicTitle}"]`)
+        .trigger('click')
+      await wrapper.get('[data-test="topic-menu-delete"]').trigger('click')
+    }
+
+    function showsCard(wrapper: VueWrapper, topicTitle: string): boolean {
+      return cardTitles(wrapper).some((text) => text.includes(topicTitle))
+    }
+
+    function topicDeletes(): number {
+      return fetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE').length
+    }
+
+    it('says what goes and deletes the topic once you confirm', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'GET /conversations': Response.json([
+          makeSummary({ id: 7, topic: { id: 2, title: 'Chemistry' } }),
+          makeSummary({ id: 8, topic: { id: 1, title: 'Biology' } }),
+        ]),
+        'DELETE /topics/2': new Response(null, { status: 204 }),
+      })
+      await useConversationsStore().fetchConversations()
+      usePracticeStore().current = makePracticeSession({ topic: { id: 2, title: 'Chemistry' } })
+
+      await openDelete(wrapper, 'Chemistry')
+
+      expect(wrapper.get('dialog h2').text()).toBe('Delete Chemistry?')
+      expect(wrapper.get('[data-test="delete-topic-what-goes"]').text()).toContain(
+        'its 2 subtopics',
+      )
+      expect(topicDeletes()).toBe(0)
+
+      await wrapper.get('[data-test="confirm-delete-topic"]').trigger('click')
+      await flushPromises()
+
+      expect(topicDeletes()).toBe(1)
+      expect(showsCard(wrapper, 'Chemistry')).toBe(false)
+      expect(wrapper.find('dialog').exists()).toBe(false)
+      expect(wrapper.get('[data-test="toast"]').text()).toContain('Deleted Chemistry')
+      // Its chats and practice session went with it on the API.
+      expect(useConversationsStore().conversations.map((summary) => summary.id)).toEqual([8])
+      expect(usePracticeStore().current).toBeNull()
+    })
+
+    it('deletes nothing when you cancel', async () => {
+      const wrapper = await mountKnowledgeMap()
+
+      await openDelete(wrapper, 'Chemistry')
+      const cancel = wrapper.findAll('dialog button').find((button) => button.text() === 'Cancel')
+      await cancel?.trigger('click')
+
+      expect(wrapper.find('dialog').exists()).toBe(false)
+      expect(topicDeletes()).toBe(0)
+      expect(showsCard(wrapper, 'Chemistry')).toBe(true)
+    })
+
+    it('keeps the topic and shows the API’s message when deleting fails', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'DELETE /topics/2': Response.json(
+          { message: 'Can’t reach Sprout right now. Try again.' },
+          { status: 500 },
+        ),
+      })
+
+      await openDelete(wrapper, 'Chemistry')
+      await wrapper.get('[data-test="confirm-delete-topic"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.get('[data-test="form-error"]').text()).toContain(
+        'Can’t reach Sprout right now',
+      )
+      expect(showsCard(wrapper, 'Chemistry')).toBe(true)
+    })
+
+    it('treats a topic that is already gone as deleted', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'DELETE /topics/2': Response.json({ message: 'Not found.' }, { status: 404 }),
+      })
+
+      await openDelete(wrapper, 'Chemistry')
+      await wrapper.get('[data-test="confirm-delete-topic"]').trigger('click')
+      await flushPromises()
+
+      expect(showsCard(wrapper, 'Chemistry')).toBe(false)
+      expect(wrapper.find('dialog').exists()).toBe(false)
     })
   })
 })

@@ -5,6 +5,7 @@ import BaseButton from '@/components/BaseButton.vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
 import BaseToast from '@/components/BaseToast.vue'
 import FormError from '@/components/FormError.vue'
+import DeleteTopicDialog from '@/components/knowledgeMap/DeleteTopicDialog.vue'
 import SubtopicList from '@/components/knowledgeMap/SubtopicList.vue'
 import SubtopicSuggestionsDialog from '@/components/knowledgeMap/SubtopicSuggestionsDialog.vue'
 import TopicFormDialog, {
@@ -13,6 +14,7 @@ import TopicFormDialog, {
 } from '@/components/knowledgeMap/TopicFormDialog.vue'
 import TopicLibrary from '@/components/knowledgeMap/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { useDeleteTopic } from '@/composables/knowledgeMap/useDeleteTopic'
 import { useSubtopicSuggestions } from '@/composables/knowledgeMap/useSubtopicSuggestions'
 import { useGenerationPolling } from '@/composables/useGenerationPolling'
 import { useToast } from '@/composables/useToast'
@@ -32,6 +34,7 @@ const router = useRouter()
 const topicsStore = useTopicsStore()
 const { toast, showToast } = useToast()
 const suggestions = useSubtopicSuggestions(showToast)
+const deleteTopic = useDeleteTopic(showToast)
 
 type LoadState = 'loading' | 'loaded' | 'failed'
 
@@ -296,6 +299,7 @@ async function save(values: TopicFormValues): Promise<void> {
         :attention-count="attentionCount"
         @select="selectTopic"
         @edit-topic="editTopicById"
+        @delete-topic="deleteTopic.open"
         @add-topic="openForm('add-topic', null)"
         @clear-filters="clearFilters"
       />
@@ -326,6 +330,16 @@ async function save(values: TopicFormValues): Promise<void> {
       :error="saveError"
       @save="save"
       @close="form = null"
+    />
+
+    <DeleteTopicDialog
+      v-if="deleteTopic.topic.value !== null"
+      :title="deleteTopic.topic.value.title"
+      :subtopic-count="deleteTopic.topic.value.subtopics.length"
+      :deleting="deleteTopic.deleting.value"
+      :error="deleteTopic.error.value"
+      @confirm="deleteTopic.confirm"
+      @close="deleteTopic.close"
     />
 
     <SubtopicSuggestionsDialog
