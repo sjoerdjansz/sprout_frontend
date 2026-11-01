@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import TopicMenu from '@/components/knowledgeMap/TopicMenu.vue'
+import ItemMenu from '@/components/knowledgeMap/ItemMenu.vue'
 import { averageMastery, dueCards, pluralize } from '@/lib/knowledgeMap'
 import type { Topic } from '@/stores/topics'
 
@@ -39,7 +39,6 @@ const due = computed<number>(() => dueCards(topic))
         <!--    We'll decice if we want this later    -->
         <!--          <IconTile :icon="appearance.icon" :tint="appearance.tint" />-->
         <ProgressRing :value="mastery" :size="48" :label="`${topic.title} mastery ${mastery}%`" />
-        <TopicMenu :topic-title="topic.title" @edit="emit('edit')" @delete="emit('delete')" />
       </span>
       <span class="flex flex-col gap-0.75">
         <span class="font-display text-[19px] leading-6 font-semibold tracking-[-0.015em] text-ink">
@@ -54,5 +53,9 @@ const due = computed<number>(() => dueCards(topic))
         </span>
       </span>
     </button>
+    <!-- Top right, level with the mastery ring. -->
+    <div class="absolute top-5 right-4">
+      <ItemMenu kind="topic" :title="topic.title" @edit="emit('edit')" @delete="emit('delete')" />
+    </div>
   </div>
 </template>
