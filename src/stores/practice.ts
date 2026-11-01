@@ -416,6 +416,16 @@ export const usePracticeStore = defineStore('practice', () => {
   }
 
   /** Clears the page's copy; a session that's still going stays on the API to pick up again. */
+  /** A deleted topic took its practice sessions with it on the API; drop them here too. */
+  function forgetTopic(topicId: number): void {
+    if (current.value?.topic.id === topicId) {
+      current.value = null
+    }
+    if (session.value?.topic.id === topicId) {
+      reset()
+    }
+  }
+
   function reset(): void {
     plan.value = null
     results.value = []
@@ -451,5 +461,6 @@ export const usePracticeStore = defineStore('practice', () => {
     end,
     fetchSubtopicSessions,
     reset,
+    forgetTopic,
   }
 })
