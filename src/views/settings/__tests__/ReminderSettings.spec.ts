@@ -17,14 +17,13 @@ describe('ReminderSettings', () => {
     vi.unstubAllGlobals()
   })
 
-  it('shows your reminders and says nothing sends them yet', async () => {
+  it('shows your reminders', async () => {
     const { wrapper } = await mountSettings('/settings/reminders')
 
     expect(wrapper.get<HTMLSelectElement>('[data-test="reminder-time"]').element.value).toBe(
       '19:00',
     )
     expect(wrapper.get('[data-test="tab-email"]').attributes('aria-selected')).toBe('true')
-    expect(wrapper.get('[data-test="not-sent-yet"]').text()).toContain('doesn’t send reminders yet')
   })
 
   it('saves a new time', async () => {

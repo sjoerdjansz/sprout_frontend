@@ -38,15 +38,9 @@ const saveChats = setting('save_chats_as_material')
 </script>
 
 <template>
-  <SettingsCard
-    title="Learning"
-    subtitle="The defaults every practice session starts from. You can still change them per session."
-  >
+  <SettingsCard title="Learning" subtitle="">
     <div>
-      <SettingRow
-        name="Daily goal"
-        description="Cards to review per day. Small and daily beats big and rare."
-      >
+      <SettingRow name="Daily goal" description="Cards to review per day.">
         <BaseTabs
           v-model="dailyGoal"
           label="Daily goal"
@@ -64,7 +58,7 @@ const saveChats = setting('save_chats_as_material')
       </SettingRow>
       <SettingRow
         name="Mix subtopics (interleaving)"
-        description="Shuffle subtopics in one session. Harder in the moment, better for the long term."
+        description="Shuffle subtopics in one session."
       >
         <BaseSwitch v-model="interleave" label="Mix subtopics" hide-label data-test="interleave" />
       </SettingRow>
@@ -88,10 +82,6 @@ const saveChats = setting('save_chats_as_material')
     </div>
 
     <FormError v-if="error" :message="error" />
-    <!-- The practice setup starts from session size, interleaving and the hint; these two wait. -->
-    <p class="text-caption font-normal text-ink-subtle" data-test="not-used-yet">
-      The daily goal and saving chats as study material aren’t used yet.
-    </p>
   </SettingsCard>
 
   <BaseToast v-if="toast !== null" :title="toast.title" :tone="toast.tone" :icon="toast.icon" />

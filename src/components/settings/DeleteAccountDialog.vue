@@ -53,6 +53,7 @@ const matches = computed<boolean>(
         </BaseButton>
         <BaseButton
           type="submit"
+          variant="danger"
           icon="trash-2"
           :disabled="deleting || !matches"
           data-test="confirm-delete"

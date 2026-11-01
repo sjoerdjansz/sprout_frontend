@@ -108,11 +108,11 @@ async function deleteAccount(typedEmail: string): Promise<void> {
 </script>
 
 <template>
-  <SettingsCard title="Your data" subtitle="It’s yours. Take it with you, or take it away.">
+  <SettingsCard title="Your data" subtitle="">
     <div>
       <SettingRow
-        name="Export your library"
-        description="Topics, cards, questions, chats and progress as JSON, plus your cards as CSV for Anki."
+        name="Export flashcards"
+        description="Export your cards to use them somewhere else."
       >
         <BaseButton
           variant="secondary"
@@ -127,7 +127,7 @@ async function deleteAccount(typedEmail: string): Promise<void> {
       </SettingRow>
       <SettingRow
         name="Reset progress"
-        description="Keeps your topics and cards, wipes mastery, reviews, streaks and XP. Can’t be undone."
+        description="Keeps your topics and cards but wipes mastery, reviews, streaks and XP. Can’t be undone."
       >
         <BaseButton
           variant="secondary"
@@ -141,10 +141,10 @@ async function deleteAccount(typedEmail: string): Promise<void> {
       </SettingRow>
       <SettingRow
         name="Delete account"
-        description="Everything goes, right away and for good. We’ll ask you to type your email first."
+        description="Permanently delete everything. We’ll ask you to type your email first."
       >
         <BaseButton
-          variant="secondary"
+          variant="danger"
           size="sm"
           icon="trash-2"
           data-test="delete-account"
