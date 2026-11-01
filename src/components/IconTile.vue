@@ -2,8 +2,8 @@
 import BaseIcon from '@/components/BaseIcon.vue'
 import type { IconName } from '@/components/icons'
 
-/** The four topic tints from the design system, each a `*-soft` ground with its `*-ink` icon. */
-export type Tint = 'mint' | 'sun' | 'peach' | 'sky'
+/** The four topic tints (`*-soft` ground, `*-ink` icon) and a neutral gray. */
+export type Tint = 'mint' | 'sun' | 'peach' | 'sky' | 'gray'
 
 type Size = 'sm' | 'md' | 'lg'
 
@@ -22,6 +22,7 @@ const tintClasses: Record<Tint, string> = {
   sun: 'bg-sun-soft text-sun-ink',
   peach: 'bg-ember-soft text-ember-ink',
   sky: 'bg-sky-soft text-sky-ink',
+  gray: 'bg-surface-sunken text-ink-muted',
 }
 
 const sizeClasses: Record<Size, string> = {
