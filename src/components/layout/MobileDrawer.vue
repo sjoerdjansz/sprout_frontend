@@ -32,41 +32,20 @@ const emit = defineEmits<{
 interface DrawerLink {
   icon: IconName
   label: string
-  description: string
   /** Left out while the page doesn't exist yet: the link then does nothing, as in the sidebar. */
   to?: RouteLocationRaw
 }
 
 const links: DrawerLink[] = [
-  {
-    icon: 'house',
-    label: 'Dashboard',
-    description: 'Chat, today’s queue, progress',
-    to: { name: 'home' },
-  },
-  {
-    icon: 'network',
-    label: 'Topics',
-    description: 'All topics and mastery scores',
-    to: { name: 'topics' },
-  },
-  {
-    icon: 'target',
-    label: 'Practice',
-    description: 'Feynman, flashcards, quizzes',
-    to: { name: 'practice' },
-  },
-  { icon: 'chart-line', label: 'Insights', description: 'Study time and progress per subject' },
-  {
-    icon: 'settings',
-    label: 'Settings',
-    description: 'Profile, effort, reminders, appearance',
-    to: { name: 'settings' },
-  },
+  { icon: 'house', label: 'Dashboard', to: { name: 'home' } },
+  { icon: 'network', label: 'Topics', to: { name: 'topics' } },
+  { icon: 'target', label: 'Practice', to: { name: 'practice' } },
+  { icon: 'chart-line', label: 'Insights' },
+  { icon: 'settings', label: 'Settings', to: { name: 'settings' } },
 ]
 
 const linkClasses =
-  'group flex min-h-14 items-center gap-3.5 rounded-md px-3 text-ink transition-colors duration-150 ease-default hover:bg-surface-sunken aria-[current=page]:bg-sprout-soft aria-[current=page]:text-sprout-ink'
+  'flex min-h-12 items-center gap-3.5 rounded-md px-3 text-body-strong text-ink transition-colors duration-150 ease-default hover:bg-surface-sunken aria-[current=page]:bg-sprout-soft aria-[current=page]:text-sprout-ink'
 
 const dialog = useTemplateRef<HTMLDialogElement>('dialog')
 
@@ -121,21 +100,11 @@ function onClick(event: MouseEvent): void {
       <template v-for="link in links" :key="link.label">
         <RouterLink v-if="link.to" :to="link.to" :class="linkClasses" data-test="drawer-link">
           <BaseIcon :name="link.icon" />
-          <span class="flex flex-col">
-            <span class="text-body-strong">{{ link.label }}</span>
-            <span
-              class="text-caption font-normal text-ink-subtle group-aria-[current=page]:text-sprout-ink"
-            >
-              {{ link.description }}
-            </span>
-          </span>
+          {{ link.label }}
         </RouterLink>
         <a v-else href="#" :class="linkClasses" data-test="drawer-link" @click.prevent>
           <BaseIcon :name="link.icon" />
-          <span class="flex flex-col">
-            <span class="text-body-strong">{{ link.label }}</span>
-            <span class="text-caption font-normal text-ink-subtle">{{ link.description }}</span>
-          </span>
+          {{ link.label }}
         </a>
       </template>
 
