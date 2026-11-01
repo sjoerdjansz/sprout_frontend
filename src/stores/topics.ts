@@ -278,7 +278,14 @@ export const useTopicsStore = defineStore('topics', () => {
 
   /** Deletes a subtopic with its cards, questions and progress. Can't be undone. */
   async function deleteSubtopic(subtopicId: number): Promise<void> {
-    await api<null>(`/subtopics/${subtopicId}`, { method: 'DELETE' })
+    try {
+      await api<null>(`/subtopics/${subtopicId}`, { method: 'DELETE' })
+    } catch (caught) {
+      // A 404 means it's already gone (deleted elsewhere): what you asked for, so carry on.
+      if (!(caught instanceof ApiError) || caught.status !== 404) {
+        throw caught
+      }
+    }
 
     for (const topic of topics.value) {
       topic.subtopics = topic.subtopics.filter((existing) => existing.id !== subtopicId)

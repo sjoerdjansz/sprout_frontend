@@ -45,12 +45,6 @@ export function useDeleteSubtopic(
       if (!(caught instanceof ApiError)) {
         throw caught
       }
-      // Already gone (deleted elsewhere): the knowledge map is where you'd end up anyway.
-      if (caught.status === 404) {
-        await router.push({ name: 'knowledge-map' })
-
-        return
-      }
       error.value = caught.message
     } finally {
       deleting.value = false
