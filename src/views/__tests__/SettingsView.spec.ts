@@ -52,15 +52,4 @@ describe('SettingsView', () => {
     expect(wrapper.find('[data-test="form-error"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="name"]').exists()).toBe(true)
   })
-
-  it('logs you out from the menu', async () => {
-    const { wrapper } = await mountSettings('/settings/profile', {
-      'POST /auth/logout': new Response(null, { status: 204 }),
-    })
-
-    await wrapper.get('[data-test="settings-logout"]').trigger('click')
-    await flushPromises()
-
-    expect(useAuthStore().isAuthenticated).toBe(false)
-  })
 })

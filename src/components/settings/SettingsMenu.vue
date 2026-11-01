@@ -7,10 +7,6 @@ const { sections } = defineProps<{
   sections: SettingsSection[]
 }>()
 
-const emit = defineEmits<{
-  logout: []
-}>()
-
 const itemClasses =
   'flex h-10.5 flex-none items-center gap-2.5 rounded-md px-3 text-label whitespace-nowrap text-ink-muted transition-colors duration-150 ease-default hover:bg-surface-sunken hover:text-ink'
 </script>
