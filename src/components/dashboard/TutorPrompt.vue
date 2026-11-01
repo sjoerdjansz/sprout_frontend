@@ -51,7 +51,7 @@ const message = defineModel<string>({ required: true })
     class="flex flex-col gap-4 rounded-xl bg-surface-tint p-4 md:gap-5 md:p-7"
   >
     <div class="flex flex-col items-start gap-2.5">
-      <BaseBadge tone="sky" icon="brain">Socratic tutor</BaseBadge>
+      <BaseBadge tone="sky" icon="brain">Sprout, your tutor</BaseBadge>
       <h2 id="tutor-prompt-heading" class="font-display text-title-lg text-ink">
         What do you want to understand today?
       </h2>
