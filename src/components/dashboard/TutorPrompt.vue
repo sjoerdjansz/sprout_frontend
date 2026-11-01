@@ -56,8 +56,7 @@ const message = defineModel<string>({ required: true })
         What do you want to understand today?
       </h2>
       <p class="text-ink-muted">
-        I’ll guide you with questions instead of handing you answers, one step past what you already
-        know.
+        I'll help you make sense of the topic that you're trying to master.
       </p>
     </div>
 
