@@ -2,11 +2,11 @@
 import type { RouteLocationRaw } from 'vue-router'
 import BaseBadge from '@/components/BaseBadge.vue'
 import FormError from '@/components/FormError.vue'
-import ChatComposer, { type Suggestion } from '@/components/chat/ChatComposer.vue'
 import type { MessageFile } from '@/components/chat/ChatMessage.vue'
 import ChatThread from '@/components/chat/ChatThread.vue'
 import ResumeSession from '@/components/dashboard/ResumeSession.vue'
 import type { Attachment } from '@/composables/chat/useComposerAttachments'
+import ChatComposer from '@/components/chat/ChatComposer.vue'
 
 export interface LastSession {
   title: string
@@ -43,18 +43,6 @@ const emit = defineEmits<{
 }>()
 
 const message = defineModel<string>({ required: true })
-
-// Exploration starters: the chat scopes a subject with you, practising happens elsewhere.
-const suggestions: Suggestion[] = [
-  { label: 'Learn something new', icon: 'sparkles', message: 'I want to learn about ' },
-  {
-    label: 'Clear up a confusion',
-    icon: 'circle-help',
-    message: 'Something I keep getting confused about is ',
-  },
-  { label: 'Go deeper on a topic', icon: 'layers', message: 'I know the basics of ' },
-  { label: 'Prepare for something', icon: 'target', message: 'I’m preparing for ' },
-]
 </script>
 
 <template>
@@ -86,7 +74,6 @@ const suggestions: Suggestion[] = [
 
     <ChatComposer
       v-model="message"
-      :suggestions="suggestions"
       :disabled="pendingMessage !== null"
       :attachments="attachments"
       :attachment-notice="attachmentNotice"
