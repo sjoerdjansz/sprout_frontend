@@ -55,7 +55,7 @@ const emit = defineEmits<{
     <SidebarNavLink icon="network" label="Topics" :to="{ name: 'topics' }" :collapsed="collapsed" />
     <SidebarNavLink
       icon="target"
-      label="Practice center"
+      label="Practice"
       :to="{ name: 'practice' }"
       :collapsed="collapsed"
     />
