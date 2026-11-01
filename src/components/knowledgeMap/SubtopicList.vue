@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
-import BaseIconButton from '@/components/BaseIconButton.vue'
 import SubtopicRow from '@/components/knowledgeMap/SubtopicRow.vue'
 import { facets, pluralize } from '@/lib/knowledgeMap'
 import type { Subtopic, Topic } from '@/stores/topics'
@@ -13,8 +12,9 @@ const { topic, subtopics } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  editTopic: []
   addSubtopic: []
+  editSubtopic: [subtopicId: number]
+  deleteSubtopic: [subtopicId: number]
 }>()
 </script>
 
@@ -28,13 +28,6 @@ const emit = defineEmits<{
             · {{ pluralize(topic.subtopics.length, 'subtopic') }}
           </span>
         </h2>
-        <BaseIconButton
-          icon="pencil"
-          :label="`Edit ${topic.title}`"
-          size="sm"
-          data-test="edit-topic"
-          @click="emit('editTopic')"
-        />
       </div>
       <div class="flex items-center gap-4">
         <span class="flex flex-wrap gap-x-3.5 gap-y-1.5 text-caption font-normal text-ink-subtle">
@@ -67,7 +60,13 @@ const emit = defineEmits<{
     <ul
       class="flex flex-auto flex-col gap-0.5 rounded-lg border border-line bg-surface p-1.5 shadow-sm"
     >
-      <SubtopicRow v-for="subtopic in subtopics" :key="subtopic.id" :subtopic="subtopic" />
+      <SubtopicRow
+        v-for="subtopic in subtopics"
+        :key="subtopic.id"
+        :subtopic="subtopic"
+        @edit="emit('editSubtopic', subtopic.id)"
+        @delete="emit('deleteSubtopic', subtopic.id)"
+      />
       <li
         v-if="subtopics.length === 0"
         class="px-3.5 py-4 text-[14px] text-ink-muted"

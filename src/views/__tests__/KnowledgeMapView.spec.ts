@@ -52,6 +52,14 @@ async function mountKnowledgeMap(routes: Routes = {}): Promise<VueWrapper> {
   return wrapper
 }
 
+/** Opens Edit topic from a topic card's ⋮ menu. */
+async function editTopicFromMenu(wrapper: VueWrapper, topicTitle = 'Biology'): Promise<void> {
+  await wrapper
+    .get(`[data-test="topic-menu"][aria-label="More for ${topicTitle}"]`)
+    .trigger('click')
+  await wrapper.get('[data-test="topic-menu-edit"]').trigger('click')
+}
+
 function cardTitles(wrapper: VueWrapper): string[] {
   return wrapper.findAll('[data-test="topic-card"]').map((card) => card.text())
 }
@@ -285,21 +293,6 @@ describe('KnowledgeMapView', () => {
     )
   })
 
-  it('edits the topic whose subtopics you see', async () => {
-    const wrapper = await mountKnowledgeMap({
-      'PUT /topics/1': Response.json(makeTopic({ title: 'Biology basics' })),
-    })
-
-    await wrapper.get('[data-test="edit-topic"]').trigger('click')
-    expect(wrapper.get('dialog h2').text()).toBe('Edit topic')
-    expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe('Biology')
-
-    await wrapper.get('[data-test="name"]').setValue('Biology basics')
-    await submitForm(wrapper)
-
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology basics')
-  })
-
   it("edits any topic from its card's menu", async () => {
     const wrapper = await mountKnowledgeMap({
       'PUT /topics/2': Response.json(makeTopic({ id: 2, title: 'Chemistry basics' })),
@@ -426,7 +419,7 @@ describe('KnowledgeMapView', () => {
     }
 
     async function saveSource(wrapper: VueWrapper): Promise<void> {
-      await wrapper.get('[data-test="edit-topic"]').trigger('click')
+      await editTopicFromMenu(wrapper)
       await wrapper.get('[data-test="notes"]').setValue(source)
       await submitForm(wrapper)
     }
@@ -500,7 +493,7 @@ describe('KnowledgeMapView', () => {
         'PUT /topics/1': Response.json(makeTopic({ title: 'Biology basics' })),
       })
 
-      await wrapper.get('[data-test="edit-topic"]').trigger('click')
+      await editTopicFromMenu(wrapper)
       await wrapper.get('[data-test="name"]').setValue('Biology basics')
       await submitForm(wrapper)
 
@@ -638,6 +631,90 @@ describe('KnowledgeMapView', () => {
 
       expect(showsCard(wrapper, 'Chemistry')).toBe(false)
       expect(wrapper.find('dialog').exists()).toBe(false)
+    })
+  })
+
+  it('opens a card’s menu without selecting the card', async () => {
+    const wrapper = await mountKnowledgeMap()
+
+    await wrapper.get('[data-test="topic-menu"][aria-label="More for Chemistry"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="topic-card"][aria-pressed="true"]').text()).toContain('Biology')
+  })
+
+  describe('a subtopic’s menu', () => {
+    async function pickFromSubtopicMenu(
+      wrapper: VueWrapper,
+      item: 'edit' | 'delete',
+      subtopicTitle = 'Photosynthesis',
+    ): Promise<void> {
+      await wrapper
+        .get(`[data-test="subtopic-menu"][aria-label="More for ${subtopicTitle}"]`)
+        .trigger('click')
+      await wrapper.get(`[data-test="subtopic-menu-${item}"]`).trigger('click')
+    }
+
+    it('edits the subtopic with its own notes filled in', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'PUT /subtopics/101': Response.json({
+          subtopic: makeSubtopic({ title: 'Photosynthesis basics' }),
+        }),
+      })
+
+      await pickFromSubtopicMenu(wrapper, 'edit')
+
+      expect(wrapper.get('dialog h2').text()).toBe('Edit subtopic')
+      expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe(
+        'Photosynthesis',
+      )
+      expect((wrapper.get('[data-test="notes"]').element as HTMLTextAreaElement).value).toBe(
+        'Plants use chlorophyll to capture light.',
+      )
+
+      await wrapper.get('[data-test="name"]').setValue('Photosynthesis basics')
+      await submitForm(wrapper)
+
+      // The whole form goes, so the notes aren't cleared.
+      expect(sentBody('PUT /subtopics/101')).toMatchObject({
+        topic_id: 1,
+        title: 'Photosynthesis basics',
+        notes: 'Plants use chlorophyll to capture light.',
+      })
+      expect(wrapper.find('dialog').exists()).toBe(false)
+      expect(subtopicTitles(wrapper)).toContain('Photosynthesis basics')
+    })
+
+    it('deletes the subtopic once you confirm, and keeps the others', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'DELETE /subtopics/101': new Response(null, { status: 204 }),
+      })
+
+      await pickFromSubtopicMenu(wrapper, 'delete')
+      expect(wrapper.get('dialog h2').text()).toBe('Delete Photosynthesis?')
+
+      await wrapper.get('[data-test="confirm-delete"]').trigger('click')
+      await flushPromises()
+
+      expect(subtopicTitles(wrapper)).toEqual(['Cell respiration', 'Chlorophyll'])
+      expect(wrapper.find('dialog').exists()).toBe(false)
+      expect(wrapper.get('[data-test="toast"]').text()).toContain('Deleted Photosynthesis')
+    })
+
+    it('keeps the subtopic and shows the API’s message when deleting fails', async () => {
+      const wrapper = await mountKnowledgeMap({
+        'DELETE /subtopics/101': Response.json(
+          { message: 'Can’t reach Sprout right now. Try again.' },
+          { status: 500 },
+        ),
+      })
+
+      await pickFromSubtopicMenu(wrapper, 'delete')
+      await wrapper.get('[data-test="confirm-delete"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.get('[data-test="form-error"]').text()).toContain('Can’t reach Sprout')
+      expect(subtopicTitles(wrapper)).toContain('Photosynthesis')
     })
   })
 })
