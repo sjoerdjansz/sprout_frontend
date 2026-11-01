@@ -24,7 +24,7 @@ const timeOptions = computed<SelectOption[]>(() =>
 </script>
 
 <template>
-  <SettingsCard title="Reminders" subtitle="">
+  <SettingsCard title="Reminders">
     <div>
       <SettingRow name="Daily reminder" description="A nudge when cards are due.">
         <div class="flex items-center gap-3">

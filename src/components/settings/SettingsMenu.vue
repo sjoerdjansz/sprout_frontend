@@ -35,14 +35,5 @@ const itemClasses =
     </RouterLink>
 
     <div class="hidden grow md:block" />
-    <button
-      type="button"
-      :class="[itemClasses, 'cursor-pointer md:mt-6']"
-      data-test="settings-logout"
-      @click="emit('logout')"
-    >
-      <BaseIcon name="log-out" :size="18" />
-      Log out
-    </button>
   </nav>
 </template>

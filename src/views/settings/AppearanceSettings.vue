@@ -15,7 +15,7 @@ const reduceMotion = setting('reduce_motion')
 </script>
 
 <template>
-  <SettingsCard title="Appearance" subtitle="">
+  <SettingsCard title="Appearance">
     <ThemePicker v-model="theme" />
 
     <div>

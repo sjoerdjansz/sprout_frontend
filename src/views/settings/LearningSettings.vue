@@ -38,7 +38,7 @@ const saveChats = setting('save_chats_as_material')
 </script>
 
 <template>
-  <SettingsCard title="Learning" subtitle="">
+  <SettingsCard title="Learning">
     <div>
       <SettingRow name="Daily goal" description="Cards to review per day.">
         <BaseTabs

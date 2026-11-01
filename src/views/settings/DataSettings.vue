@@ -30,7 +30,7 @@ async function exportLibrary(): Promise<void> {
     saveFile(await settingsStore.exportFlashcards())
     showToast({
       title: 'Export ready',
-      message: 'Your library as JSON, and your cards as CSV for Anki.',
+      message: 'Your library as JSON, and your cards as CSV.',
       tone: 'sprout',
       icon: 'download',
     })
@@ -108,11 +108,11 @@ async function deleteAccount(typedEmail: string): Promise<void> {
 </script>
 
 <template>
-  <SettingsCard title="Your data" subtitle="">
+  <SettingsCard title="Your data">
     <div>
       <SettingRow
-        name="Export flashcards"
-        description="Export your cards to use them somewhere else."
+        name="Export your library"
+        description="Everything as JSON, plus your cards as CSV."
       >
         <BaseButton
           variant="secondary"

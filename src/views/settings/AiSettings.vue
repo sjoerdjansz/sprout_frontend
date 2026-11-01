@@ -40,7 +40,7 @@ onMounted(loadUsage)
 </script>
 
 <template>
-  <SettingsCard title="AI Tutor" subtitle="">
+  <SettingsCard title="AI Tutor">
     <div>
       <SettingRow
         name="Effort"
