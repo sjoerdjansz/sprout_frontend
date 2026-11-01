@@ -194,7 +194,7 @@ const slipped = computed<SlippedItem[]>(() => slippedItems(results))
         </section>
       </div>
 
-      <div class="flex flex-wrap justify-center gap-2.5 pt-1">
+      <div class="flex flex-wrap justify-left gap-2.5 pt-1">
         <BaseButton size="lg" icon="house" data-test="done-home" @click="emit('home')">
           Back to dashboard
         </BaseButton>
