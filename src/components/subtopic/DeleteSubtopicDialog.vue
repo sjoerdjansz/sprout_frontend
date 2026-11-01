@@ -31,6 +31,7 @@ const emit = defineEmits<{
         Cancel
       </BaseButton>
       <BaseButton
+        variant="danger"
         icon="trash-2"
         :disabled="deleting"
         data-test="confirm-delete"
