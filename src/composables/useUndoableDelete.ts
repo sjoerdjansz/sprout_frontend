@@ -6,6 +6,8 @@ export interface UndoableDelete {
   key: string
   /** The toast's title ("Card deleted"). */
   title: string
+  /** What else the toast says; "You can still undo this." when left out. */
+  message?: string
   /** Sends the delete. */
   run: () => Promise<void>
 }

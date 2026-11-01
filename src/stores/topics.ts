@@ -35,8 +35,13 @@ export interface Subtopic {
   topic_id: number
   title: string
   description: string | null
-  /** What its flashcards and questions are made from. */
+  /**
+   * Your own notes only (the subtopic form's field). The tutor's notes from the chat and the parts
+   * of your files are separate sources, listed on the subtopic page (`SubtopicDetail.sources`).
+   */
   notes: string | null
+  /** How many sources its cards are made from; with 0, "Generate from sources" is refused. */
+  source_count: number
   generation_status: GenerationStatus
   /** 0–100 */
   mastery: number
@@ -67,10 +72,29 @@ export interface Topic {
   created_at: string
 }
 
+/**
+ * Where a source came from (`../API.md`, "A subtopic's sources"): the tutor's notes from the chat,
+ * your own notes, or the part of a file you attached in the chat.
+ */
+export type SourceType = 'tutor' | 'own' | 'file'
+
+/** One of the things a subtopic's flashcards and questions are made from. */
+export interface SubtopicSource {
+  id: number
+  type: SourceType
+  /** Markdown, at most 10,000 characters. */
+  content: string
+  /** The file it's a part of, for a `file` source; the file itself can't be downloaded. */
+  material: { id: number; original_filename: string } | null
+  updated_at: string
+}
+
 /** One subtopic as the subtopic page loads it, with its topic and how much material it has. */
 export interface SubtopicDetail extends Subtopic {
   topic: { id: number; title: string; category: Category }
   counts: { flashcards: number; questions: number; sessions: number }
+  /** In the API's order: the tutor's notes, your notes, then the files in upload order. */
+  sources: SubtopicSource[]
 }
 
 /** A topic form: name a new category with `categoryName` instead of picking one. */
@@ -244,6 +268,14 @@ export const useTopicsStore = defineStore('topics', () => {
     }
   }
 
+  /**
+   * Removes one of a subtopic's sources; its cards and questions stay. Fetch the subtopic again for
+   * the new `sources`, `source_count` and (after removing your own notes) `notes`.
+   */
+  async function removeSource(subtopicId: number, sourceId: number): Promise<void> {
+    await api<null>(`/subtopics/${subtopicId}/sources/${sourceId}`, { method: 'DELETE' })
+  }
+
   /** Asks the AI how the topic's saved description and notes split into subtopics. Saves nothing. */
   async function suggestSubtopics(topicId: number): Promise<SubtopicSuggestion[]> {
     const result = await api<{ suggestions: SubtopicSuggestion[] }>(
@@ -269,7 +301,7 @@ export const useTopicsStore = defineStore('topics', () => {
   }
 
   /**
-   * Queues cards and questions from the notes that the existing ones don't cover (202). Also how
+   * Queues cards and questions from all sources that the existing ones don't cover (202). Also how
    * a `failed` subtopic is tried again. The subtopic comes back `generating`.
    */
   async function generateMaterial(subtopicId: number): Promise<SubtopicSaveResult> {
@@ -298,6 +330,7 @@ export const useTopicsStore = defineStore('topics', () => {
     updateSubtopic,
     fetchSubtopic,
     deleteSubtopic,
+    removeSource,
     generateMaterial,
     suggestSubtopics,
     addSubtopics,

@@ -39,13 +39,13 @@ const {
   cards,
   questions,
   sessions,
-  notes,
+  sources,
   pending,
   undo,
   flush,
   removeCard,
   removeQuestion,
-  removeNotes,
+  removeSource,
 } = useSubtopicMaterial(subtopic, actions)
 const cardEditor = useFlashcardEditor(actions)
 const {
@@ -68,6 +68,9 @@ const {
 } = edit
 const { isOpen: isDeleteOpen, deleting: deletingSubtopic, error: deleteError } = deletion
 
+// "Generate from sources" needs something to generate from.
+const hasSources = computed<boolean>(() => (subtopic.value?.source_count ?? 0) > 0)
+
 const userInitials = computed<string>(() => initials(auth.user?.name ?? ''))
 
 type TabId = 'cards' | 'questions' | 'sessions' | 'sources'
@@ -78,7 +81,8 @@ const tabs = computed<TabItem<TabId>[]>(() => [
   { id: 'cards', label: 'Flashcards', icon: 'layers', count: cards.value.length },
   { id: 'questions', label: 'Questions', icon: 'list-checks', count: questions.value.length },
   { id: 'sessions', label: 'Sessions', icon: 'message-circle', count: sessions.value.length },
-  { id: 'sources', label: 'Sources', icon: 'book-open', count: notes.value === null ? 0 : 1 },
+  // The API's source_count, less a source whose removal you can still undo (as with cards).
+  { id: 'sources', label: 'Sources', icon: 'book-open', count: sources.value.length },
 ])
 
 const tabLabel = computed<string>(
@@ -160,6 +164,7 @@ watch(tab, () => {
           :saving="savingCard"
           :editor-error="cardError"
           :generating="generating"
+          :has-sources="hasSources"
           @add="cardEditor.open('new')"
           @edit="(card) => cardEditor.open(card.id)"
           @cancel-edit="cardEditor.close"
@@ -171,6 +176,7 @@ watch(tab, () => {
         <QuestionsPanel
           v-else-if="tab === 'questions'"
           :questions="questions"
+          :has-sources="hasSources"
           @remove="removeQuestion"
           @quiz="practise('retrieval')"
         />
@@ -184,13 +190,12 @@ watch(tab, () => {
         />
         <SourcesPanel
           v-else
-          :notes="notes"
-          :generated-cards="cards.filter((card) => card.origin === 'ai').length"
-          :generated-questions="questions.filter((question) => question.origin === 'ai').length"
+          :sources="sources"
           :generating="generating"
-          @edit="edit.open"
+          :has-sources="hasSources"
+          @edit-notes="edit.open"
           @generate="generate"
-          @remove="removeNotes"
+          @remove="removeSource"
         />
       </section>
 
@@ -220,7 +225,7 @@ watch(tab, () => {
     <BaseToast
       v-if="pending !== null"
       :title="pending.title"
-      message="You can still undo this."
+      :message="pending.message ?? 'You can still undo this.'"
       tone="ember"
       icon="trash-2"
     >

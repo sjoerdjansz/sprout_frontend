@@ -185,7 +185,7 @@ export const usageKinds: UsageKind[] = [
     label: 'Sources split up',
     icon: 'network',
     tint: 'sky',
-    hint: 'Subtopics suggested from your notes',
+    hint: 'Your notes and files split into subtopics',
   },
 ]
 

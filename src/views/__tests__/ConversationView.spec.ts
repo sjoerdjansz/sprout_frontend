@@ -332,4 +332,74 @@ describe('ConversationView', () => {
     expect(notice()).not.toContain('Sprout is making your cards…')
     expect(notice()).toContain('This conversation is saved to your knowledge map.')
   })
+
+  it('keeps asking while any subtopic of the topic is generating, also one the save left out', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    // Saving with files: an existing subtopic gets its part of a file afterwards and starts
+    // generating once the save has answered.
+    const topicWith = (gait: GenerationStatus, landing: GenerationStatus): Topic =>
+      makeTopic({
+        id: 12,
+        title: 'Biomechanics of running',
+        subtopics: [
+          makeSubtopic({ id: 40, topic_id: 12, title: 'Gait cycle', generation_status: gait }),
+          makeSubtopic({ id: 41, topic_id: 12, title: 'Landing', generation_status: landing }),
+        ],
+      })
+    const fetchMock = stubApi({
+      'GET /user': Response.json(user),
+      'GET /conversations': Response.json([makeSummary()]),
+      'GET /conversations/10': [
+        () => Response.json(makeConversation({ topic: { id: 12, title: 'Biomechanics' } })),
+        () =>
+          Response.json(
+            makeConversation({ is_saved: true, topic: { id: 12, title: 'Biomechanics' } }),
+          ),
+      ],
+      'POST /conversations/10/save': () =>
+        Response.json(
+          {
+            topic: {
+              id: 12,
+              title: 'Biomechanics of running',
+              goal: { description: 'Explain', deadline: '2026-12-01', recall_percentage: 80 },
+              subtopics: [
+                { id: 40, title: 'Gait cycle', generation_status: 'generating' },
+                { id: 41, title: 'Landing', generation_status: 'ready' },
+              ],
+              created_at: '2026-10-30T15:20:11.000000Z',
+            },
+            added: { subtopics: 0 },
+          },
+          { status: 201 },
+        ),
+      'GET /topics': [
+        () => Response.json([topicWith('ready', 'generating')]),
+        () => Response.json([topicWith('ready', 'ready')]),
+      ],
+    })
+    const wrapper = await mountConversation()
+
+    await wrapper.get('[data-test="open-save"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-test="goal-deadline"]').setValue('2026-12-01')
+    await wrapper.get('[data-test="goal-recall"]').setValue('80')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    const notice = (): string => wrapper.get('[data-test="saved-notice"]').text()
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(notice()).toContain('Sprout is making your cards…')
+
+    await vi.advanceTimersByTimeAsync(pollInterval)
+    await flushPromises()
+    expect(notice()).not.toContain('Sprout is making your cards…')
+
+    const topicCalls = (): number =>
+      fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/topics')).length
+    expect(topicCalls()).toBe(2)
+    await vi.advanceTimersByTimeAsync(pollInterval * 3)
+    expect(topicCalls()).toBe(2)
+  })
 })

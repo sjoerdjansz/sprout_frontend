@@ -139,6 +139,16 @@ describe('topics store', () => {
     expect(store.subtopic?.counts.flashcards).toBe(2)
   })
 
+  it('removes one of a subtopic’s sources', async () => {
+    const fetchMock = stubApi({
+      'DELETE /subtopics/101/sources/51': new Response(null, { status: 204 }),
+    })
+
+    await useTopicsStore().removeSource(101, 51)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('deletes a subtopic from the page and the library', async () => {
     stubApi({ 'DELETE /subtopics/101': new Response(null, { status: 204 }) })
     const store = useTopicsStore()

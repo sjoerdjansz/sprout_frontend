@@ -5,10 +5,16 @@ import router from '@/router'
 import { makeFlashcard, makeOpenQuestion, makeQuestion } from '@/__tests__/materialFixtures'
 import { makeDone, makePracticeSession } from '@/__tests__/practiceFixtures'
 import { stubApi } from '@/__tests__/stubApi'
-import { makeLibrary, makeSubtopic, makeSubtopicDetail } from '@/__tests__/topicFixtures'
+import {
+  makeLibrary,
+  makeSource,
+  makeSubtopic,
+  makeSubtopicDetail,
+} from '@/__tests__/topicFixtures'
 import { pollInterval } from '@/composables/useGenerationPolling'
 import { undoWindow } from '@/composables/useUndoableDelete'
 import { useAuthStore, type User } from '@/stores/auth'
+import type { SubtopicSource } from '@/stores/topics'
 import SubtopicView from '../SubtopicView.vue'
 
 const user: User = {
@@ -322,6 +328,17 @@ describe('SubtopicView', () => {
     expect(calls('GET /subtopics/101')).toBe(2)
   })
 
+  it('only offers Generate from sources when the subtopic has a source', async () => {
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': Response.json(
+        makeSubtopicDetail({ notes: null, source_count: 0, sources: [] }),
+      ),
+    })
+
+    expect(wrapper.get('[data-test="generate"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="tab-sources"]').text()).toContain('0')
+  })
+
   it('makes cards in the background and shows them once they are ready', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
     const wrapper = await mountSubtopic({
@@ -370,7 +387,7 @@ describe('SubtopicView', () => {
     expect(calls('GET /subtopics/101')).toBe(3)
   })
 
-  it('says when the notes were already covered', async () => {
+  it('says when the sources were already covered', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
     const wrapper = await mountSubtopic({
       'GET /subtopics/101': [
@@ -382,7 +399,7 @@ describe('SubtopicView', () => {
     await vi.advanceTimersByTimeAsync(pollInterval)
     await flushPromises()
     expect(wrapper.get('[data-test="toast"]').text()).toContain('Nothing new to add')
-    expect(wrapper.get('[data-test="toast"]').text()).toContain('Your notes are already covered.')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Your sources are already covered.')
   })
 
   it('shows no toast when making the cards failed', async () => {
@@ -411,7 +428,7 @@ describe('SubtopicView', () => {
     })
 
     expect(wrapper.get('[data-test="generation-failed"]').text()).toContain(
-      "Sprout couldn't make cards from your notes.",
+      "Sprout couldn't make cards from your sources.",
     )
     expect(wrapper.get('[data-test="generation-badge"]').text()).toBe('Cards not made')
     expect(cardFronts(wrapper)).toHaveLength(2)
@@ -515,25 +532,182 @@ describe('SubtopicView', () => {
     expect(wrapper.findAll('[data-test="session"]')).toHaveLength(1)
   })
 
-  it('removes the notes as a source, with a chance to undo', async () => {
-    const wrapper = await mountSubtopic({
-      'PUT /subtopics/101': Response.json({
-        subtopic: makeSubtopic({ notes: null }),
-        added: { flashcards: 0, questions: 0 },
-      }),
+  describe('Sources tab', () => {
+    const tutorSource = makeSource({
+      id: 41,
+      type: 'tutor',
+      content: 'Chlorophyll absorbs **red and blue** light.',
+    })
+    const ownSource = makeSource({ id: 42, type: 'own', content: 'My own words on light.' })
+    const fileSource = makeSource({
+      id: 45,
+      type: 'file',
+      content: 'Photosynthesis happens in the chloroplasts.',
+      material: { id: 10, original_filename: 'photosynthesis-notes.txt' },
     })
 
-    await openTab(wrapper, 'sources')
-    expect(wrapper.get('[data-test="source"]').text()).toContain('Notes · 6 words')
+    function withSources(sources: SubtopicSource[]): Response {
+      return Response.json(
+        makeSubtopicDetail({
+          notes: sources.find((source) => source.type === 'own')?.content ?? null,
+          source_count: sources.length,
+          sources,
+        }),
+      )
+    }
 
-    await wrapper.get('[data-test="remove-source"]').trigger('click')
-    expect(wrapper.find('[data-test="source"]').exists()).toBe(false)
-    expect(wrapper.find('[data-test="add-source"]').exists()).toBe(true)
-    expect(wrapper.get('[data-test="toast"]').text()).toContain('Source removed')
+    function labels(wrapper: VueWrapper): string[] {
+      return wrapper.findAll('[data-test="source-label"]').map((label) => label.text())
+    }
 
-    await wrapper.get('[data-test="undo"]').trigger('click')
-    expect(wrapper.find('[data-test="source"]').exists()).toBe(true)
-    expect(calls('PUT /subtopics/101')).toBe(0)
+    it('lists every source in the API’s order, with its label, and shows it as Markdown', async () => {
+      const wrapper = await mountSubtopic({
+        'GET /subtopics/101': withSources([tutorSource, ownSource, fileSource]),
+      })
+
+      await openTab(wrapper, 'sources')
+      expect(wrapper.get('[data-test="tab-sources"]').text()).toContain('3')
+      expect(labels(wrapper)).toEqual([
+        'From the chat',
+        'Your notes',
+        'From photosynthesis-notes.txt',
+      ])
+      expect(wrapper.findAll('[data-test="source"]')[0]?.text()).toContain('Chat notes · 6 words')
+
+      await wrapper.findAll('[data-test="show-source"]')[0]?.trigger('click')
+      expect(wrapper.get('[data-test="source-content"] strong').text()).toBe('red and blue')
+
+      await wrapper.get('[data-test="search"]').setValue('notes.txt')
+      expect(labels(wrapper)).toEqual(['From photosynthesis-notes.txt'])
+    })
+
+    it('lets you edit only your own notes', async () => {
+      const wrapper = await mountSubtopic({
+        'GET /subtopics/101': withSources([tutorSource, ownSource, fileSource]),
+      })
+
+      await openTab(wrapper, 'sources')
+      const rows = wrapper.findAll('[data-test="source"]')
+      expect(rows.map((row) => row.find('[data-test="edit-notes"]').exists())).toEqual([
+        false,
+        true,
+        false,
+      ])
+      expect(wrapper.find('[data-test="add-notes"]').exists()).toBe(false)
+    })
+
+    it('offers to add your notes when you have none, in the form', async () => {
+      const wrapper = await mountSubtopic({
+        'GET /subtopics/101': withSources([tutorSource, fileSource]),
+        'GET /topics': Response.json(makeLibrary()),
+        'GET /categories': Response.json([]),
+      })
+
+      await openTab(wrapper, 'sources')
+      await wrapper.get('[data-test="add-notes"]').trigger('click')
+      await flushPromises()
+
+      const notes = wrapper.get('[data-test="notes"]').element as HTMLTextAreaElement
+      expect(wrapper.find('dialog').exists()).toBe(true)
+      expect(notes.value).toBe('')
+    })
+
+    it('shows the empty state without sources, and no Generate from sources', async () => {
+      const wrapper = await mountSubtopic({ 'GET /subtopics/101': withSources([]) })
+
+      await openTab(wrapper, 'sources')
+      expect(wrapper.get('[data-test="empty"]').text()).toContain('No sources yet.')
+      expect(wrapper.find('[data-test="empty-add-notes"]').exists()).toBe(true)
+      expect(
+        wrapper.get('[data-test="generate-from-sources"]').attributes('disabled'),
+      ).toBeDefined()
+    })
+
+    it('removes a source after the undo toast, then fetches the subtopic again', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+      const wrapper = await mountSubtopic({
+        'GET /subtopics/101': [
+          () => withSources([tutorSource, ownSource]),
+          () => withSources([ownSource]),
+        ],
+        'DELETE /subtopics/101/sources/41': noContent,
+      })
+
+      await openTab(wrapper, 'sources')
+      const remove = wrapper.findAll('[data-test="remove-source"]')[0]
+      expect(remove?.attributes('aria-label')).toBe('Remove From the chat')
+      await remove?.trigger('click')
+
+      expect(labels(wrapper)).toEqual(['Your notes'])
+      expect(wrapper.get('[data-test="toast"]').text()).toContain('Its cards and questions stay.')
+      expect(calls('DELETE /subtopics/101/sources/41')).toBe(0)
+
+      await vi.advanceTimersByTimeAsync(undoWindow)
+      await flushPromises()
+
+      expect(calls('DELETE /subtopics/101/sources/41')).toBe(1)
+      expect(calls('GET /subtopics/101')).toBe(2)
+      expect(labels(wrapper)).toEqual(['Your notes'])
+      expect(wrapper.get('[data-test="tab-sources"]').text()).toContain('1')
+    })
+
+    it('brings a source back when you undo', async () => {
+      const wrapper = await mountSubtopic({
+        'GET /subtopics/101': withSources([tutorSource, ownSource]),
+      })
+
+      await openTab(wrapper, 'sources')
+      await wrapper.findAll('[data-test="remove-source"]')[1]?.trigger('click')
+      expect(labels(wrapper)).toEqual(['From the chat'])
+
+      await wrapper.get('[data-test="undo"]').trigger('click')
+      expect(labels(wrapper)).toEqual(['From the chat', 'Your notes'])
+    })
+
+    it('fetches the subtopic again without an error when the source was already gone', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+      const wrapper = await mountSubtopic({
+        'GET /subtopics/101': [
+          () => withSources([tutorSource, ownSource]),
+          () => withSources([ownSource]),
+        ],
+        'DELETE /subtopics/101/sources/41': notFound,
+      })
+
+      await openTab(wrapper, 'sources')
+      await wrapper.findAll('[data-test="remove-source"]')[0]?.trigger('click')
+      await vi.advanceTimersByTimeAsync(undoWindow)
+      await flushPromises()
+
+      expect(calls('GET /subtopics/101')).toBe(2)
+      expect(wrapper.find('[data-test="form-error"]').exists()).toBe(false)
+      expect(wrapper.find('[data-test="not-found-title"]').exists()).toBe(false)
+      expect(labels(wrapper)).toEqual(['Your notes'])
+    })
+
+    it('shows the form without notes after you removed your own', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+      const wrapper = await mountSubtopic({
+        'GET /subtopics/101': [
+          () => withSources([tutorSource, ownSource]),
+          () => withSources([tutorSource]),
+        ],
+        'DELETE /subtopics/101/sources/42': noContent,
+        'GET /topics': Response.json(makeLibrary()),
+        'GET /categories': Response.json([]),
+      })
+
+      await openTab(wrapper, 'sources')
+      await wrapper.findAll('[data-test="remove-source"]')[1]?.trigger('click')
+      await vi.advanceTimersByTimeAsync(undoWindow)
+      await flushPromises()
+      vi.useRealTimers()
+
+      await wrapper.get('[data-test="add-notes"]').trigger('click')
+      await flushPromises()
+      const notes = wrapper.get('[data-test="notes"]').element as HTMLTextAreaElement
+      expect(notes.value).toBe('')
+    })
   })
 
   it('edits the subtopic in a dialog with your topics to move it to', async () => {
@@ -559,6 +733,27 @@ describe('SubtopicView', () => {
     )
     expect(body).toMatchObject({ topic_id: 1, title: 'Light reactions' })
     expect(wrapper.find('dialog').exists()).toBe(false)
+  })
+
+  it('opens the form with only your own notes, never the tutor’s', async () => {
+    const wrapper = await mountSubtopic({
+      'GET /subtopics/101': Response.json(
+        makeSubtopicDetail({
+          notes: null,
+          source_count: 1,
+          sources: [makeSource({ id: 41, type: 'tutor', content: 'From the tutor.' })],
+        }),
+      ),
+      'GET /topics': Response.json(makeLibrary()),
+      'GET /categories': Response.json([]),
+    })
+
+    await wrapper.get('[data-test="edit-subtopic"]').trigger('click')
+    await flushPromises()
+
+    const notes = wrapper.get('[data-test="notes"]').element as HTMLTextAreaElement
+    expect(notes.value).toBe('')
+    expect(wrapper.get('dialog').text()).toContain('Notes from the chat and your files stay')
   })
 
   it('deletes the subtopic after you confirm, and goes back to the knowledge map', async () => {

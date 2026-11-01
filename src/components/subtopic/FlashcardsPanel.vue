@@ -11,14 +11,16 @@ import type { Flashcard, FlashcardInput } from '@/stores/flashcards'
 /** Which card the editor is open for: one of them, or a new one. */
 export type CardEditorTarget = number | 'new'
 
-const { cards, editing, saving, editorError, generating } = defineProps<{
+const { cards, editing, saving, editorError, generating, hasSources } = defineProps<{
   cards: Flashcard[]
   /** Null while no editor is open. */
   editing: CardEditorTarget | null
   saving: boolean
   editorError: ApiError | null
-  /** While Sprout makes cards from the notes, or is about to. */
+  /** While Sprout makes cards from the sources, or is about to. */
   generating: boolean
+  /** Without a source there's nothing to generate from (the API refuses it). */
+  hasSources: boolean
 }>()
 
 const emit = defineEmits<{
@@ -47,7 +49,9 @@ const emptyMessage = computed<string>(() =>
   cards.length === 0
     ? generating
       ? 'No cards yet. They show up here once Sprout has made them.'
-      : 'No cards yet. Add one, or generate them from your notes.'
+      : hasSources
+        ? 'No cards yet. Add one, or generate them from your sources.'
+        : 'No cards yet. Add one, or add your notes on the Sources tab so Sprout can make them.'
     : 'No cards match. Clear the filter, or add one.',
 )
 </script>
@@ -63,7 +67,8 @@ const emptyMessage = computed<string>(() =>
       variant="ghost"
       size="sm"
       icon="sparkles"
-      :disabled="generating"
+      :disabled="generating || !hasSources"
+      :title="hasSources ? undefined : 'Add a source first, so Sprout has something to work from.'"
       data-test="generate"
       @click="emit('generate')"
     >

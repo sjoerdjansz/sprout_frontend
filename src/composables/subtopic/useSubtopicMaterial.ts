@@ -4,7 +4,7 @@ import { useUndoableDelete, type UndoableDelete } from '@/composables/useUndoabl
 import { useFlashcardsStore, type Flashcard } from '@/stores/flashcards'
 import { usePracticeStore, type PracticeSession } from '@/stores/practice'
 import { useQuestionsStore, type Question } from '@/stores/questions'
-import { useTopicsStore, type SubtopicDetail } from '@/stores/topics'
+import { useTopicsStore, type SubtopicDetail, type SubtopicSource } from '@/stores/topics'
 
 /**
  * The subtopic's material as the page shows it, and deleting it with a few seconds to undo.
@@ -17,14 +17,14 @@ export function useSubtopicMaterial(
   cards: ComputedRef<Flashcard[]>
   questions: ComputedRef<Question[]>
   sessions: ComputedRef<PracticeSession[]>
-  /** The only source for now; null when there are none (or they're being removed). */
-  notes: ComputedRef<string | null>
+  /** What the cards are made from, in the API's order, without one that's being removed. */
+  sources: ComputedRef<SubtopicSource[]>
   pending: Ref<UndoableDelete | null>
   undo: () => void
   flush: () => void
   removeCard: (card: Flashcard) => void
   removeQuestion: (question: Question) => void
-  removeNotes: () => void
+  removeSource: (source: SubtopicSource) => void
 } {
   const topicsStore = useTopicsStore()
   const flashcardsStore = useFlashcardsStore()
@@ -40,8 +40,8 @@ export function useSubtopicMaterial(
   )
   // Practice sessions are a record of what you did, so they can't be deleted.
   const sessions = computed<PracticeSession[]>(() => practiceStore.subtopicSessions)
-  const notes = computed<string | null>(() =>
-    subtopic.value?.notes && !isHidden('notes') ? subtopic.value.notes : null,
+  const sources = computed<SubtopicSource[]>(() =>
+    (subtopic.value?.sources ?? []).filter((source) => !isHidden(`source-${source.id}`)),
   )
 
   function removeCard(card: Flashcard): void {
@@ -66,23 +66,18 @@ export function useSubtopicMaterial(
     })
   }
 
-  // Removing the only source clears the notes; the cards and questions made from them stay.
-  function removeNotes(): void {
-    const current = subtopic.value
-    if (current === null) {
-      return
-    }
+  // The cards and questions made from a source stay: they don't remember where they came from.
+  // Fetching the subtopic again brings the new source count, and `notes` when it was your own.
+  // A 404 (already gone) reloads the page without an error, through `failAction`.
+  function removeSource(source: SubtopicSource): void {
+    const subtopicId = actions.subtopicId()
 
     schedule({
-      key: 'notes',
+      key: `source-${source.id}`,
       title: 'Source removed',
+      message: 'Its cards and questions stay. You can still undo this.',
       run: async () => {
-        await topicsStore.updateSubtopic(current.id, {
-          topicId: current.topic.id,
-          title: current.title,
-          description: current.description ?? '',
-          notes: '',
-        })
+        await topicsStore.removeSource(subtopicId, source.id)
         await actions.refreshHeader()
       },
     })
@@ -92,12 +87,12 @@ export function useSubtopicMaterial(
     cards,
     questions,
     sessions,
-    notes,
+    sources,
     pending,
     undo,
     flush,
     removeCard,
     removeQuestion,
-    removeNotes,
+    removeSource,
   }
 }

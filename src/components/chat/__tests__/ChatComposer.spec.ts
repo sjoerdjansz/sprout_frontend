@@ -73,3 +73,26 @@ describe('ChatComposer', () => {
     wrapper.unmount()
   })
 })
+
+describe('ChatComposer with attachments', () => {
+  it('attaches files you drop on it, or paste', async () => {
+    const wrapper = mountComposer({ attachments: [] })
+    const dropped = new File(['notes'], 'notes.md')
+
+    await wrapper.get('[data-test="composer"]').trigger('drop', {
+      dataTransfer: { files: [dropped], types: ['Files'] },
+    })
+    await wrapper.get('[data-test="composer-input"]').trigger('paste', {
+      clipboardData: { files: [dropped] },
+    })
+
+    expect(wrapper.emitted('attach')).toEqual([[[dropped]], [[dropped]]])
+  })
+
+  it('takes no files where attaching isn’t possible', () => {
+    const wrapper = mountComposer()
+
+    expect(wrapper.find('[data-test="attach"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="file-input"]').exists()).toBe(false)
+  })
+})

@@ -42,8 +42,8 @@ const emit = defineEmits<{
   >
     <BaseIcon name="circle-help" :size="18" class="flex-none" />
     <div class="flex min-w-0 flex-[1_1_240px] flex-col gap-0.5">
-      <p class="text-body-strong">Sprout couldn't make cards from your notes.</p>
-      <p class="text-body">Your notes and existing cards are fine. Try again in a moment.</p>
+      <p class="text-body-strong">Sprout couldn't make cards from your sources.</p>
+      <p class="text-body">Your sources and existing cards are fine. Try again in a moment.</p>
     </div>
     <BaseButton
       variant="secondary"

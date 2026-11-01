@@ -70,9 +70,30 @@ describe('conversations store', () => {
     })
     const store = useConversationsStore()
 
-    await store.startConversation('Quiz me on photosynthesis', 8)
+    await store.startConversation('Quiz me on photosynthesis', { topicId: 8 })
 
     expect(requestBody(fetchMock)).toEqual({ message: 'Quiz me on photosynthesis', topic_id: 8 })
+  })
+
+  it('sends material_ids only when there are files, in the order given', async () => {
+    const fetchMock = stubApi({
+      'POST /conversations': Response.json(makeConversation({ id: 11 }), { status: 201 }),
+      'POST /conversations/11/messages': Response.json(makeConversation({ id: 11 }), {
+        status: 201,
+      }),
+    })
+    const store = useConversationsStore()
+
+    await store.startConversation('Here are my notes', { materialIds: [9, 7] })
+    await store.sendMessage(11, 'And one more', [12])
+    await store.sendMessage(11, 'No files this time', [])
+
+    const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)))
+    expect(bodies).toEqual([
+      { message: 'Here are my notes', material_ids: [9, 7] },
+      { message: 'And one more', material_ids: [12] },
+      { message: 'No files this time' },
+    ])
   })
 
   it('sends a message and moves the conversation to the top of the history', async () => {

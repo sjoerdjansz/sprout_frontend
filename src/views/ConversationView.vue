@@ -4,12 +4,14 @@ import { useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
 import FormError from '@/components/FormError.vue'
 import ChatComposer from '@/components/chat/ChatComposer.vue'
+import type { MessageFile } from '@/components/chat/ChatMessage.vue'
 import ChatThread from '@/components/chat/ChatThread.vue'
 import ContinueLearning from '@/components/conversation/ContinueLearning.vue'
 import ConversationHeader from '@/components/conversation/ConversationHeader.vue'
 import SaveTopicDialog from '@/components/conversation/SaveTopicDialog.vue'
 import SavedNotice from '@/components/conversation/SavedNotice.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import { useComposerAttachments } from '@/composables/chat/useComposerAttachments'
 import { useSavedTopicGeneration } from '@/composables/conversation/useSavedTopicGeneration'
 import { ApiError } from '@/lib/api'
 import { chatErrorMessage } from '@/lib/chatError'
@@ -47,7 +49,10 @@ const userInitials = computed<string>(() => initials(auth.user?.name ?? ''))
 
 const message = ref('')
 const pendingMessage = ref<string | null>(null)
+const pendingFiles = ref<MessageFile[]>([])
 const sendError = ref<string | null>(null)
+const attachments = useComposerAttachments()
+const { attachments: attachedFiles, notice: attachmentNotice } = attachments
 
 const isSaveDialogOpen = ref(false)
 const openingSaveDialog = ref(false)
@@ -89,6 +94,7 @@ watch(
   () => id,
   () => {
     message.value = ''
+    attachments.reset()
     sendError.value = null
     openSaveError.value = null
     saveResult.value = null
@@ -99,22 +105,29 @@ watch(
 )
 
 async function send(text: string): Promise<void> {
+  const materialIds = attachments.readyIds.value
+  const sentFiles = attachments.takeForSending()
   pendingMessage.value = text
+  pendingFiles.value = sentFiles.map((file) => ({
+    original_filename: file.name,
+    size_bytes: file.sizeBytes,
+  }))
   message.value = ''
   sendError.value = null
   void scrollToNewest()
 
   try {
-    await conversationsStore.sendMessage(id, text)
+    await conversationsStore.sendMessage(id, text, materialIds)
   } catch (caught) {
     if (!(caught instanceof ApiError)) {
       throw caught
     }
-    // Nothing was stored, so give your text back to send again.
+    // Nothing was stored, so give your text and files back to send again (same ids, no upload).
     message.value = text
-    sendError.value = chatErrorMessage(caught)
+    sendError.value = attachments.restore(sentFiles, caught)
   } finally {
     pendingMessage.value = null
+    pendingFiles.value = []
     void scrollToNewest()
   }
 }
@@ -132,7 +145,7 @@ async function continueLearning(text: string): Promise<void> {
   void scrollToNewest()
 
   try {
-    const continued = await conversationsStore.startConversation(text, topicId)
+    const continued = await conversationsStore.startConversation(text, { topicId })
     await router.push({ name: 'conversation', params: { id: continued.id } })
   } catch (caught) {
     if (!(caught instanceof ApiError)) {
@@ -222,6 +235,7 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
         <ChatThread
           :messages="conversation.messages"
           :pending-message="pendingMessage"
+          :pending-files="pendingFiles"
           :user-initials="userInitials"
           class="grow"
         />
@@ -250,8 +264,12 @@ async function save(reviewedDraft: ReviewedDraft): Promise<void> {
             <ChatComposer
               v-model="message"
               :disabled="pendingMessage !== null"
+              :attachments="attachedFiles"
+              :attachment-notice="attachmentNotice"
               placeholder="Answer the tutor, or ask something new…"
               @send="send"
+              @attach="attachments.add"
+              @remove-attachment="attachments.remove"
             />
           </template>
         </div>

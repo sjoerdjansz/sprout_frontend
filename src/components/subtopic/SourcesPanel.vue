@@ -1,136 +1,167 @@
 <script setup lang="ts">
-import { computed, ref, useId } from 'vue'
+import { computed, ref } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIconButton from '@/components/BaseIconButton.vue'
 import MarkdownContent from '@/components/chat/MarkdownContent.vue'
 import MaterialRow from '@/components/subtopic/MaterialRow.vue'
 import MaterialToolbar from '@/components/subtopic/MaterialToolbar.vue'
 import { pluralize } from '@/lib/knowledgeMap'
-import { wordCount } from '@/lib/subtopicPage'
+import { relativeTime } from '@/lib/relativeTime'
+import {
+  filterSources,
+  sourceFilters,
+  sourceLabel,
+  sourceLooks,
+  wordCount,
+  type SourceFilter,
+} from '@/lib/subtopicPage'
+import type { SubtopicSource } from '@/stores/topics'
 
-const { notes, generatedCards, generatedQuestions, generating } = defineProps<{
-  /** For now a subtopic's only source: the notes its cards and questions are made from. */
-  notes: string | null
-  /** How many cards and questions Sprout made (not the ones you wrote yourself). */
-  generatedCards: number
-  generatedQuestions: number
-  /** While Sprout makes cards from the notes, or is about to. */
+const { sources, generating, hasSources } = defineProps<{
+  /** What the cards and questions are made from: the tutor's notes, yours, and file parts. */
+  sources: SubtopicSource[]
+  /** While Sprout makes cards from the sources, or is about to. */
   generating: boolean
+  /** Whether the API counts any source; nothing to generate from without one. */
+  hasSources: boolean
 }>()
 
 const emit = defineEmits<{
-  /** Adding and editing both go through the subtopic's notes, in the subtopic form. */
-  edit: []
+  /** Adding and editing your own notes both go through the subtopic form. */
+  editNotes: []
   generate: []
-  remove: []
+  remove: [source: SubtopicSource]
 }>()
 
 const query = ref('')
-const expanded = ref(false)
-const notesId = useId()
+const filter = ref<SourceFilter>('all')
+// One source open at a time, like the questions.
+const expandedId = ref<number | null>(null)
 
-const sourceName = 'Your notes'
+const shownSources = computed<SubtopicSource[]>(() =>
+  filterSources(sources, query.value, filter.value),
+)
 
-const shownNotes = computed<string | null>(() => {
-  const search = query.value.trim().toLowerCase()
-  if (notes === null || search === '') {
-    return notes
-  }
+// Your own notes are the one source you write yourself; there's at most one.
+const hasOwnNotes = computed<boolean>(() => sources.some((source) => source.type === 'own'))
 
-  return sourceName.toLowerCase().includes(search) || notes.toLowerCase().includes(search)
-    ? notes
-    : null
-})
+function toggle(sourceId: number): void {
+  expandedId.value = expandedId.value === sourceId ? null : sourceId
+}
+
+function contentId(source: SubtopicSource): string {
+  return `source-content-${source.id}`
+}
 </script>
 
 <template>
-  <!-- No filter chips: there's one kind of source for now. -->
-  <MaterialToolbar v-model:query="query" search-label="Search sources">
+  <MaterialToolbar
+    v-model:query="query"
+    v-model:filter="filter"
+    search-label="Search sources"
+    :filters="sourceFilters"
+  >
     <BaseButton
-      v-if="notes === null"
+      variant="ghost"
       size="sm"
-      icon="upload"
-      data-test="add-source"
-      @click="emit('edit')"
+      icon="sparkles"
+      :disabled="generating || !hasSources"
+      data-test="generate-from-sources"
+      @click="emit('generate')"
     >
-      Add source
+      {{ generating ? 'Making cards…' : 'Generate from sources' }}
+    </BaseButton>
+    <BaseButton
+      v-if="!hasOwnNotes"
+      size="sm"
+      icon="plus"
+      data-test="add-notes"
+      @click="emit('editNotes')"
+    >
+      Add your notes
     </BaseButton>
   </MaterialToolbar>
 
   <ul class="flex flex-col gap-0.5 p-2">
     <MaterialRow
-      v-if="shownNotes !== null"
-      icon="pencil"
-      tint="sun"
-      :highlighted="expanded"
+      v-for="source in shownSources"
+      :key="source.id"
+      :icon="sourceLooks[source.type].icon"
+      :tint="sourceLooks[source.type].tint"
+      :highlighted="expandedId === source.id"
       data-test="source"
     >
       <button
         type="button"
-        :aria-expanded="expanded"
-        :aria-controls="notesId"
+        :aria-expanded="expandedId === source.id"
+        :aria-controls="contentId(source)"
         class="flex cursor-pointer flex-col gap-0.5 rounded-sm text-left"
-        @click="expanded = !expanded"
+        @click="toggle(source.id)"
       >
-        <b class="text-[15px] leading-5 font-[650] text-ink">{{ sourceName }}</b>
+        <b class="text-[15px] leading-5 font-[650] break-words text-ink" data-test="source-label">
+          {{ sourceLabel(source) }}
+        </b>
         <span class="text-label font-normal text-ink-muted">
-          Notes · {{ pluralize(wordCount(shownNotes), 'word') }}
+          {{ sourceLooks[source.type].kind }} · {{ pluralize(wordCount(source.content), 'word') }}
         </span>
       </button>
       <div
-        v-if="expanded"
-        :id="notesId"
+        v-if="expandedId === source.id"
+        :id="contentId(source)"
         class="mt-2.5 max-w-180 rounded-sm bg-surface px-3 py-2.5 text-[14px] leading-5 text-ink"
-        data-test="notes-text"
+        data-test="source-content"
       >
-        <MarkdownContent :source="shownNotes" />
+        <MarkdownContent :source="source.content" />
       </div>
 
       <template #meta>
-        <span class="text-label text-ink">
-          {{ pluralize(generatedCards, 'card') }} · {{ pluralize(generatedQuestions, 'question') }}
+        <span class="text-caption font-normal text-ink-subtle">
+          Updated {{ relativeTime(source.updated_at) }}
         </span>
-        <span class="text-caption font-normal text-ink-subtle">made by Sprout</span>
       </template>
 
       <template #actions>
         <BaseIconButton
           icon="eye"
-          :label="expanded ? 'Hide notes' : 'Show notes'"
+          :label="expandedId === source.id ? 'Hide source' : 'Show source'"
           size="sm"
-          @click="expanded = !expanded"
+          data-test="show-source"
+          @click="toggle(source.id)"
         />
+        <!-- Only your own notes can be edited: the chat's notes and a file's words stay theirs. -->
         <BaseIconButton
-          icon="sparkles"
-          :label="generating ? 'Sprout is making cards' : 'Generate more cards from this'"
-          size="sm"
-          :disabled="generating"
-          data-test="generate-from-source"
-          @click="emit('generate')"
-        />
-        <BaseIconButton
+          v-if="source.type === 'own'"
           icon="pencil"
           label="Edit notes"
           size="sm"
-          data-test="edit-source"
-          @click="emit('edit')"
+          data-test="edit-notes"
+          @click="emit('editNotes')"
         />
         <BaseIconButton
           icon="trash-2"
-          label="Remove source"
+          :label="`Remove ${sourceLabel(source)}`"
           size="sm"
           data-test="remove-source"
-          @click="emit('remove')"
+          @click="emit('remove', source)"
         />
       </template>
     </MaterialRow>
 
-    <li v-else class="px-4 py-8 text-center text-[14px] text-ink-muted" data-test="empty">
-      {{
-        notes === null
-          ? 'No sources yet. Add your notes and Sprout turns them into cards and questions.'
-          : 'No sources match your search.'
-      }}
+    <li
+      v-if="shownSources.length === 0"
+      class="flex flex-col items-center gap-3 px-4 py-8 text-center text-[14px] text-ink-muted"
+      data-test="empty"
+    >
+      <template v-if="sources.length === 0">
+        <p>
+          No sources yet. Add your notes, or attach a file in the chat, and Sprout turns them into
+          cards and questions.
+        </p>
+        <BaseButton size="sm" icon="plus" data-test="empty-add-notes" @click="emit('editNotes')">
+          Add your notes
+        </BaseButton>
+      </template>
+      <p v-else>No sources match your search.</p>
     </li>
   </ul>
 </template>

@@ -67,7 +67,10 @@ async function send(
   }
   const request: RequestInit = { method, headers: requestHeaders }
 
-  if (body !== undefined) {
+  // A file upload goes as it is: the browser sets the multipart Content-Type with its boundary.
+  if (body instanceof FormData) {
+    request.body = body
+  } else if (body !== undefined) {
     requestHeaders['Content-Type'] = 'application/json'
     request.body = JSON.stringify(body)
   }
@@ -92,7 +95,7 @@ async function send(
 }
 
 /**
- * Call the Sprout API. Sends JSON, attaches the Sanctum bearer token when the
+ * Call the Sprout API. Sends JSON (or a `FormData` body as multipart, for uploads), attaches the Sanctum bearer token when the
  * user is signed in, and returns the parsed JSON body (or null for 204).
  *
  * The type parameter describes the response shape; it isn't checked at runtime.
