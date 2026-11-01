@@ -42,39 +42,42 @@ function toggleMix(): void {
 </script>
 
 <template>
-  <div class="grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] gap-2.5">
-    <OptionCard
-      v-for="mode in practiceModes"
-      :key="mode.id"
-      :pressed="selected.includes(mode.id)"
-      :disabled="unavailable[mode.id] !== undefined"
-      :data-test="`mode-${mode.id}`"
-      @toggle="toggle(mode.id)"
-    >
-      <IconTile :icon="mode.icon" :tint="mode.tint" />
-      <span class="flex min-w-0 flex-col">
-        <b class="text-body-strong">{{ mode.name }}</b>
-        <span class="text-caption font-normal text-ink-muted">
-          {{ unavailable[mode.id] ?? mode.blurb }}
+  <!-- Fixed columns per width, not auto-fit: the mix spans two of them, which only lines up when
+       the column count is known. Sized to the container, as the page beside it may be narrow. -->
+  <div class="@container">
+    <div class="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @2xl:grid-cols-3">
+      <OptionCard
+        v-for="mode in practiceModes"
+        :key="mode.id"
+        :pressed="selected.includes(mode.id)"
+        :disabled="unavailable[mode.id] !== undefined"
+        :data-test="`mode-${mode.id}`"
+        @toggle="toggle(mode.id)"
+      >
+        <IconTile :icon="mode.icon" :tint="mode.tint" />
+        <span class="flex min-w-0 flex-col">
+          <b class="text-body-strong">{{ mode.name }}</b>
+          <span class="text-caption font-normal text-ink-muted">
+            {{ unavailable[mode.id] ?? mode.blurb }}
+          </span>
         </span>
-      </span>
-    </OptionCard>
+      </OptionCard>
 
-    <OptionCard
-      :pressed="isMixed"
-      :disabled="mixIds.length < 2"
-      class="col-span-full"
-      data-test="mode-mix"
-      @toggle="toggleMix"
-    >
-      <IconTile icon="shuffle" tint="peach" />
-      <span class="flex min-w-0 flex-col">
-        <b class="text-body-strong">Mix it all</b>
-        <span class="text-caption font-normal text-ink-muted">
-          Every way to practise in one session, one after the other. The open session you add
-          yourself.
+      <OptionCard
+        :pressed="isMixed"
+        :disabled="mixIds.length < 2"
+        class="@md:col-span-2"
+        data-test="mode-mix"
+        @toggle="toggleMix"
+      >
+        <IconTile icon="shuffle" tint="gray" />
+        <span class="flex min-w-0 flex-col">
+          <b class="text-body-strong">Mix it all</b>
+          <span class="text-caption font-normal text-ink-muted">
+            Every way to practise in one session. You can add or omit the open session.
+          </span>
         </span>
-      </span>
-    </OptionCard>
+      </OptionCard>
+    </div>
   </div>
 </template>
