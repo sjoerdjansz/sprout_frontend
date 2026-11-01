@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
-import SubtopicRow from '@/components/knowledgeMap/SubtopicRow.vue'
-import { facets, pluralize } from '@/lib/knowledgeMap'
+import SubtopicRow from '@/components/topics/SubtopicRow.vue'
+import { facets, pluralize } from '@/lib/topics'
 import type { Subtopic, Topic } from '@/stores/topics'
 
 const { topic, subtopics } = defineProps<{

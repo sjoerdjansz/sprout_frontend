@@ -10,7 +10,7 @@ import { makePracticeSession } from '@/__tests__/practiceFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
 import { useConversationsStore } from '@/stores/conversations'
 import { usePracticeStore } from '@/stores/practice'
-import KnowledgeMapView from '../KnowledgeMapView.vue'
+import TopicsView from '../TopicsView.vue'
 
 const user: User = {
   id: 1,
@@ -38,7 +38,7 @@ function sentBody(route: string): unknown {
   return JSON.parse(String(call?.[1]?.body))
 }
 
-async function mountKnowledgeMap(routes: Routes = {}): Promise<VueWrapper> {
+async function mountTopics(routes: Routes = {}): Promise<VueWrapper> {
   fetchMock = stubApi({
     'GET /user': Response.json(user),
     'GET /conversations': Response.json([]),
@@ -46,7 +46,7 @@ async function mountKnowledgeMap(routes: Routes = {}): Promise<VueWrapper> {
     'GET /categories': Response.json(makeCategories()),
     ...routes,
   })
-  const wrapper = mount(KnowledgeMapView, { global: { plugins: [router] } })
+  const wrapper = mount(TopicsView, { global: { plugins: [router] } })
   await flushPromises()
 
   return wrapper
@@ -97,7 +97,7 @@ function validationError(field: string, message: string): Response {
   return Response.json({ message, errors: { [field]: [message] } }, { status: 422 })
 }
 
-describe('KnowledgeMapView', () => {
+describe('TopicsView', () => {
   beforeAll(() => {
     // jsdom doesn't implement showModal.
     HTMLDialogElement.prototype.showModal = vi.fn<() => void>()
@@ -107,7 +107,7 @@ describe('KnowledgeMapView', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     useAuthStore().setToken('1|abc')
-    await router.push('/knowledge-map')
+    await router.push('/topics')
   })
 
   afterEach(() => {
@@ -116,7 +116,7 @@ describe('KnowledgeMapView', () => {
   })
 
   it('sums up your library and shows the subtopics of the first topic', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
 
     expect(wrapper.get('[data-test="summary"]').text()).toBe(
       '4 topics · 8 subtopics · 1 mastered · 11 cards due today',
@@ -133,13 +133,13 @@ describe('KnowledgeMapView', () => {
   })
 
   it('opens the page of a subtopic from its row', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
 
     expect(wrapper.get('[data-test="subtopic"]').attributes('href')).toBe('/subtopics/101')
   })
 
   it('says what to do when the library cannot load, and tries again', async () => {
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'GET /topics': [
         () => Response.json({ message: 'Something went wrong.' }, { status: 500 }),
         () => Response.json(makeLibrary()),
@@ -154,13 +154,13 @@ describe('KnowledgeMapView', () => {
   })
 
   it('invites you to add a first topic when your library is empty', async () => {
-    const wrapper = await mountKnowledgeMap({ 'GET /topics': Response.json([]) })
+    const wrapper = await mountTopics({ 'GET /topics': Response.json([]) })
 
     expect(wrapper.get('[data-test="empty-library"]').text()).toContain('Your library is empty')
   })
 
   it('narrows the cards as you search, and clears the filters when nothing matches', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
 
     await wrapper.get('[data-test="search"]').setValue('recursion')
     expect(cardTitles(wrapper)).toEqual([expect.stringContaining('Computer science')])
@@ -174,7 +174,7 @@ describe('KnowledgeMapView', () => {
   })
 
   it('filters by category and by what needs attention', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
 
     const chips = wrapper.findAll('[data-test="category-chip"]')
     // Only categories in use get a chip.
@@ -193,7 +193,7 @@ describe('KnowledgeMapView', () => {
     const scrollIntoView = vi.fn<(options?: ScrollIntoViewOptions) => void>()
     Element.prototype.scrollIntoView = scrollIntoView
     vi.stubGlobal('matchMedia', () => ({ matches: false }))
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
     const list = wrapper.get('section[aria-label="Subtopics"]').element
 
     // On screen (jsdom's default position): nothing moves.
@@ -207,7 +207,7 @@ describe('KnowledgeMapView', () => {
   })
 
   it('shows a subtopic you search for, even when another topic was picked', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
 
     await wrapper.get('[data-test="search"]').setValue('recursion')
 
@@ -219,7 +219,7 @@ describe('KnowledgeMapView', () => {
   })
 
   it('shows the subtopics of the topic you pick', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
 
     await selectTopic(wrapper, 'Chemistry')
 
@@ -228,8 +228,8 @@ describe('KnowledgeMapView', () => {
   })
 
   it('keeps the topic you picked in the URL, so coming back shows it again', async () => {
-    await router.push('/knowledge-map?topic=2')
-    const wrapper = await mountKnowledgeMap()
+    await router.push('/topics?topic=2')
+    const wrapper = await mountTopics()
 
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
 
@@ -238,14 +238,14 @@ describe('KnowledgeMapView', () => {
   })
 
   it('falls back to the first topic for a topic that is not in your library', async () => {
-    await router.push('/knowledge-map?topic=999')
-    const wrapper = await mountKnowledgeMap()
+    await router.push('/topics?topic=999')
+    const wrapper = await mountTopics()
 
     expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
   })
 
   it('adds a topic in a dialog and shows it', async () => {
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'POST /topics': Response.json(makeTopic({ id: 9, title: 'Astronomy' }), { status: 201 }),
     })
 
@@ -264,7 +264,7 @@ describe('KnowledgeMapView', () => {
   })
 
   it('keeps the dialog open with the API message when saving fails', async () => {
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'POST /topics': validationError('title', 'Give your topic a name.'),
     })
 
@@ -278,7 +278,7 @@ describe('KnowledgeMapView', () => {
 
   it('adds a topic in a category of your own, which then gets a chip', async () => {
     const guitar = makeTopic({ id: 9, title: 'Guitar', category: { id: 31, name: 'Music' } })
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'POST /topics': Response.json(guitar, { status: 201 }),
     })
 
@@ -294,7 +294,7 @@ describe('KnowledgeMapView', () => {
   })
 
   it("edits any topic from its card's menu", async () => {
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'PUT /topics/2': Response.json(makeTopic({ id: 2, title: 'Chemistry basics' })),
     })
 
@@ -321,7 +321,7 @@ describe('KnowledgeMapView', () => {
       is_new: true,
       generation_status: 'generating',
     })
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'POST /subtopics': Response.json({ subtopic: respiration }, { status: 201 }),
     })
 
@@ -347,7 +347,7 @@ describe('KnowledgeMapView', () => {
     for (const subtopic of generatingLibrary[0]?.subtopics.slice(0, 2) ?? []) {
       subtopic.generation_status = 'generating'
     }
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'GET /topics': [
         () => Response.json(generatingLibrary),
         () => Response.json(generatingLibrary),
@@ -378,7 +378,7 @@ describe('KnowledgeMapView', () => {
     if (first !== undefined) {
       first.generation_status = 'generating'
     }
-    const wrapper = await mountKnowledgeMap({
+    const wrapper = await mountTopics({
       'GET /topics': [
         () => Response.json(generatingLibrary),
         () => Response.json({ message: 'Something went wrong on our side.' }, { status: 500 }),
@@ -404,7 +404,7 @@ describe('KnowledgeMapView', () => {
     if (first !== undefined) {
       first.generation_status = 'failed'
     }
-    const wrapper = await mountKnowledgeMap({ 'GET /topics': Response.json(failedLibrary) })
+    const wrapper = await mountTopics({ 'GET /topics': Response.json(failedLibrary) })
 
     expect(captions(wrapper)).toContain("Sprout couldn't make its cards. Try again on its page.")
   })
@@ -431,7 +431,7 @@ describe('KnowledgeMapView', () => {
     }
 
     it('suggests subtopics after you save a changed source, and adds the ones you keep', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'PUT /topics/1': Response.json(makeTopic({ notes: source })),
         'POST /topics/1/subtopic-suggestions': Response.json(suggested),
         'POST /topics/1/subtopics': Response.json(
@@ -475,7 +475,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('says when your subtopics already cover the source', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'PUT /topics/1': Response.json(makeTopic({ notes: source })),
         'POST /topics/1/subtopic-suggestions': Response.json({ suggestions: [] }),
       })
@@ -489,7 +489,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('asks no suggestions when the source didn’t change', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'PUT /topics/1': Response.json(makeTopic({ title: 'Biology basics' })),
       })
 
@@ -501,7 +501,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('lets you try again when Sprout can’t read the source, and skip', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'PUT /topics/1': Response.json(makeTopic({ notes: source })),
         'POST /topics/1/subtopic-suggestions': [
           () => Response.json({ message: 'The tutor can’t answer right now.' }, { status: 503 }),
@@ -521,7 +521,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('shows a name the topic already has under its row, and keeps the review', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'PUT /topics/1': Response.json(makeTopic({ notes: source })),
         'POST /topics/1/subtopic-suggestions': Response.json(suggested),
         'POST /topics/1/subtopics': validationError(
@@ -543,6 +543,13 @@ describe('KnowledgeMapView', () => {
     })
   })
 
+  it('sends an old /knowledge-map link here, with its topic', async () => {
+    await router.push('/knowledge-map?topic=2')
+
+    expect(router.currentRoute.value.name).toBe('topics')
+    expect(router.currentRoute.value.query).toEqual({ topic: '2' })
+  })
+
   describe('deleting a topic', () => {
     async function openDelete(wrapper: VueWrapper, topicTitle: string): Promise<void> {
       await wrapper
@@ -560,7 +567,7 @@ describe('KnowledgeMapView', () => {
     }
 
     it('says what goes and deletes the topic once you confirm', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'GET /conversations': Response.json([
           makeSummary({ id: 7, topic: { id: 2, title: 'Chemistry' } }),
           makeSummary({ id: 8, topic: { id: 1, title: 'Biology' } }),
@@ -591,7 +598,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('deletes nothing when you cancel', async () => {
-      const wrapper = await mountKnowledgeMap()
+      const wrapper = await mountTopics()
 
       await openDelete(wrapper, 'Chemistry')
       const cancel = wrapper.findAll('dialog button').find((button) => button.text() === 'Cancel')
@@ -603,7 +610,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('keeps the topic and shows the API’s message when deleting fails', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'DELETE /topics/2': Response.json(
           { message: 'Can’t reach Sprout right now. Try again.' },
           { status: 500 },
@@ -621,7 +628,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('treats a topic that is already gone as deleted', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'DELETE /topics/2': Response.json({ message: 'Not found.' }, { status: 404 }),
       })
 
@@ -635,7 +642,7 @@ describe('KnowledgeMapView', () => {
   })
 
   it('opens a card’s menu without selecting the card', async () => {
-    const wrapper = await mountKnowledgeMap()
+    const wrapper = await mountTopics()
 
     await wrapper.get('[data-test="topic-menu"][aria-label="More for Chemistry"]').trigger('click')
     await flushPromises()
@@ -656,7 +663,7 @@ describe('KnowledgeMapView', () => {
     }
 
     it('edits the subtopic with its own notes filled in', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'PUT /subtopics/101': Response.json({
           subtopic: makeSubtopic({ title: 'Photosynthesis basics' }),
         }),
@@ -686,7 +693,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('deletes the subtopic once you confirm, and keeps the others', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'DELETE /subtopics/101': new Response(null, { status: 204 }),
       })
 
@@ -702,7 +709,7 @@ describe('KnowledgeMapView', () => {
     })
 
     it('keeps the subtopic and shows the API’s message when deleting fails', async () => {
-      const wrapper = await mountKnowledgeMap({
+      const wrapper = await mountTopics({
         'DELETE /subtopics/101': Response.json(
           { message: 'Can’t reach Sprout right now. Try again.' },
           { status: 500 },

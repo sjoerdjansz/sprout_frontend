@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/BaseButton.vue'
-import LibraryToolbar from '@/components/knowledgeMap/LibraryToolbar.vue'
-import TopicCard from '@/components/knowledgeMap/TopicCard.vue'
+import LibraryToolbar from '@/components/topics/LibraryToolbar.vue'
+import TopicCard from '@/components/topics/TopicCard.vue'
 import type { Category, Topic } from '@/stores/topics'
 
 const { topics, libraryIsEmpty, filterCategories, selectedTopicId, attentionCount } = defineProps<{

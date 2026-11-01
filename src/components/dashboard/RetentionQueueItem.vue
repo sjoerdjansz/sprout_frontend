@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import IconTile from '@/components/IconTile.vue'
 import type { QueueTopic } from '@/lib/dashboard'
-import { pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/topics'
 
 const { item } = defineProps<{
   item: QueueTopic

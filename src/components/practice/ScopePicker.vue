@@ -5,7 +5,7 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import IconTile from '@/components/IconTile.vue'
 import OptionCard from '@/components/OptionCard.vue'
-import { dueCards, pluralize, subtopicCaption, topicAppearance } from '@/lib/knowledgeMap'
+import { dueCards, pluralize, subtopicCaption, topicAppearance } from '@/lib/topics'
 import type { Topic } from '@/stores/topics'
 
 const { topics, showWholeTopicTip } = defineProps<{

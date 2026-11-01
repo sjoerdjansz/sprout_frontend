@@ -52,12 +52,7 @@ const emit = defineEmits<{
     </div>
 
     <SidebarNavLink icon="house" label="Dashboard" :to="{ name: 'home' }" :collapsed="collapsed" />
-    <SidebarNavLink
-      icon="network"
-      label="Knowledge map"
-      :to="{ name: 'knowledge-map' }"
-      :collapsed="collapsed"
-    />
+    <SidebarNavLink icon="network" label="Topics" :to="{ name: 'topics' }" :collapsed="collapsed" />
     <SidebarNavLink
       icon="target"
       label="Practice center"

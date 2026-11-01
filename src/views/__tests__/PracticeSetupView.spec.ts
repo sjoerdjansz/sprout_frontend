@@ -251,7 +251,7 @@ describe('PracticeSetupView', () => {
     expect(withoutHint.get('[data-test="why-this-helps"]').text()).not.toContain('second try')
   })
 
-  it('points to the knowledge map when there is nothing to practise', async () => {
+  it('points to your topics when there is nothing to practise', async () => {
     const wrapper = await mountSetup('/practice', { 'GET /topics': Response.json([]) })
 
     expect(wrapper.find('[data-test="empty-library"]').exists()).toBe(true)

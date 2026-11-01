@@ -3,7 +3,7 @@ import type { SubtopicPageActions } from '@/composables/subtopic/useSubtopicLoad
 import { useGenerationPolling } from '@/composables/useGenerationPolling'
 import type { Toast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
-import { pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/topics'
 import { useFlashcardsStore } from '@/stores/flashcards'
 import { useQuestionsStore } from '@/stores/questions'
 import { useTopicsStore, type GenerationStatus, type SubtopicDetail } from '@/stores/topics'

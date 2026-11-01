@@ -6,9 +6,9 @@ import BaseButton from '@/components/BaseButton.vue'
 import BaseIcon from '@/components/BaseIcon.vue'
 import BaseIconButton from '@/components/BaseIconButton.vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import { facetStateClasses } from '@/components/knowledgeMap/facetStateClasses'
+import { facetStateClasses } from '@/components/topics/facetStateClasses'
 import SubtopicMenu from '@/components/subtopic/SubtopicMenu.vue'
-import { facetState, facets, subtopicLevel, type Level } from '@/lib/knowledgeMap'
+import { facetState, facets, subtopicLevel, type Level } from '@/lib/topics'
 import type { FacetProgress, SubtopicDetail } from '@/stores/topics'
 
 const { subtopic } = defineProps<{
@@ -37,13 +37,13 @@ const crumbClasses =
 
 <template>
   <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2">
-    <RouterLink :to="{ name: 'knowledge-map' }" :class="crumbClasses" data-test="crumb-library">
+    <RouterLink :to="{ name: 'topics' }" :class="crumbClasses" data-test="crumb-library">
       <BaseIcon name="chevron-left" :size="16" />
-      Knowledge map
+      Topics
     </RouterLink>
     <span aria-hidden="true" class="text-ink-subtle">/</span>
     <RouterLink
-      :to="{ name: 'knowledge-map', query: { topic: subtopic.topic.id } }"
+      :to="{ name: 'topics', query: { topic: subtopic.topic.id } }"
       :class="crumbClasses"
       data-test="crumb-topic"
     >

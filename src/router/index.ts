@@ -7,7 +7,7 @@ import CheckEmailView from '@/views/CheckEmailView.vue'
 import ConversationView from '@/views/ConversationView.vue'
 import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
-import KnowledgeMapView from '@/views/KnowledgeMapView.vue'
+import TopicsView from '@/views/TopicsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import EmailConfirmView from '@/views/EmailConfirmView.vue'
 import ProfileSettings from '@/views/settings/ProfileSettings.vue'
@@ -47,10 +47,15 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/knowledge-map',
-      name: 'knowledge-map',
-      component: KnowledgeMapView,
+      path: '/topics',
+      name: 'topics',
+      component: TopicsView,
       meta: { requiresAuth: true },
+    },
+    // The page was called the knowledge map until 2026-11-01; old links and bookmarks still work.
+    {
+      path: '/knowledge-map',
+      redirect: (to) => ({ name: 'topics', query: to.query }),
     },
     {
       path: '/subtopics/:id',

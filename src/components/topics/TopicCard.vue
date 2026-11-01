@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ProgressRing from '@/components/ProgressRing.vue'
-import ItemMenu from '@/components/knowledgeMap/ItemMenu.vue'
-import { averageMastery, dueCards, pluralize } from '@/lib/knowledgeMap'
+import ItemMenu from '@/components/topics/ItemMenu.vue'
+import { averageMastery, dueCards, pluralize } from '@/lib/topics'
 import type { Topic } from '@/stores/topics'
 
 const { topic, selected } = defineProps<{

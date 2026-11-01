@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseIcon from '@/components/BaseIcon.vue'
-import { facetStateClasses } from '@/components/knowledgeMap/facetStateClasses'
-import { facetState, facets, holdingCount } from '@/lib/knowledgeMap'
+import { facetStateClasses } from '@/components/topics/facetStateClasses'
+import { facetState, facets, holdingCount } from '@/lib/topics'
 import type { FacetProgress, Subtopic } from '@/stores/topics'
 
 const { subtopic } = defineProps<{

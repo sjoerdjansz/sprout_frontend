@@ -5,19 +5,19 @@ import BaseButton from '@/components/BaseButton.vue'
 import type { SelectOption } from '@/components/BaseSelect.vue'
 import BaseToast from '@/components/BaseToast.vue'
 import FormError from '@/components/FormError.vue'
-import DeleteTopicDialog from '@/components/knowledgeMap/DeleteTopicDialog.vue'
+import DeleteTopicDialog from '@/components/topics/DeleteTopicDialog.vue'
 import DeleteSubtopicDialog from '@/components/subtopic/DeleteSubtopicDialog.vue'
-import SubtopicList from '@/components/knowledgeMap/SubtopicList.vue'
-import SubtopicSuggestionsDialog from '@/components/knowledgeMap/SubtopicSuggestionsDialog.vue'
+import SubtopicList from '@/components/topics/SubtopicList.vue'
+import SubtopicSuggestionsDialog from '@/components/topics/SubtopicSuggestionsDialog.vue'
 import TopicFormDialog, {
   type TopicFormMode,
   type TopicFormValues,
-} from '@/components/knowledgeMap/TopicFormDialog.vue'
-import TopicLibrary from '@/components/knowledgeMap/TopicLibrary.vue'
+} from '@/components/topics/TopicFormDialog.vue'
+import TopicLibrary from '@/components/topics/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useDeleteSubtopicFromMap } from '@/composables/knowledgeMap/useDeleteSubtopicFromMap'
-import { useDeleteTopic } from '@/composables/knowledgeMap/useDeleteTopic'
-import { useSubtopicSuggestions } from '@/composables/knowledgeMap/useSubtopicSuggestions'
+import { useDeleteSubtopicFromList } from '@/composables/topics/useDeleteSubtopicFromList'
+import { useDeleteTopic } from '@/composables/topics/useDeleteTopic'
+import { useSubtopicSuggestions } from '@/composables/topics/useSubtopicSuggestions'
 import { useGenerationPolling } from '@/composables/useGenerationPolling'
 import { useToast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
@@ -28,7 +28,7 @@ import {
   usedCategories,
   visibleSubtopics,
   type LibraryFilters,
-} from '@/lib/knowledgeMap'
+} from '@/lib/topics'
 import { useTopicsStore, type Category, type Topic } from '@/stores/topics'
 
 const route = useRoute()
@@ -37,7 +37,7 @@ const topicsStore = useTopicsStore()
 const { toast, showToast } = useToast()
 const suggestions = useSubtopicSuggestions(showToast)
 const deleteTopic = useDeleteTopic(showToast)
-const deleteSubtopic = useDeleteSubtopicFromMap(showToast)
+const deleteSubtopic = useDeleteSubtopicFromList(showToast)
 
 type LoadState = 'loading' | 'loaded' | 'failed'
 
@@ -315,7 +315,7 @@ async function save(values: TopicFormValues): Promise<void> {
 <template>
   <AppLayout>
     <header class="flex flex-none flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-      <h1 class="font-display text-title-lg text-ink">Knowledge map</h1>
+      <h1 class="font-display text-title-lg text-ink">Topics</h1>
       <p
         v-if="loadState === 'loaded'"
         class="text-label font-normal text-ink-muted"

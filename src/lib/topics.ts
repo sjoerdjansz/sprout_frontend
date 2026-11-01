@@ -1,5 +1,5 @@
 /*
- * The knowledge map's rules: when a subtopic counts as mastered or slipping, what needs your
+ * The topics page's rules: when a subtopic counts as mastered or slipping, what needs your
  * attention, and which topics a search shows. Kept apart from the
  * components so they stay presentational and the rules are easy to test.
  */

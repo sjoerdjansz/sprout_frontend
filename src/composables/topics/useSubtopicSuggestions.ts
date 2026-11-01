@@ -1,7 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { Toast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
-import { pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/topics'
 import { useTopicsStore, type SubtopicSuggestion, type Topic } from '@/stores/topics'
 
 /** Reading the source, reviewing what Sprout suggests, or adding the ones you kept. */

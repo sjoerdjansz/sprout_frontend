@@ -5,9 +5,9 @@ import { useTopicsStore, type Subtopic } from '@/stores/topics'
 
 /**
  * Deleting a subtopic from its row's menu, after you confirm it in a dialog. The subtopic page has
- * its own (`composables/subtopic/useDeleteSubtopic`), which goes back to the map afterwards.
+ * its own (`composables/subtopic/useDeleteSubtopic`), which goes back to the topics page afterwards.
  */
-export function useDeleteSubtopicFromMap(showToast: (toast: Toast) => void): {
+export function useDeleteSubtopicFromList(showToast: (toast: Toast) => void): {
   /** The subtopic you're asked to confirm; null while the dialog is closed. */
   subtopic: Ref<Subtopic | null>
   deleting: Ref<boolean>

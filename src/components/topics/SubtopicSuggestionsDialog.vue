@@ -3,13 +3,13 @@ import { computed } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import FormError from '@/components/FormError.vue'
-import SuggestionRow from '@/components/knowledgeMap/SuggestionRow.vue'
+import SuggestionRow from '@/components/topics/SuggestionRow.vue'
 import type {
   SuggestionRow as Row,
   SuggestionsPhase,
-} from '@/composables/knowledgeMap/useSubtopicSuggestions'
+} from '@/composables/topics/useSubtopicSuggestions'
 import type { ApiError } from '@/lib/api'
-import { pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/topics'
 
 const { topicTitle, phase, rows, error, rowErrors, keptCount, canAdd } = defineProps<{
   topicTitle: string

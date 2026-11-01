@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import FacetDots from '@/components/knowledgeMap/FacetDots.vue'
-import ItemMenu from '@/components/knowledgeMap/ItemMenu.vue'
-import { subtopicCaption, type Caption } from '@/lib/knowledgeMap'
+import FacetDots from '@/components/topics/FacetDots.vue'
+import ItemMenu from '@/components/topics/ItemMenu.vue'
+import { subtopicCaption, type Caption } from '@/lib/topics'
 import type { Subtopic } from '@/stores/topics'
 
 const { subtopic } = defineProps<{

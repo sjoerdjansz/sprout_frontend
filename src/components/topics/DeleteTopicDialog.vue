@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseDialog from '@/components/BaseDialog.vue'
 import FormError from '@/components/FormError.vue'
-import { pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/topics'
 
 const { title, subtopicCount, deleting, error } = defineProps<{
   /** The topic's name. */

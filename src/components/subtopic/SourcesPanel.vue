@@ -5,7 +5,7 @@ import BaseIconButton from '@/components/BaseIconButton.vue'
 import MarkdownContent from '@/components/chat/MarkdownContent.vue'
 import MaterialRow from '@/components/subtopic/MaterialRow.vue'
 import MaterialToolbar from '@/components/subtopic/MaterialToolbar.vue'
-import { pluralize } from '@/lib/knowledgeMap'
+import { pluralize } from '@/lib/topics'
 import { relativeTime } from '@/lib/relativeTime'
 import {
   filterSources,

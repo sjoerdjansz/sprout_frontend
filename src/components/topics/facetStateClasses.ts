@@ -1,4 +1,4 @@
-import type { FacetState } from '@/lib/knowledgeMap'
+import type { FacetState } from '@/lib/topics'
 
 /** Solid sprout once a facet holds, soft while you're practising it, sunken before you start. */
 export const facetStateClasses: Record<FacetState, string> = {

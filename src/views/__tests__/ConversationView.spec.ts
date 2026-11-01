@@ -179,7 +179,7 @@ describe('ConversationView', () => {
     expect(wrapper.find('[data-test="continue"] [data-test="composer-input"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="open-save"]').exists()).toBe(false)
     expect(wrapper.get('[data-test="saved-notice"]').text()).toContain(
-      'This conversation is saved to your knowledge map.',
+      'This conversation is saved to your topics.',
     )
   })
 
@@ -330,7 +330,7 @@ describe('ConversationView', () => {
     await vi.advanceTimersByTimeAsync(pollInterval)
     await flushPromises()
     expect(notice()).not.toContain('Sprout is making your cards…')
-    expect(notice()).toContain('This conversation is saved to your knowledge map.')
+    expect(notice()).toContain('This conversation is saved to your topics.')
   })
 
   it('keeps asking while any subtopic of the topic is generating, also one the save left out', async () => {

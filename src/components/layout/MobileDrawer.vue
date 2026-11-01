@@ -46,9 +46,9 @@ const links: DrawerLink[] = [
   },
   {
     icon: 'network',
-    label: 'Knowledge map',
+    label: 'Topics',
     description: 'All topics and mastery scores',
-    to: { name: 'knowledge-map' },
+    to: { name: 'topics' },
   },
   {
     icon: 'target',

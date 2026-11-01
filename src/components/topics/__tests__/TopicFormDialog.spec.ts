@@ -4,7 +4,7 @@ import { ApiError } from '@/lib/api'
 import TopicFormDialog, {
   type TopicFormMode,
   type TopicFormValues,
-} from '@/components/knowledgeMap/TopicFormDialog.vue'
+} from '@/components/topics/TopicFormDialog.vue'
 
 const emptyValues: TopicFormValues = {
   title: '',
