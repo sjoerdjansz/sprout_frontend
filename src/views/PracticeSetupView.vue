@@ -126,9 +126,9 @@ onMounted(() => {
         </template>
         <FormError v-if="setup.startError.value" :message="setup.startError.value" />
         <SessionSummary
-          :blocks="setup.blocks.value"
-          :scope="setup.scopeLabel.value"
-          :order="setup.orderLabel.value"
+          :blocks="setup.summary.value.blocks"
+          :scope="setup.summary.value.scopeLabel"
+          :order="setup.summary.value.orderLabel"
           :loading="setup.materialState.value === 'loading'"
           :second-try="setup.secondTry.value"
           :no-modes="modes.length === 0"

@@ -142,6 +142,29 @@ describe('PracticeSetupView', () => {
     expect(wrapper.get('[data-test="mode-mix"]').attributes('disabled')).toBeDefined()
   })
 
+  it('keeps the last summary while another subtopic’s cards load', async () => {
+    let answerCards: (response: Response) => void = () => {}
+    const wrapper = await mountSetup('/practice?subtopic=101', {
+      'GET /subtopics/102/flashcards': () =>
+        new Promise<Response>((resolve) => {
+          answerCards = resolve
+        }),
+    })
+    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Flashcards')
+
+    await wrapper.get('[data-test="scope-102"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Flashcards')
+    expect(wrapper.get('[data-test="start-session"]').text()).toBe('Getting your cards…')
+
+    answerCards(Response.json([]))
+    await flushPromises()
+
+    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Explain it')
+    expect(wrapper.get('[data-test="start-session"]').text()).toBe('Start session')
+  })
+
   it('loads the cards of the whole topic and offers interleaving', async () => {
     const wrapper = await mountSetup('/practice?topic=1')
 

@@ -24,6 +24,13 @@ import { useTopicsStore, type Topic } from '@/stores/topics'
 
 export type LoadState = 'loading' | 'loaded' | 'failed'
 
+/** What the "Your session" card shows: the blocks, and the scope and order in words. */
+export interface SetupSummary {
+  blocks: PracticeBlock[]
+  scopeLabel: string
+  orderLabel: string | null
+}
+
 export interface PracticeSetup {
   libraryState: Ref<LoadState>
   libraryError: Ref<string>
@@ -40,9 +47,8 @@ export interface PracticeSetup {
   secondTry: Ref<boolean>
   scope: ComputedRef<PracticeScope | null>
   unavailable: ComputedRef<Partial<Record<PracticeModeId, string>>>
-  blocks: ComputedRef<PracticeBlock[]>
-  scopeLabel: ComputedRef<string>
-  orderLabel: ComputedRef<string | null>
+  /** While another scope's cards load, the summary of the last one that loaded. */
+  summary: ComputedRef<SetupSummary>
   /** Flashcards or the quiz is on: the only modes with an amount and order to pick. */
   hasSizedMode: ComputedRef<boolean>
   showWholeTopicTip: ComputedRef<boolean>
@@ -152,6 +158,16 @@ export function usePracticeSetup(): PracticeSetup {
     }
 
     return interleave.value ? `Mixed subtopics, ${due}` : `One subtopic at a time, ${due}`
+  })
+
+  // Emptying the card while another scope loads made it shrink and jump back a moment later, so
+  // it keeps showing the last loaded summary and swaps in the new one when it's there.
+  const summary = computed<SetupSummary>((previous) => {
+    if (materialState.value === 'loading' && previous !== undefined) {
+      return previous
+    }
+
+    return { blocks: blocks.value, scopeLabel: scopeLabel.value, orderLabel: orderLabel.value }
   })
 
   const showWholeTopicTip = computed<boolean>(
@@ -300,9 +316,7 @@ export function usePracticeSetup(): PracticeSetup {
     secondTry,
     scope,
     unavailable,
-    blocks,
-    scopeLabel,
-    orderLabel,
+    summary,
     hasSizedMode,
     showWholeTopicTip,
     current: computed<PracticeSession | null>(() => practiceStore.current),
