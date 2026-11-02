@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import BaseButton from '@/components/BaseButton.vue'
-import BaseIcon from '@/components/BaseIcon.vue'
 import SubtopicRow from '@/components/topics/SubtopicRow.vue'
-import { facets, pluralize } from '@/lib/topics'
+import { pluralize } from '@/lib/topics'
 import type { Subtopic, Topic } from '@/stores/topics'
 
 const { topic, subtopics } = defineProps<{
@@ -29,24 +28,15 @@ const emit = defineEmits<{
           </span>
         </h2>
       </div>
-      <div class="flex items-center gap-4">
-        <span class="flex flex-wrap gap-x-3.5 gap-y-1.5 text-caption font-normal text-ink-subtle">
-          <span v-for="facet in facets" :key="facet.key" class="inline-flex items-center gap-1">
-            <BaseIcon :name="facet.icon" :size="14" />
-            {{ facet.label }}
-          </span>
-          <span>· solid = holding over time</span>
-        </span>
-        <BaseButton
-          variant="ghost"
-          size="sm"
-          icon="plus"
-          data-test="add-subtopic"
-          @click="emit('addSubtopic')"
-        >
-          Add subtopic
-        </BaseButton>
-      </div>
+      <BaseButton
+        variant="ghost"
+        size="sm"
+        icon="plus"
+        data-test="add-subtopic"
+        @click="emit('addSubtopic')"
+      >
+        Add subtopic
+      </BaseButton>
     </div>
 
     <p
