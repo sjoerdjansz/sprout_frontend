@@ -136,30 +136,15 @@ export function subtopicCaption(subtopic: Subtopic): Caption {
 }
 
 export interface LibraryFilters {
-  query: string
   categoryId: number | 'all'
   needsAttention: boolean
 }
 
-export const noFilters: LibraryFilters = { query: '', categoryId: 'all', needsAttention: false }
+export const noFilters: LibraryFilters = { categoryId: 'all', needsAttention: false }
 
-function matches(title: string, query: string): boolean {
-  return title.toLowerCase().includes(query)
-}
-
-/** A search finds a topic by its own name or by the name of one of its subtopics. */
 export function filterTopics(topics: Topic[], filters: LibraryFilters): Topic[] {
-  const query = filters.query.trim().toLowerCase()
-
   return topics.filter((topic) => {
     if (filters.categoryId !== 'all' && topic.category.id !== filters.categoryId) {
-      return false
-    }
-    if (
-      query !== '' &&
-      !matches(topic.title, query) &&
-      !topic.subtopics.some((subtopic) => matches(subtopic.title, query))
-    ) {
       return false
     }
 
@@ -167,17 +152,52 @@ export function filterTopics(topics: Topic[], filters: LibraryFilters): Topic[] 
   })
 }
 
-/** When the topic's own name matches the search, all its subtopics stay visible. */
-export function visibleSubtopics(topic: Topic, filters: LibraryFilters): Subtopic[] {
-  const query = filters.query.trim().toLowerCase()
+/** The topic page's filter chips: the states you act on (practise now, start, done), and All. */
+export type SubtopicFilter = 'all' | 'attention' | 'new' | 'mastered'
 
-  return topic.subtopics.filter((subtopic) => {
-    if (query !== '' && !matches(subtopic.title, query) && !matches(topic.title, query)) {
-      return false
-    }
+export const subtopicFilters: { key: SubtopicFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'attention', label: 'Needs attention' },
+  { key: 'new', label: 'New' },
+  { key: 'mastered', label: 'Mastered' },
+]
 
-    return !filters.needsAttention || needsAttention(subtopic)
-  })
+function passesFilter(subtopic: Subtopic, filter: SubtopicFilter): boolean {
+  switch (filter) {
+    case 'all':
+      return true
+    case 'attention':
+      return needsAttention(subtopic)
+    case 'new':
+      return subtopic.is_new
+    case 'mastered':
+      return isMastered(subtopic)
+  }
+}
+
+/** The subtopics whose name matches the search (case-insensitive) and that pass the chip. */
+export function filterSubtopics(
+  subtopics: Subtopic[],
+  query: string,
+  filter: SubtopicFilter,
+): Subtopic[] {
+  const search = query.trim().toLowerCase()
+
+  return subtopics.filter(
+    (subtopic) =>
+      passesFilter(subtopic, filter) &&
+      (search === '' || subtopic.title.toLowerCase().includes(search)),
+  )
+}
+
+/** How many subtopics each chip would show, ignoring the search. */
+export function subtopicFilterCounts(subtopics: Subtopic[]): Record<SubtopicFilter, number> {
+  return {
+    all: subtopics.length,
+    attention: subtopics.filter((subtopic) => passesFilter(subtopic, 'attention')).length,
+    new: subtopics.filter((subtopic) => passesFilter(subtopic, 'new')).length,
+    mastered: subtopics.filter((subtopic) => passesFilter(subtopic, 'mastered')).length,
+  }
 }
 
 /** The categories worth a filter chip: the ones your topics use, in their own order. */

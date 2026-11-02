@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 import { ApiError } from '@/lib/api'
 import { useTopicsStore } from '@/stores/topics'
 
-/** Deleting the whole subtopic after you confirm it, then going back to the topics page. */
+/** Deleting the whole subtopic after you confirm it, then going back to its topic's page. */
 export function useDeleteSubtopic(
   subtopicId: () => number,
   /** Drops deletes still waiting for their undo window: they go with the subtopic anyway. */
@@ -38,9 +38,14 @@ export function useDeleteSubtopic(
     deleting.value = true
     error.value = null
 
+    // Read before deleting: the store forgets the subtopic, and with it the topic it was in.
+    const topicId = topicsStore.subtopic?.topic_id ?? null
+
     try {
       await topicsStore.deleteSubtopic(subtopicId())
-      await router.push({ name: 'topics' })
+      await router.push(
+        topicId === null ? { name: 'topics' } : { name: 'topic', params: { id: topicId } },
+      )
     } catch (caught) {
       if (!(caught instanceof ApiError)) {
         throw caught

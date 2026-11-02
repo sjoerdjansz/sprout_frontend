@@ -10,6 +10,7 @@ import { makePracticeSession } from '@/__tests__/practiceFixtures'
 import { useAuthStore, type User } from '@/stores/auth'
 import { useConversationsStore } from '@/stores/conversations'
 import { usePracticeStore } from '@/stores/practice'
+import { useTopicsStore } from '@/stores/topics'
 import TopicsView from '../TopicsView.vue'
 
 const user: User = {
@@ -64,33 +65,12 @@ function cardTitles(wrapper: VueWrapper): string[] {
   return wrapper.findAll('[data-test="topic-card"]').map((card) => card.text())
 }
 
-// The topic whose subtopics are shown is the one whose card is pressed.
-function selectedTopic(wrapper: VueWrapper): string {
-  return wrapper.get('[data-test="topic-card"][aria-pressed="true"]').text()
-}
-
-function captions(wrapper: VueWrapper): string[] {
-  return wrapper.findAll('[data-test="subtopic-caption"]').map((caption) => caption.text())
-}
-
 function topicCalls(): number {
   return fetchMock.mock.calls.filter(
     ([input, init]) =>
       String(input).replace(import.meta.env.VITE_API_URL, '') === '/topics' &&
       (init?.method ?? 'GET') === 'GET',
   ).length
-}
-
-function subtopicTitles(wrapper: VueWrapper): string[] {
-  return wrapper.findAll('[data-test="subtopic-title"]').map((title) => title.text())
-}
-
-async function selectTopic(wrapper: VueWrapper, title: string): Promise<void> {
-  const card = wrapper
-    .findAll('[data-test="topic-card"]')
-    .find((candidate) => candidate.text().includes(title))
-  await card?.trigger('click')
-  await flushPromises()
 }
 
 async function submitForm(wrapper: VueWrapper): Promise<void> {
@@ -120,27 +100,36 @@ describe('TopicsView', () => {
     vi.unstubAllGlobals()
   })
 
-  it('sums up your library and shows the subtopics of the first topic', async () => {
+  it('sums up your library, with a card per topic that opens its page', async () => {
     const wrapper = await mountTopics()
 
     expect(wrapper.get('[data-test="summary"]').text()).toBe(
       '4 topics · 8 subtopics · 1 mastered · 11 cards due today',
     )
     expect(cardTitles(wrapper)).toHaveLength(4)
-    expect(selectedTopic(wrapper)).toContain('Biology')
     // Only flashcards have a review schedule, so the count says what it counts.
     expect(wrapper.findAll('[data-test="topic-meta"]')[0]?.text()).toContain('· 9 cards due')
-    expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration', 'Chlorophyll'])
-    expect(wrapper.get('[data-test="topic-description"]').text()).toBe(
-      'How living things work, from cells to whole ecosystems.',
-    )
-    expect(wrapper.find('aside').exists()).toBe(false)
+    expect(wrapper.get('[data-test="topic-card"]').attributes('href')).toBe('/topics/1')
+    // The subtopics live on the topic's own page.
+    expect(wrapper.find('[data-test="subtopic"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="search"]').exists()).toBe(false)
   })
 
-  it('opens the page of a subtopic from its row', async () => {
+  it('sends an old link to a topic on this page to the topic’s own page', async () => {
+    // Such a link comes from outside the page: a bookmark, or another page of an older version.
+    await router.push('/settings')
+    await router.push('/topics?topic=2')
+
+    expect(router.currentRoute.value.fullPath).toBe('/topics/2')
+  })
+
+  it('says which topic you deleted on its own page', async () => {
+    window.history.replaceState({ ...window.history.state, deletedTopic: 'Chemistry' }, '')
     const wrapper = await mountTopics()
 
-    expect(wrapper.get('[data-test="subtopic"]').attributes('href')).toBe('/subtopics/101')
+    expect(wrapper.get('[data-test="toast"]').text()).toContain('Deleted Chemistry')
+    // Only once: coming back to this entry later says nothing.
+    expect(window.history.state.deletedTopic).toBeNull()
   })
 
   it('says what to do when the library cannot load, and tries again', async () => {
@@ -164,20 +153,6 @@ describe('TopicsView', () => {
     expect(wrapper.get('[data-test="empty-library"]').text()).toContain('Your library is empty')
   })
 
-  it('narrows the cards as you search, and clears the filters when nothing matches', async () => {
-    const wrapper = await mountTopics()
-
-    await wrapper.get('[data-test="search"]').setValue('recursion')
-    expect(cardTitles(wrapper)).toEqual([expect.stringContaining('Computer science')])
-
-    await wrapper.get('[data-test="search"]').setValue('astronomy')
-    expect(wrapper.find('[data-test="topic-card"]').exists()).toBe(false)
-
-    await wrapper.get('[data-test="clear-filters"]').trigger('click')
-    expect(cardTitles(wrapper)).toHaveLength(4)
-    expect((wrapper.get('[data-test="search"]').element as HTMLInputElement).value).toBe('')
-  })
-
   it('filters by category and by what needs attention', async () => {
     const wrapper = await mountTopics()
 
@@ -186,67 +161,28 @@ describe('TopicsView', () => {
     expect(chips.map((chip) => chip.text())).toEqual(['Science', 'Technology', 'Languages'])
     await chips[2]?.trigger('click')
     expect(cardTitles(wrapper)).toEqual([expect.stringContaining('Spanish')])
-    // Biology is filtered out, so the subtopics of the topic you can see show instead.
-    expect(selectedTopic(wrapper)).toContain('Spanish')
 
     await wrapper.get('[data-test="category-all"]').trigger('click')
     await wrapper.get('[data-test="needs-attention"]').trigger('click')
-    expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration'])
+    expect(cardTitles(wrapper)).toEqual([
+      expect.stringContaining('Biology'),
+      expect.stringContaining('Computer science'),
+    ])
   })
 
-  it('scrolls to the subtopics when they are below the screen', async () => {
-    const scrollIntoView = vi.fn<(options?: ScrollIntoViewOptions) => void>()
-    Element.prototype.scrollIntoView = scrollIntoView
-    vi.stubGlobal('matchMedia', () => ({ matches: false }))
-    const wrapper = await mountTopics()
-    const list = wrapper.get('section[aria-label="Subtopics"]').element
-
-    // On screen (jsdom's default position): nothing moves.
-    await selectTopic(wrapper, 'Chemistry')
-    expect(scrollIntoView).not.toHaveBeenCalled()
-
-    // Below the screen, as on a phone under all the cards.
-    vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({ top: 2000 } as DOMRect)
-    await selectTopic(wrapper, 'Spanish')
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
-  })
-
-  it('shows a subtopic you search for, even when another topic was picked', async () => {
+  it('clears the filters when nothing matches', async () => {
     const wrapper = await mountTopics()
 
-    await wrapper.get('[data-test="search"]').setValue('recursion')
+    // Spanish has nothing that needs attention.
+    await wrapper.findAll('[data-test="category-chip"]')[2]?.trigger('click')
+    await wrapper.get('[data-test="needs-attention"]').trigger('click')
+    expect(wrapper.find('[data-test="topic-card"]').exists()).toBe(false)
 
-    expect(selectedTopic(wrapper)).toContain('Computer science')
-    expect(subtopicTitles(wrapper)).toEqual(['Recursion'])
+    await wrapper.get('[data-test="clear-filters"]').trigger('click')
+    expect(cardTitles(wrapper)).toHaveLength(4)
   })
 
-  it('shows the subtopics of the topic you pick', async () => {
-    const wrapper = await mountTopics()
-
-    await selectTopic(wrapper, 'Chemistry')
-
-    expect(selectedTopic(wrapper)).toContain('Chemistry')
-    expect(subtopicTitles(wrapper)).toEqual(['The periodic table', 'Chemical bonds'])
-  })
-
-  it('keeps the topic you picked in the URL, so coming back shows it again', async () => {
-    await router.push('/topics?topic=2')
-    const wrapper = await mountTopics()
-
-    expect(selectedTopic(wrapper)).toContain('Chemistry')
-
-    await selectTopic(wrapper, 'Spanish')
-    expect(router.currentRoute.value.query).toEqual({ topic: '4' })
-  })
-
-  it('falls back to the first topic for a topic that is not in your library', async () => {
-    await router.push('/topics?topic=999')
-    const wrapper = await mountTopics()
-
-    expect(selectedTopic(wrapper)).toContain('Biology')
-  })
-
-  it('adds a topic in a dialog and shows it', async () => {
+  it('adds a topic in a dialog and opens its page', async () => {
     const wrapper = await mountTopics({
       'POST /topics': Response.json(makeTopic({ id: 9, title: 'Astronomy' }), { status: 201 }),
     })
@@ -259,10 +195,26 @@ describe('TopicsView', () => {
 
     expect(wrapper.find('dialog').exists()).toBe(false)
     expect(cardTitles(wrapper)).toHaveLength(5)
-    expect(selectedTopic(wrapper)).toContain('Astronomy')
-    expect(wrapper.get('[data-test="no-subtopics"]').text()).toBe(
-      'No subtopics yet. Add the first one.',
-    )
+    expect(router.currentRoute.value.fullPath).toBe('/topics/9')
+    // Without a source there's nothing for Sprout to read there.
+    expect(window.history.state.suggestSubtopics).toBe(false)
+  })
+
+  it('reads the source of a new topic on its page', async () => {
+    const wrapper = await mountTopics({
+      'POST /topics': Response.json(makeTopic({ id: 9, title: 'Running', notes: '# Form' }), {
+        status: 201,
+      }),
+    })
+
+    await wrapper.get('[data-test="add-topic"]').trigger('click')
+    await wrapper.get('[data-test="name"]').setValue('Running')
+    await wrapper.get('[data-test="notes"]').setValue('# Form')
+    await submitForm(wrapper)
+
+    expect(router.currentRoute.value.fullPath).toBe('/topics/9')
+    expect(window.history.state.suggestSubtopics).toBe(true)
+    expect(wrapper.find('[data-test="suggestions"]').exists()).toBe(false)
   })
 
   it('keeps the dialog open with the API message when saving fails', async () => {
@@ -313,34 +265,7 @@ describe('TopicsView', () => {
     await submitForm(wrapper)
 
     expect(sentBody('PUT /topics/2')).toMatchObject({ title: 'Chemistry basics' })
-    expect(selectedTopic(wrapper)).toContain('Chemistry basics')
-  })
-
-  it('adds a subtopic to the topic and says Sprout is making its cards', async () => {
-    const respiration = makeSubtopic({
-      id: 501,
-      title: 'Respiration',
-      is_new: true,
-      generation_status: 'generating',
-    })
-    const wrapper = await mountTopics({
-      'POST /subtopics': Response.json({ subtopic: respiration }, { status: 201 }),
-    })
-
-    await wrapper.get('[data-test="add-subtopic"]').trigger('click')
-    expect(wrapper.get('dialog h2').text()).toBe('New subtopic')
-    expect((wrapper.get('[data-test="main-topic"]').element as HTMLSelectElement).value).toBe('1')
-
-    await wrapper.get('[data-test="name"]').setValue('Respiration')
-    await submitForm(wrapper)
-
-    expect(subtopicTitles(wrapper)).toContain('Respiration')
-    expect(wrapper.get('[data-test="toast"]').text()).toContain('Added Respiration')
-    expect(wrapper.get('[data-test="toast"]').text()).toContain(
-      'Sprout is making cards from your notes.',
-    )
-    expect(captions(wrapper)).toContain('Sprout is making your cards…')
-    wrapper.unmount()
+    expect(cardTitles(wrapper)).toContainEqual(expect.stringContaining('Chemistry basics'))
   })
 
   it('asks again while cards are being made, once for all of them, until they are ready', async () => {
@@ -356,9 +281,7 @@ describe('TopicsView', () => {
         () => Response.json(makeLibrary()),
       ],
     })
-    expect(
-      captions(wrapper).filter((text) => text === 'Sprout is making your cards…'),
-    ).toHaveLength(2)
+    expect(wrapper.find('[data-test="check-error"]').exists()).toBe(false)
 
     await vi.advanceTimersByTimeAsync(pollInterval)
     await flushPromises()
@@ -367,7 +290,6 @@ describe('TopicsView', () => {
     await vi.advanceTimersByTimeAsync(pollInterval)
     await flushPromises()
     expect(topicCalls()).toBe(3)
-    expect(captions(wrapper)).not.toContain('Sprout is making your cards…')
 
     await vi.advanceTimersByTimeAsync(pollInterval * 5)
     expect(topicCalls()).toBe(3)
@@ -398,17 +320,6 @@ describe('TopicsView', () => {
     await flushPromises()
     expect(wrapper.find('[data-test="check-error"]').exists()).toBe(false)
     expect(topicCalls()).toBe(3)
-  })
-
-  it('shows a subtopic whose cards could not be made', async () => {
-    const failedLibrary = makeLibrary()
-    const first = failedLibrary[0]?.subtopics[0]
-    if (first !== undefined) {
-      first.generation_status = 'failed'
-    }
-    const wrapper = await mountTopics({ 'GET /topics': Response.json(failedLibrary) })
-
-    expect(captions(wrapper)).toContain("Sprout couldn't make its cards. Try again on its page.")
   })
 
   describe('building a topic from its source', () => {
@@ -470,7 +381,9 @@ describe('TopicsView', () => {
         ],
       })
       expect(wrapper.find('[data-test="suggestions"]').exists()).toBe(false)
-      expect(subtopicTitles(wrapper)).toContain('Cadence 101')
+      expect(useTopicsStore().topics[0]?.subtopics.map((subtopic) => subtopic.title)).toContain(
+        'Cadence 101',
+      )
       expect(wrapper.get('[data-test="toast"]').text()).toContain('Added 2 subtopics')
       expect(wrapper.get('[data-test="toast"]').text()).toContain('Sprout is making their cards.')
       wrapper.unmount()
@@ -545,11 +458,13 @@ describe('TopicsView', () => {
     })
   })
 
-  it('sends an old /knowledge-map link here, with its topic', async () => {
-    await router.push('/knowledge-map?topic=2')
+  it('sends an old /knowledge-map link here, or to its topic', async () => {
+    await router.push('/knowledge-map')
+    expect(router.currentRoute.value.fullPath).toBe('/topics')
 
-    expect(router.currentRoute.value.name).toBe('topics')
-    expect(router.currentRoute.value.query).toEqual({ topic: '2' })
+    await router.push('/settings')
+    await router.push('/knowledge-map?topic=2')
+    expect(router.currentRoute.value.fullPath).toBe('/topics/2')
   })
 
   describe('deleting a topic', () => {
@@ -640,90 +555,6 @@ describe('TopicsView', () => {
 
       expect(showsCard(wrapper, 'Chemistry')).toBe(false)
       expect(wrapper.find('dialog').exists()).toBe(false)
-    })
-  })
-
-  it('opens a card’s menu without selecting the card', async () => {
-    const wrapper = await mountTopics()
-
-    await wrapper.get('[data-test="topic-menu"][aria-label="More for Chemistry"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.get('[data-test="topic-card"][aria-pressed="true"]').text()).toContain('Biology')
-  })
-
-  describe('a subtopic’s menu', () => {
-    async function pickFromSubtopicMenu(
-      wrapper: VueWrapper,
-      item: 'edit' | 'delete',
-      subtopicTitle = 'Photosynthesis',
-    ): Promise<void> {
-      await wrapper
-        .get(`[data-test="subtopic-menu"][aria-label="More for ${subtopicTitle}"]`)
-        .trigger('click')
-      await wrapper.get(`[data-test="subtopic-menu-${item}"]`).trigger('click')
-    }
-
-    it('edits the subtopic with its own notes filled in', async () => {
-      const wrapper = await mountTopics({
-        'PUT /subtopics/101': Response.json({
-          subtopic: makeSubtopic({ title: 'Photosynthesis basics' }),
-        }),
-      })
-
-      await pickFromSubtopicMenu(wrapper, 'edit')
-
-      expect(wrapper.get('dialog h2').text()).toBe('Edit subtopic')
-      expect((wrapper.get('[data-test="name"]').element as HTMLInputElement).value).toBe(
-        'Photosynthesis',
-      )
-      expect((wrapper.get('[data-test="notes"]').element as HTMLTextAreaElement).value).toBe(
-        'Plants use chlorophyll to capture light.',
-      )
-
-      await wrapper.get('[data-test="name"]').setValue('Photosynthesis basics')
-      await submitForm(wrapper)
-
-      // The whole form goes, so the notes aren't cleared.
-      expect(sentBody('PUT /subtopics/101')).toMatchObject({
-        topic_id: 1,
-        title: 'Photosynthesis basics',
-        notes: 'Plants use chlorophyll to capture light.',
-      })
-      expect(wrapper.find('dialog').exists()).toBe(false)
-      expect(subtopicTitles(wrapper)).toContain('Photosynthesis basics')
-    })
-
-    it('deletes the subtopic once you confirm, and keeps the others', async () => {
-      const wrapper = await mountTopics({
-        'DELETE /subtopics/101': new Response(null, { status: 204 }),
-      })
-
-      await pickFromSubtopicMenu(wrapper, 'delete')
-      expect(wrapper.get('dialog h2').text()).toBe('Delete Photosynthesis?')
-
-      await wrapper.get('[data-test="confirm-delete"]').trigger('click')
-      await flushPromises()
-
-      expect(subtopicTitles(wrapper)).toEqual(['Cell respiration', 'Chlorophyll'])
-      expect(wrapper.find('dialog').exists()).toBe(false)
-      expect(wrapper.get('[data-test="toast"]').text()).toContain('Deleted Photosynthesis')
-    })
-
-    it('keeps the subtopic and shows the API’s message when deleting fails', async () => {
-      const wrapper = await mountTopics({
-        'DELETE /subtopics/101': Response.json(
-          { message: 'Can’t reach Sprout right now. Try again.' },
-          { status: 500 },
-        ),
-      })
-
-      await pickFromSubtopicMenu(wrapper, 'delete')
-      await wrapper.get('[data-test="confirm-delete"]').trigger('click')
-      await flushPromises()
-
-      expect(wrapper.get('[data-test="form-error"]').text()).toContain('Can’t reach Sprout')
-      expect(subtopicTitles(wrapper)).toContain('Photosynthesis')
     })
   })
 })

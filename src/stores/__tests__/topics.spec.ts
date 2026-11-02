@@ -42,6 +42,31 @@ describe('topics store', () => {
 
     expect(store.topics).toHaveLength(4)
     expect(store.categories).toHaveLength(6)
+    expect(store.libraryLoaded).toBe(true)
+  })
+
+  it('fetches one topic for its page, next to what the library already holds', async () => {
+    const renamed = makeTopic({ id: 2, title: 'Chemistry basics' })
+    stubApi({
+      'GET /topics/9/subtopics': Response.json(makeTopic({ id: 9, title: 'Astronomy' })),
+      'GET /topics/2/subtopics': Response.json(renamed),
+    })
+    const store = useTopicsStore()
+
+    // Opened straight from a link: only that topic is known, not the library.
+    await store.fetchTopic(9)
+    expect(store.topics.map((topic) => topic.title)).toEqual(['Astronomy'])
+    expect(store.libraryLoaded).toBe(false)
+
+    // Already in the library: replaced in place.
+    store.topics = makeLibrary()
+    await store.fetchTopic(2)
+    expect(store.topics.map((topic) => topic.title)).toEqual([
+      'Biology',
+      'Chemistry basics',
+      'Computer science',
+      'Spanish',
+    ])
   })
 
   it('adds a topic in a new category, sending its name instead of an id', async () => {

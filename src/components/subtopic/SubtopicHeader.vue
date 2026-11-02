@@ -43,7 +43,7 @@ const crumbClasses =
     </RouterLink>
     <span aria-hidden="true" class="text-ink-subtle">/</span>
     <RouterLink
-      :to="{ name: 'topics', query: { topic: subtopic.topic.id } }"
+      :to="{ name: 'topic', params: { id: subtopic.topic.id } }"
       :class="crumbClasses"
       data-test="crumb-topic"
     >

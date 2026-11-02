@@ -50,10 +50,10 @@ const summary = computed<string | null>(() => {
         Sprout couldn't make cards for {{ pluralize(failedCount, 'subtopic') }}.
         <RouterLink
           v-if="result !== null"
-          :to="{ name: 'topics', query: { topic: result.topic.id } }"
+          :to="{ name: 'topic', params: { id: result.topic.id } }"
           class="rounded-sm font-semibold underline"
         >
-          Open your topics
+          Open the topic
         </RouterLink>
         to try again.
       </p>

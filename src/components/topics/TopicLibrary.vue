@@ -4,23 +4,20 @@ import LibraryToolbar from '@/components/topics/LibraryToolbar.vue'
 import TopicCard from '@/components/topics/TopicCard.vue'
 import type { Category, Topic } from '@/stores/topics'
 
-const { topics, libraryIsEmpty, filterCategories, selectedTopicId, attentionCount } = defineProps<{
+const { topics, libraryIsEmpty, filterCategories, attentionCount } = defineProps<{
   /** The topics that match the filters. */
   topics: Topic[]
   /** You have no topics at all, so there's nothing a filter could find. */
   libraryIsEmpty: boolean
   /** The categories offered as filter chips. */
   filterCategories: Category[]
-  selectedTopicId: number | null
   attentionCount: number
 }>()
 
-const query = defineModel<string>('query', { required: true })
 const categoryId = defineModel<number | 'all'>('categoryId', { required: true })
 const needsAttention = defineModel<boolean>('needsAttention', { required: true })
 
 const emit = defineEmits<{
-  select: [topicId: number]
   editTopic: [topicId: number]
   deleteTopic: [topicId: number]
   addTopic: []
@@ -34,7 +31,6 @@ const emit = defineEmits<{
     class="flex flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-sm"
   >
     <LibraryToolbar
-      v-model:query="query"
       v-model:category-id="categoryId"
       v-model:needs-attention="needsAttention"
       :categories="filterCategories"
@@ -62,7 +58,7 @@ const emit = defineEmits<{
       >
         <p class="text-heading text-ink">Nothing matches</p>
         <p class="text-[14px] leading-5 text-ink-muted">
-          Try another word, or add it as a new topic and let Sprout teach you.
+          Try another filter, or add a new topic and let Sprout teach you.
         </p>
         <BaseButton
           variant="secondary"
@@ -79,8 +75,6 @@ const emit = defineEmits<{
           v-for="topic in topics"
           :key="topic.id"
           :topic="topic"
-          :selected="topic.id === selectedTopicId"
-          @select="emit('select', topic.id)"
           @edit="emit('editTopic', topic.id)"
           @delete="emit('deleteTopic', topic.id)"
         />

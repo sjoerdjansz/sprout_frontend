@@ -7,19 +7,12 @@ import {
   subtopicLevel,
   topicAppearance,
   usedCategories,
-  visibleSubtopics,
+  filterSubtopics,
+  subtopicFilterCounts,
+  type SubtopicFilter,
 } from '@/lib/topics'
 import { makeCategories, makeLibrary, makeTopic } from '@/__tests__/topicFixtures'
-import type { Subtopic, Topic } from '@/stores/topics'
-
-function topicNamed(title: string): Topic {
-  const topic = makeLibrary().find((candidate) => candidate.title === title)
-  if (topic === undefined) {
-    throw new Error(`No topic ${title}`)
-  }
-
-  return topic
-}
+import type { Subtopic } from '@/stores/topics'
 
 function subtopicNamed(title: string): Subtopic {
   const subtopic = makeLibrary()
@@ -56,37 +49,34 @@ describe('topics page rules', () => {
     })
   })
 
-  it('finds a topic by its own name or one of its subtopics', () => {
-    const topics = makeLibrary()
-
-    expect(filterTopics(topics, { ...noFilters, query: 'chem' }).map((t) => t.title)).toEqual([
-      'Chemistry',
-    ])
-    expect(filterTopics(topics, { ...noFilters, query: 'RECURSION' }).map((t) => t.title)).toEqual([
-      'Computer science',
-    ])
-  })
-
-  it('shows only the matching subtopics, or all of them when the topic name matches', () => {
-    const biology = topicNamed('Biology')
-
-    expect(
-      visibleSubtopics(biology, { ...noFilters, query: 'chloro' }).map((s) => s.title),
-    ).toEqual(['Chlorophyll'])
-    expect(visibleSubtopics(biology, { ...noFilters, query: 'bio' })).toHaveLength(3)
-  })
-
-  it('filters by category and by what needs attention', () => {
+  it('filters topics by category and by what needs attention', () => {
     const topics = makeLibrary()
 
     expect(filterTopics(topics, { ...noFilters, categoryId: 4 }).map((t) => t.title)).toEqual([
       'Spanish',
     ])
     expect(
-      visibleSubtopics(topicNamed('Computer science'), { ...noFilters, needsAttention: true }).map(
-        (s) => s.title,
-      ),
-    ).toEqual(['Recursion'])
+      filterTopics(topics, { ...noFilters, needsAttention: true }).map((t) => t.title),
+    ).toEqual(['Biology', 'Computer science'])
+  })
+
+  it('filters a topic’s subtopics by name and by state', () => {
+    const subtopics = makeLibrary().flatMap((topic) => topic.subtopics)
+    const titles = (query: string, filter: SubtopicFilter): string[] =>
+      filterSubtopics(subtopics, query, filter).map((subtopic) => subtopic.title)
+
+    expect(titles(' CHLORO ', 'all')).toEqual(['Chlorophyll'])
+    expect(titles('', 'attention')).toEqual(['Photosynthesis', 'Cell respiration', 'Recursion'])
+    expect(titles('', 'new')).toEqual(['Chemical bonds'])
+    expect(titles('', 'mastered')).toEqual(['Big-O notation'])
+    expect(titles('cell', 'attention')).toEqual(['Cell respiration'])
+    expect(titles('cell', 'mastered')).toEqual([])
+  })
+
+  it('counts the subtopics per filter, ignoring the search', () => {
+    const subtopics = makeLibrary().flatMap((topic) => topic.subtopics)
+
+    expect(subtopicFilterCounts(subtopics)).toEqual({ all: 8, attention: 3, new: 1, mastered: 1 })
   })
 
   it('offers a filter only for the categories your topics use', () => {

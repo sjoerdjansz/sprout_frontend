@@ -141,8 +141,8 @@ describe('SubtopicView', () => {
       '2',
       '1',
     ])
-    // Back to the topics page with this topic picked.
-    expect(wrapper.get('[data-test="crumb-topic"]').attributes('href')).toBe('/topics?topic=1')
+    // Back to the topic's own page.
+    expect(wrapper.get('[data-test="crumb-topic"]').attributes('href')).toBe('/topics/1')
   })
 
   it('opens the practice setup with this subtopic, and a mode from the tabs', async () => {
@@ -754,7 +754,7 @@ describe('SubtopicView', () => {
     expect(wrapper.get('dialog').text()).toContain('Notes from the chat and your files stay')
   })
 
-  it('deletes the subtopic after you confirm, and goes back to the topics page', async () => {
+  it('deletes the subtopic after you confirm, and goes back to its topic’s page', async () => {
     const wrapper = await mountSubtopic({
       'DELETE /subtopics/101': noContent,
       'GET /topics': Response.json([]),
@@ -769,7 +769,7 @@ describe('SubtopicView', () => {
     await flushPromises()
 
     expect(calls('DELETE /subtopics/101')).toBe(1)
-    expect(router.currentRoute.value.name).toBe('topics')
+    expect(router.currentRoute.value.fullPath).toBe('/topics/1')
   })
 
   it('shows the not found page when the subtopic was deleted elsewhere', async () => {

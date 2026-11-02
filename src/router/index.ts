@@ -7,6 +7,7 @@ import CheckEmailView from '@/views/CheckEmailView.vue'
 import ConversationView from '@/views/ConversationView.vue'
 import VerifyView from '@/views/VerifyView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
+import TopicView from '@/views/TopicView.vue'
 import TopicsView from '@/views/TopicsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import EmailConfirmView from '@/views/EmailConfirmView.vue'
@@ -50,6 +51,20 @@ const router = createRouter({
       path: '/topics',
       name: 'topics',
       component: TopicsView,
+      meta: { requiresAuth: true },
+      // Until 2026-11-02 a topic's subtopics showed on this page as ?topic=8; those links now open
+      // the topic's own page.
+      beforeEnter: (to) =>
+        typeof to.query.topic === 'string'
+          ? { name: 'topic', params: { id: to.query.topic }, replace: true }
+          : true,
+    },
+    {
+      path: '/topics/:id',
+      name: 'topic',
+      component: TopicView,
+      // A non-numeric id becomes NaN, which the API answers with its not found message.
+      props: (route) => ({ id: Number(route.params.id) }),
       meta: { requiresAuth: true },
     },
     // The page was called the knowledge map until 2026-11-01; old links and bookmarks still work.
