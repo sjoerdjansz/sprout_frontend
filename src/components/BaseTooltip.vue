@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
 
-const { text, delay = 1000 } = defineProps<{
+const { text, delay = 500 } = defineProps<{
   text: string
   /** How long the mouse rests on the element before the tooltip shows, in ms. */
   delay?: number
