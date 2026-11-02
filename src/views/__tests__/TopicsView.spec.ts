@@ -103,9 +103,16 @@ describe('TopicsView', () => {
   it('sums up your library, with a card per topic that opens its page', async () => {
     const wrapper = await mountTopics()
 
-    expect(wrapper.get('[data-test="summary"]').text()).toBe(
-      '4 topics · 8 subtopics · 1 mastered · 11 cards due today',
-    )
+    const summary = wrapper.findAll('[data-test="summary"] > div').map((stat) => ({
+      label: stat.get('dt').text(),
+      value: stat.get('dd').text(),
+    }))
+    expect(summary).toEqual([
+      { label: 'topics', value: '4' },
+      { label: 'subtopics', value: '8' },
+      { label: 'mastered', value: '1' },
+      { label: 'cards due today', value: '11' },
+    ])
     expect(cardTitles(wrapper)).toHaveLength(4)
     // Only flashcards have a review schedule, so the count says what it counts.
     expect(wrapper.findAll('[data-test="topic-meta"]')[0]?.text()).toContain('· 9 cards due')

@@ -205,17 +205,28 @@ export function usedCategories(categories: Category[], topics: Topic[]): Categor
   return categories.filter((category) => topics.some((topic) => topic.category.id === category.id))
 }
 
-export function librarySummary(topics: Topic[]): string {
+/** One figure in the Topics page's summary: "8 subtopics". */
+export interface LibraryStat {
+  key: 'topics' | 'subtopics' | 'mastered' | 'due'
+  value: number
+  label: string
+}
+
+/** The whole library at a glance, ignoring the filters. */
+export function librarySummary(topics: Topic[]): LibraryStat[] {
   const subtopics = topics.flatMap((topic) => topic.subtopics)
-  const mastered = subtopics.filter(isMastered).length
   const due = topics.reduce((sum, topic) => sum + dueCards(topic), 0)
 
   return [
-    pluralize(topics.length, 'topic'),
-    pluralize(subtopics.length, 'subtopic'),
-    `${mastered} mastered`,
-    `${pluralize(due, 'card')} due today`,
-  ].join(' · ')
+    { key: 'topics', value: topics.length, label: topics.length === 1 ? 'topic' : 'topics' },
+    {
+      key: 'subtopics',
+      value: subtopics.length,
+      label: subtopics.length === 1 ? 'subtopic' : 'subtopics',
+    },
+    { key: 'mastered', value: subtopics.filter(isMastered).length, label: 'mastered' },
+    { key: 'due', value: due, label: due === 1 ? 'card due today' : 'cards due today' },
+  ]
 }
 
 export interface TopicAppearance {

@@ -11,7 +11,7 @@ import {
   subtopicFilterCounts,
   type SubtopicFilter,
 } from '@/lib/topics'
-import { makeCategories, makeLibrary, makeTopic } from '@/__tests__/topicFixtures'
+import { makeCategories, makeLibrary, makeSubtopic, makeTopic } from '@/__tests__/topicFixtures'
 import type { Subtopic } from '@/stores/topics'
 
 function subtopicNamed(title: string): Subtopic {
@@ -88,9 +88,17 @@ describe('topics page rules', () => {
   })
 
   it('sums up the library', () => {
-    expect(librarySummary(makeLibrary())).toBe(
-      '4 topics · 8 subtopics · 1 mastered · 11 cards due today',
-    )
+    expect(librarySummary(makeLibrary()).map((stat) => `${stat.value} ${stat.label}`)).toEqual([
+      '4 topics',
+      '8 subtopics',
+      '1 mastered',
+      '11 cards due today',
+    ])
+    expect(
+      librarySummary([makeTopic({ subtopics: [makeSubtopic({ due_cards: 1 })] })]).map(
+        (stat) => `${stat.value} ${stat.label}`,
+      ),
+    ).toEqual(['1 topic', '1 subtopic', '0 mastered', '1 card due today'])
   })
 
   it('gives a topic an icon for its category and a tint that rotates by id', () => {

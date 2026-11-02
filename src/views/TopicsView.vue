@@ -7,6 +7,7 @@ import FormError from '@/components/FormError.vue'
 import DeleteTopicDialog from '@/components/topics/DeleteTopicDialog.vue'
 import SubtopicSuggestionsDialog from '@/components/topics/SubtopicSuggestionsDialog.vue'
 import TopicFormDialog from '@/components/topics/TopicFormDialog.vue'
+import LibrarySummary from '@/components/topics/LibrarySummary.vue'
 import TopicLibrary from '@/components/topics/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useDeleteTopic } from '@/composables/topics/useDeleteTopic'
@@ -21,6 +22,7 @@ import {
   needsAttention,
   usedCategories,
   type LibraryFilters,
+  type LibraryStat,
 } from '@/lib/topics'
 import { useTopicsStore, type Category, type Topic } from '@/stores/topics'
 
@@ -91,7 +93,7 @@ const { error: checkError } = useGenerationPolling(
 
 const filteredTopics = computed<Topic[]>(() => filterTopics(topicsStore.topics, filters.value))
 
-const summary = computed<string>(() => librarySummary(topicsStore.topics))
+const summary = computed<LibraryStat[]>(() => librarySummary(topicsStore.topics))
 
 const attentionCount = computed<number>(
   () => topicsStore.topics.flatMap((topic) => topic.subtopics).filter(needsAttention).length,
@@ -138,13 +140,7 @@ const deleteTopic = useDeleteTopic((deletedTopic) => {
   <AppLayout>
     <header class="flex flex-none flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
       <h1 class="font-display text-title-lg text-ink">Topics</h1>
-      <p
-        v-if="loadState === 'loaded'"
-        class="text-label font-normal text-ink-muted"
-        data-test="summary"
-      >
-        {{ summary }}
-      </p>
+      <LibrarySummary v-if="loadState === 'loaded'" :stats="summary" />
     </header>
 
     <p v-if="loadState === 'loading'" class="text-ink-muted" aria-live="polite">
