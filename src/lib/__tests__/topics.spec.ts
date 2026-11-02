@@ -36,7 +36,7 @@ describe('topics page rules', () => {
 
   it('captions each subtopic with its most urgent fact', () => {
     expect(subtopicCaption(subtopicNamed('Cell respiration'))).toEqual({
-      text: 'Slipping · 6 cards due',
+      text: 'Slipping, 6 cards due',
       tone: 'sun',
     })
     expect(subtopicCaption(subtopicNamed('Photosynthesis')).text).toBe('3 cards due today')
@@ -44,7 +44,7 @@ describe('topics page rules', () => {
     expect(subtopicCaption(subtopicNamed('Chlorophyll')).text).toBe('Next review in 4 days')
     expect(subtopicCaption(subtopicNamed('Chemical bonds')).text).toBe('Not started yet')
     expect(subtopicCaption({ ...subtopicNamed('Chemical bonds'), due_cards: 3 })).toEqual({
-      text: 'Not started yet · 3 cards due',
+      text: 'Not started yet, 3 cards due',
       tone: 'sun',
     })
   })

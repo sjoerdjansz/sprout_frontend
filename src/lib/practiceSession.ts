@@ -7,6 +7,7 @@
 import type { BadgeTone } from '@/components/BaseBadge.vue'
 import { practiceMode, practiceModes, type PracticeModeId } from '@/lib/practiceModes'
 import { ratingLabels } from '@/lib/ratings'
+import { listOf } from '@/lib/text'
 import type { Flashcard, Rating } from '@/stores/flashcards'
 import type {
   PracticeMessage,
@@ -464,15 +465,15 @@ export function estimateMinutes(blocks: PracticeBlock[]): number {
 }
 
 /**
- * "Photosynthesis" or "Biology · all subtopics". Whether the subtopics are mixed is the order's
- * business, so the scope only says what's in it.
+ * "Photosynthesis" or "All subtopics from Biology", as the practice setup calls it. Whether the
+ * subtopics are mixed is the order's business, so the scope only says what's in it.
  */
 export function scopeTitle(scope: PracticeScope): string {
   if (scope.subtopic !== null) {
     return scope.subtopic.title
   }
 
-  return `${scope.topicTitle} · all subtopics`
+  return `All subtopics from ${scope.topicTitle}`
 }
 
 // --- Results -------------------------------------------------------------------------------
@@ -689,7 +690,11 @@ export function resultLine(result: BlockResult): string {
     }
     case 'retrieval': {
       const summary = summariseQuiz(result.answers)
-      return `${summary.right} right · ${summary.almost} almost · ${summary.wrong} wrong`
+      return listOf([
+        `${summary.right} right`,
+        `${summary.almost} almost`,
+        `${summary.wrong} wrong`,
+      ])
     }
     case 'feynman':
       return result.explanations.length > 0 ? 'Explained in your own words' : 'Not explained yet'

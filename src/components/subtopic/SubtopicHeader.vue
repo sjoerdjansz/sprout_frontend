@@ -61,7 +61,7 @@ const crumbClasses =
 
     <div class="flex min-w-0 flex-[1_1_300px] flex-col gap-1">
       <span class="text-overline text-ink-subtle uppercase">
-        {{ subtopic.topic.title }} · Subtopic
+        Subtopic of {{ subtopic.topic.title }}
       </span>
       <div class="flex flex-wrap items-center gap-2.5">
         <h1 class="font-display text-title-lg text-ink" data-test="subtopic-title">

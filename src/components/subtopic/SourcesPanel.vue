@@ -102,7 +102,7 @@ function contentId(source: SubtopicSource): string {
           {{ sourceLabel(source) }}
         </b>
         <span class="text-label font-normal text-ink-muted">
-          {{ sourceLooks[source.type].kind }} · {{ pluralize(wordCount(source.content), 'word') }}
+          {{ sourceLooks[source.type].kind }}, {{ pluralize(wordCount(source.content), 'word') }}
         </span>
       </button>
       <div

@@ -44,10 +44,11 @@ const emit = defineEmits<{
         :pressed="needsAttention"
         tone="sun"
         icon="trending-down"
+        :count="attentionCount"
         data-test="needs-attention"
         @click="needsAttention = !needsAttention"
       >
-        Needs attention · {{ attentionCount }}
+        Needs attention
       </FilterChip>
     </div>
     <BaseButton

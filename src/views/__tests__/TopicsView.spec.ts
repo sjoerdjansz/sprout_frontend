@@ -115,7 +115,7 @@ describe('TopicsView', () => {
     ])
     expect(cardTitles(wrapper)).toHaveLength(4)
     // Only flashcards have a review schedule, so the count says what it counts.
-    expect(wrapper.findAll('[data-test="topic-meta"]')[0]?.text()).toContain('· 9 cards due')
+    expect(wrapper.findAll('[data-test="topic-meta"]')[0]?.text()).toBe('3 subtopics, 9 cards due')
     expect(wrapper.get('[data-test="topic-card"]').attributes('href')).toBe('/topics/1')
     // The subtopics live on the topic's own page.
     expect(wrapper.find('[data-test="subtopic"]').exists()).toBe(false)

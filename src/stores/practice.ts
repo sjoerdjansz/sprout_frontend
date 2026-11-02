@@ -37,7 +37,7 @@ export type SessionPhase = 'block' | 'next' | 'done'
 export interface PracticePlan {
   scope: PracticeScope
   options: PracticeOptions
-  /** "Photosynthesis" or "Biology · all subtopics". */
+  /** "Photosynthesis" or "All subtopics from Biology". */
   title: string
   blocks: PracticeBlock[]
 }

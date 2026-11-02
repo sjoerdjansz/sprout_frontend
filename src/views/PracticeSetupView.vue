@@ -29,11 +29,11 @@ const {
   current,
 } = setup
 
-// "Photosynthesis" or "Biology · whole topic": what the session you can pick up is about.
+// "Photosynthesis" or "All subtopics from Biology": what the session you can pick up is about.
 const currentTitle = computed<string>(() =>
   current.value === null
     ? ''
-    : (current.value.subtopic?.title ?? `${current.value.topic.title} · whole topic`),
+    : (current.value.subtopic?.title ?? `All subtopics from ${current.value.topic.title}`),
 )
 
 onMounted(() => {

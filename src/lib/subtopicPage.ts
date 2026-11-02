@@ -8,6 +8,7 @@ import type { BadgeTone } from '@/components/BaseBadge.vue'
 import type { Tint } from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
 import { dueLabel } from '@/lib/dueDate'
+import { listOf } from '@/lib/text'
 import { pluralize } from '@/lib/topics'
 import { practiceMode } from '@/lib/practiceModes'
 import { ratingLabels } from '@/lib/ratings'
@@ -89,13 +90,13 @@ export function flashcardStatus(card: Flashcard): CardStatus {
   }
 }
 
-/** "Last: Good · 88% recall"; null for a card you haven't reviewed yet. */
+/** "Last rated Solid, 88% recall"; null for a card you haven't reviewed yet. */
 export function lastReview(card: Flashcard): string | null {
   if (card.last_rating === null || card.recall === null) {
     return null
   }
 
-  return `Last: ${ratingLabels[card.last_rating]} · ${card.recall}% recall`
+  return `Last rated ${ratingLabels[card.last_rating]}, ${card.recall}% recall`
 }
 
 export type QuestionFilter = 'all' | QuestionType | 'wrong'
@@ -175,7 +176,7 @@ export function sessionTitle(session: PracticeSession): string {
   return only === undefined || others.length > 0 ? 'Mixed session' : practiceMode(only).name
 }
 
-/** What you did in it: "12 cards · 3 questions · 1 explanation · 4 messages". */
+/** What you did in it: "12 cards, 3 questions, 1 explanation and 4 messages". */
 export function sessionActivity(session: PracticeSession): string {
   const done = session.done
   const cards = new Set(done.flashcard_reviews.map((review) => review.flashcard_id)).size
@@ -190,7 +191,7 @@ export function sessionActivity(session: PracticeSession): string {
     messages > 0 ? pluralize(messages, 'message') : null,
   ]
 
-  const activity = parts.filter((part) => part !== null).join(' · ')
+  const activity = listOf(parts.filter((part) => part !== null))
 
   return activity === '' ? 'Nothing practised yet' : activity
 }

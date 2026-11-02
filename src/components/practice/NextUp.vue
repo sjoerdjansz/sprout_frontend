@@ -56,7 +56,7 @@ const previousLine = computed<string>(() =>
         aria-labelledby="next-up-heading"
         class="flex flex-col gap-4 rounded-xl border border-line bg-surface p-6 shadow-sm"
       >
-        <span class="text-overline text-ink-subtle">NEXT UP · {{ position.toUpperCase() }}</span>
+        <span class="text-overline text-ink-subtle">NEXT UP: {{ position.toUpperCase() }}</span>
         <div class="flex items-center gap-3">
           <IconTile :icon="nextMode.icon" :tint="nextMode.tint" />
           <div class="flex flex-col">

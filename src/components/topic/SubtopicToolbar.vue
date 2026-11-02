@@ -25,21 +25,12 @@ const filter = defineModel<SubtopicFilter>('filter', { required: true })
         v-for="option in subtopicFilters"
         :key="option.key"
         :pressed="filter === option.key"
+        :count="counts[option.key]"
         class="flex-none"
         :data-test="`filter-${option.key}`"
         @click="filter = option.key"
       >
         {{ option.label }}
-        <span
-          class="inline-grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold"
-          :class="
-            filter === option.key
-              ? 'bg-on-primary text-primary'
-              : 'bg-surface-sunken text-ink-muted'
-          "
-        >
-          {{ counts[option.key] }}
-        </span>
       </FilterChip>
     </div>
   </div>

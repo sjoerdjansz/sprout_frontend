@@ -114,8 +114,8 @@ describe('DashboardView', () => {
 
       const items = wrapper.findAll('[data-test="queue-item"]')
       expect(items.map((item) => item.text())).toEqual([
-        expect.stringMatching(/^Biology\s*9 cards · slipping\s*61%\s*mastery$/),
-        expect.stringMatching(/^Computer science\s*2 cards · due today/),
+        expect.stringMatching(/^Biology\s*9 cards, slipping\s*61%\s*mastery$/),
+        expect.stringMatching(/^Computer science\s*2 cards due today/),
       ])
       expect(items[0]?.attributes('href')).toBe('/practice?topic=1&modes=cards')
       expect(wrapper.get('[aria-labelledby="queue-heading"]').text()).toContain('11 due')
@@ -126,7 +126,8 @@ describe('DashboardView', () => {
       const wrapper = await mountDashboard()
 
       const start = wrapper.get('[data-test="start-review"]')
-      expect(start.text()).toBe('Start review · about 4 min')
+      expect(start.text()).toBe('Start review')
+      expect(wrapper.get('[data-test="review-minutes"]').text()).toBe('Takes about 4 min')
 
       await start.trigger('click')
       await flushPromises()

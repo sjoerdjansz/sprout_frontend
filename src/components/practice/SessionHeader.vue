@@ -15,7 +15,7 @@ export interface BlockProgress {
 
 const { mode, title, blockLabel, progress } = defineProps<{
   mode: PracticeModeId
-  /** The scope: "Photosynthesis" or "Biology · all subtopics". */
+  /** The scope: "Photosynthesis" or "All subtopics from Biology". */
   title: string
   /** "Block 2 of 3" in a mixed session. */
   blockLabel: string | null
@@ -53,10 +53,14 @@ const badgeTone = computed<BadgeTone>(() => badgeTones[practiceMode(mode).tint])
             </BaseBadge>
             <b class="truncate" data-test="session-title">{{ title }}</b>
           </span>
-          <span class="font-normal text-ink-muted tabular-nums" data-test="session-progress">
-            <template v-if="blockLabel">{{ blockLabel }}</template>
-            <template v-if="blockLabel && progress"> · </template>
-            <template v-if="progress">{{ progress.text }}</template>
+          <span
+            class="flex gap-3 font-normal text-ink-muted tabular-nums"
+            data-test="session-progress"
+          >
+            <span v-if="blockLabel">{{ blockLabel }}</span>
+            <!-- Space separates them on screen; screen readers need the pause too. -->
+            <span v-if="blockLabel && progress" class="sr-only">{{ ', ' }}</span>
+            <span v-if="progress">{{ progress.text }}</span>
           </span>
         </div>
         <ProgressBar

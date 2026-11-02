@@ -204,7 +204,7 @@ describe('PracticeSetupView', () => {
     expect(pressed(wrapper, 'scope-whole')).toBe(true)
     expect(wrapper.find('[data-test="whole-topic-tip"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="interleave"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Biology · all subtopics')
+    expect(wrapper.text()).toContain('All subtopics from Biology')
   })
 
   it('starts the session with the plan and opens it', async () => {

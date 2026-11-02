@@ -277,7 +277,7 @@ describe('practice session rules', () => {
 
   it('names the scope', () => {
     expect(scopeTitle(oneSubtopic())).toBe('Photosynthesis')
-    expect(scopeTitle(wholeTopic())).toBe('Biology · all subtopics')
+    expect(scopeTitle(wholeTopic())).toBe('All subtopics from Biology')
   })
 
   it('counts a card rated again and then good as done, but not from memory', () => {
@@ -318,7 +318,7 @@ describe('practice session rules', () => {
     ]
 
     expect(resultLine(cards)).toBe('1 of 1 card from memory')
-    expect(resultLine(quiz)).toBe('1 right · 1 almost · 0 wrong')
+    expect(resultLine(quiz)).toBe('1 right, 1 almost and 0 wrong')
     expect(resultLine({ ...emptyResult('open'), status: 'skipped' })).toBe('Skipped')
   })
 

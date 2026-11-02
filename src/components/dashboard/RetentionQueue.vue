@@ -88,15 +88,24 @@ const emit = defineEmits<{
 
       <div class="grow" />
 
-      <BaseButton
-        size="lg"
-        block
-        icon-right="arrow-right"
-        data-test="start-review"
-        @click="emit('start')"
-      >
-        Start review<template v-if="minutes > 0"> · about {{ minutes }} min</template>
-      </BaseButton>
+      <div class="flex flex-col gap-2">
+        <BaseButton
+          size="lg"
+          block
+          icon-right="arrow-right"
+          data-test="start-review"
+          @click="emit('start')"
+        >
+          Start review
+        </BaseButton>
+        <p
+          v-if="minutes > 0"
+          class="text-center text-caption font-normal text-ink-subtle"
+          data-test="review-minutes"
+        >
+          Takes about {{ minutes }} min
+        </p>
+      </div>
     </template>
   </BaseCard>
 </template>
