@@ -46,18 +46,17 @@ const message = defineModel<string>({ required: true })
 </script>
 
 <template>
+  <!-- The deep-forest ground puts the tutor at the top of the dashboard's hierarchy:
+       asking Sprout is the main thing to do here. -->
   <section
     aria-labelledby="tutor-prompt-heading"
-    class="flex flex-col gap-4 rounded-xl bg-surface-tint p-4 md:gap-5 md:p-7"
+    class="flex flex-col gap-4 rounded-xl bg-primary p-4 text-on-primary shadow-md md:gap-5 md:p-7"
   >
     <div class="flex flex-col items-start gap-2.5">
       <BaseBadge tone="sky" icon="brain">Sprout, your tutor</BaseBadge>
-      <h2 id="tutor-prompt-heading" class="font-display text-title-lg text-ink">
+      <h2 id="tutor-prompt-heading" class="font-display text-title-lg">
         What do you want to understand today?
       </h2>
-      <p class="text-ink-muted">
-        I'll help you make sense of the topic that you're trying to master.
-      </p>
     </div>
 
     <ChatThread
@@ -87,6 +86,8 @@ const message = defineModel<string>({ required: true })
       :title="lastSession.title"
       :last-studied="lastSession.lastStudied"
       :to="lastSession.to"
+      tone="on-primary"
+      class="rounded-lg px-3 py-2.5"
     />
   </section>
 </template>

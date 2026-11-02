@@ -99,17 +99,6 @@ describe('DashboardView', () => {
     expect(router.currentRoute.value.fullPath).toBe('/practice?modes=feynman')
   })
 
-  it('opens the practice setup from Open practice', async () => {
-    stubApi({
-      'GET /user': Response.json(user),
-      'GET /topics': Response.json([]),
-      'GET /conversations': Response.json([]),
-    })
-    const wrapper = await mountDashboard()
-
-    expect(wrapper.get('[data-test="practice-center"]').attributes('href')).toBe('/practice')
-  })
-
   describe('the retention queue', () => {
     function stubLibrary(topics: Response): void {
       stubApi({

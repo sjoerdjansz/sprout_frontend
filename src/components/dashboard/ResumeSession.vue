@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import type { RouteLocationRaw } from 'vue-router'
-import IconTile from '@/components/IconTile.vue'
 import type { IconName } from '@/components/icons'
-import TextLink from '@/components/TextLink.vue'
+import TextLink, { type TextLinkTone } from '@/components/TextLink.vue'
 
 const {
   title,
   lastStudied,
   to,
-  icon = 'message-circle',
+  tone = 'primary',
 } = defineProps<{
   title: string
   /** When you last studied it, e.g. "2 hours ago". */
@@ -16,17 +15,23 @@ const {
   to: RouteLocationRaw
   /** A conversation by default; a practice session shows its own. */
   icon?: IconName
+  /** `on-primary` on a `primary` ground, as in the dashboard's tutor prompt. */
+  tone?: TextLinkTone
 }>()
 </script>
 
 <template>
   <div class="flex flex-wrap items-center gap-3" data-test="resume-session">
-    <IconTile :icon="icon" tint="mint" size="sm" />
-    <p class="grow text-sm text-ink-muted">
+    <p
+      class="grow text-sm"
+      :class="tone === 'on-primary' ? 'text-on-primary/80' : 'text-ink-muted'"
+    >
       Pick up where you left off:
-      <strong class="font-[650] text-ink">{{ title }}</strong
+      <strong class="font-[650]" :class="tone === 'on-primary' ? 'text-on-primary' : 'text-ink'">{{
+        title
+      }}</strong
       >, {{ lastStudied }}
     </p>
-    <TextLink :to="to" icon-right="arrow-right">Continue</TextLink>
+    <TextLink :to="to" icon-right="arrow-right" :tone="tone">Continue</TextLink>
   </div>
 </template>

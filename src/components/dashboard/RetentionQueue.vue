@@ -38,11 +38,7 @@ const emit = defineEmits<{
 
 <template>
   <BaseCard role="region" aria-labelledby="queue-heading" class="flex flex-col gap-4">
-    <SectionHeading
-      title="Today’s retention queue"
-      heading-id="queue-heading"
-      subtitle="Picked by your forgetting curve"
-    >
+    <SectionHeading title="Today’s retention queue" heading-id="queue-heading">
       <BaseBadge v-if="state === 'loaded' && dueCount > 0" tone="sun" icon="repeat">
         {{ dueCount }} due
       </BaseBadge>
