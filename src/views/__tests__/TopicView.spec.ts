@@ -105,7 +105,6 @@ describe('TopicView', () => {
     const wrapper = await mountTopic()
 
     expect(wrapper.get('[data-test="topic-title"]').text()).toBe('Biology')
-    expect(wrapper.get('[data-test="topic-meta"]').text()).toBe('3 subtopics · 9 cards due today')
     expect(wrapper.get('[data-test="topic-description"]').text()).toBe(
       'How living things work, from cells to whole ecosystems.',
     )

@@ -162,7 +162,6 @@ const deleteTopic = useDeleteTopic((deletedTopic) => {
       <TopicHeader
         :topic="topic"
         @practice="practise"
-        @add-subtopic="topicForm.openAddSubtopic(topic.id)"
         @edit="topicForm.openEditTopic(topic.id)"
         @delete="deleteTopic.open(topic.id)"
       />
@@ -175,7 +174,19 @@ const deleteTopic = useDeleteTopic((deletedTopic) => {
       />
 
       <section aria-labelledby="subtopics-heading" class="flex flex-col gap-3">
-        <h2 id="subtopics-heading" class="font-display text-title text-ink">Subtopics</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="subtopics-heading" class="font-display text-title text-ink">Subtopics</h2>
+          <BaseButton
+            v-if="topic.subtopics.length > 0"
+            variant="ghost"
+            size="sm"
+            icon="plus"
+            data-test="add-subtopic"
+            @click="topicForm.openAddSubtopic(topic.id)"
+          >
+            Add subtopic
+          </BaseButton>
+        </div>
         <SubtopicToolbar
           v-if="topic.subtopics.length > 0"
           v-model:query="query"
