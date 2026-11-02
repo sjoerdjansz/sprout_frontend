@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
 
-const { text, delay = 2000 } = defineProps<{
+const { text, delay = 1000 } = defineProps<{
   text: string
   /** How long the mouse rests on the element before the tooltip shows, in ms. */
   delay?: number
@@ -17,7 +17,7 @@ function clearTimer(): void {
   }
 }
 
-// Mouse only: a touch has no hover, and the long delay keeps it from popping up while you
+// Mouse only: a touch has no hover, and the delay keeps it from popping up while you
 // just move across the page.
 function startHover(event: PointerEvent): void {
   if (event.pointerType !== 'mouse') {

@@ -18,11 +18,11 @@ describe('BaseTooltip', () => {
     vi.useRealTimers()
   })
 
-  it('shows after resting the mouse on it for 2 seconds', async () => {
+  it('shows after resting the mouse on it for a second', async () => {
     const wrapper = mountTooltip()
 
     await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
-    await vi.advanceTimersByTimeAsync(1999)
+    await vi.advanceTimersByTimeAsync(999)
     expect(wrapper.find('[data-test="tooltip"]').exists()).toBe(false)
 
     await vi.advanceTimersByTimeAsync(1)
@@ -33,7 +33,7 @@ describe('BaseTooltip', () => {
     const wrapper = mountTooltip()
 
     await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
-    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(1000)
     await wrapper.trigger('pointerleave')
 
     expect(wrapper.find('[data-test="tooltip"]').exists()).toBe(false)
@@ -45,7 +45,7 @@ describe('BaseTooltip', () => {
     await wrapper.trigger('pointerenter', { pointerType: 'mouse' })
     await vi.advanceTimersByTimeAsync(1000)
     await wrapper.trigger('pointerleave')
-    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(1000)
 
     expect(wrapper.find('[data-test="tooltip"]').exists()).toBe(false)
   })
@@ -54,7 +54,7 @@ describe('BaseTooltip', () => {
     const wrapper = mountTooltip()
 
     await wrapper.trigger('pointerenter', { pointerType: 'touch' })
-    await vi.advanceTimersByTimeAsync(2000)
+    await vi.advanceTimersByTimeAsync(1000)
 
     expect(wrapper.find('[data-test="tooltip"]').exists()).toBe(false)
   })
