@@ -181,11 +181,11 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --color-canvas: #0b1812;
-  --color-surface: #12231b;
-  --color-surface-sunken: #08120d;
-  --color-surface-tint: #14301f;
-  --color-line: #23392d;
+  --color-canvas: #0a110d;
+  --color-surface: #111a15;
+  --color-surface-sunken: #060a08;
+  --color-surface-tint: #15231b;
+  --color-line: #1f2c25;
   --color-line-strong: #5e7a6a;
   --color-ink: #eaf4ee;
   --color-ink-muted: #a9bdb1;
@@ -212,7 +212,7 @@
   --shadow-sm: 0 1px 2px #00000059, 0 2px 8px #00000040;
   --shadow-md: 0 2px 4px #00000066, 0 10px 24px -6px #00000080;
   --shadow-lg: 0 4px 8px #00000080, 0 18px 40px -10px #000000b3;
-  --shadow-focus-ring: 0 0 0 2px #0b1812, 0 0 0 4px #f6c944;
+  --shadow-focus-ring: 0 0 0 2px #0a110d, 0 0 0 4px #f6c944;
 }
 
 @layer base {
