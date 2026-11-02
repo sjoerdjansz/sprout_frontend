@@ -87,7 +87,9 @@ const title = computed<string>(() => {
       </div>
       <div v-if="!isMixed && blocks[0]" class="flex justify-between gap-3">
         <dt class="text-ink-muted">Amount</dt>
-        <dd class="text-right font-semibold">{{ blockAmount(blocks[0]) }}</dd>
+        <dd class="text-right font-semibold" data-test="summary-amount">
+          {{ blockAmount(blocks[0]) }}
+        </dd>
       </div>
       <div v-if="order" class="flex justify-between gap-3">
         <dt class="text-ink-muted">Order</dt>
@@ -120,8 +122,5 @@ const title = computed<string>(() => {
     >
       {{ loading ? 'Getting your cards…' : starting ? 'Starting…' : 'Start session' }}
     </BaseButton>
-    <span class="text-center text-caption font-normal text-ink-subtle">
-      You can stop at any time. Everything you practise is saved as you go.
-    </span>
   </aside>
 </template>

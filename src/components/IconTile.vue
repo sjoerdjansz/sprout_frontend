@@ -2,8 +2,11 @@
 import BaseIcon from '@/components/BaseIcon.vue'
 import type { IconName } from '@/components/icons'
 
-/** The four topic tints (`*-soft` ground, `*-ink` icon) and a neutral gray. */
-export type Tint = 'mint' | 'sun' | 'peach' | 'sky' | 'gray'
+/**
+ * The four topic tints (`*-soft` ground, `*-ink` icon), a neutral gray, and green on the page's
+ * canvas colour, like the practice setup's subtopic mastery tiles.
+ */
+export type Tint = 'mint' | 'sun' | 'peach' | 'sky' | 'gray' | 'canvas'
 
 type Size = 'sm' | 'md' | 'lg'
 
@@ -23,6 +26,7 @@ const tintClasses: Record<Tint, string> = {
   peach: 'bg-ember-soft text-ember-ink',
   sky: 'bg-sky-soft text-sky-ink',
   gray: 'bg-surface-sunken text-ink-muted',
+  canvas: 'bg-canvas text-sprout-ink',
 }
 
 const sizeClasses: Record<Size, string> = {

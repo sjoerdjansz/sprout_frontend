@@ -12,10 +12,10 @@ const { item } = defineProps<{
 // A slipping topic can have nothing due yet: then "slipping" says it all.
 const caption = computed<string>(() => {
   if (item.slipping) {
-    return item.cardCount > 0 ? `${pluralize(item.cardCount, 'card')} · slipping` : 'Slipping'
+    return item.cardCount > 0 ? `${pluralize(item.cardCount, 'card')}, slipping` : 'Slipping'
   }
 
-  return `${pluralize(item.cardCount, 'card')} · due today`
+  return `${pluralize(item.cardCount, 'card')} due today`
 })
 </script>
 

@@ -76,6 +76,39 @@ describe('PracticeSetupView', () => {
     expect(wrapper.text()).toContain('2 questions')
   })
 
+  it('says the session gets all the cards when there are fewer than the smallest size', async () => {
+    const cards = [1, 2, 3].map((id) => makeFlashcard({ id, is_due: true }))
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
+      'GET /subtopics/101/flashcards': Response.json(cards),
+    })
+    const cardAmount = wrapper.get('[data-test="card-amount"]')
+
+    expect(cardAmount.get('[data-test="amount-all"]').text()).toBe('All 3 cards')
+    expect(cardAmount.find('[role="tablist"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="summary-amount"]').text()).toBe('3 cards')
+  })
+
+  it('offers only the sizes below what the scope has, then all of them', async () => {
+    const cards = Array.from({ length: 25 }, (_, index) => makeFlashcard({ id: index + 1 }))
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
+      'GET /subtopics/101/flashcards': Response.json(cards),
+    })
+    const cardAmount = wrapper.get('[data-test="card-amount"]')
+
+    expect(cardAmount.findAll('[role="tab"]').map((tab) => tab.text())).toEqual([
+      '10',
+      '20',
+      'All 25',
+    ])
+    expect(cardAmount.get('[data-test="tab-20"]').attributes('aria-selected')).toBe('true')
+
+    await cardAmount.get('[data-test="tab-all"]').trigger('click')
+    expect(wrapper.get('[data-test="summary-amount"]').text()).toBe('25 cards')
+
+    await cardAmount.get('[data-test="tab-10"]').trigger('click')
+    expect(wrapper.get('[data-test="summary-amount"]').text()).toBe('10 cards')
+  })
+
   it('mixes every mode that can run except the open session, which you add yourself', async () => {
     const wrapper = await mountSetup('/practice?subtopic=101')
 
@@ -171,7 +204,7 @@ describe('PracticeSetupView', () => {
     expect(pressed(wrapper, 'scope-whole')).toBe(true)
     expect(wrapper.find('[data-test="whole-topic-tip"]').exists()).toBe(true)
     expect(wrapper.find('[data-test="interleave"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Biology · mixed subtopics')
+    expect(wrapper.text()).toContain('All subtopics from Biology')
   })
 
   it('starts the session with the plan and opens it', async () => {

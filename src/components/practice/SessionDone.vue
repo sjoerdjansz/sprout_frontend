@@ -60,7 +60,7 @@ const overline = computed<string>(() => {
   const modes =
     plan.blocks.length > 1 ? 'Mixed session' : practiceMode(plan.blocks[0]?.mode ?? 'cards').name
 
-  return `Session done · ${modes} · ${plan.title}`.toUpperCase()
+  return `${modes} done: ${plan.title}`.toUpperCase()
 })
 
 interface Tile {

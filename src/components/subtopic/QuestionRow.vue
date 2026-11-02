@@ -5,7 +5,6 @@ import BaseIconButton from '@/components/BaseIconButton.vue'
 import MaterialRow from '@/components/subtopic/MaterialRow.vue'
 import { relativeTime } from '@/lib/relativeTime'
 import { answerText, questionTypeLooks, verdictLooks } from '@/lib/subtopicPage'
-import { capitalize } from '@/lib/text'
 import type { Question, QuestionOption, Verdict } from '@/stores/questions'
 
 const { question, expanded } = defineProps<{
@@ -130,10 +129,10 @@ function optionClasses(option: QuestionOption): string {
         {{ verdictLook.label }}
       </BaseBadge>
       <span class="text-caption font-normal text-ink-subtle">
-        {{ typeLook.label }}
-        <template v-if="question.latest_answer !== null">
-          · {{ capitalize(relativeTime(question.latest_answer.answered_at)) }}
-        </template>
+        {{ typeLook.label
+        }}<template v-if="question.latest_answer !== null"
+          >, answered {{ relativeTime(question.latest_answer.answered_at) }}</template
+        >
       </span>
     </template>
 
@@ -145,7 +144,7 @@ function optionClasses(option: QuestionOption): string {
         @click="emit('toggle')"
       />
       <!-- No practice sessions yet (see ../specs/subtopic-page.md). -->
-      <BaseIconButton icon="rotate-ccw" label="Ask me again · Coming soon" size="sm" disabled />
+      <BaseIconButton icon="rotate-ccw" label="Ask me again (coming soon)" size="sm" disabled />
       <BaseIconButton
         icon="trash-2"
         label="Delete question"

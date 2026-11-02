@@ -132,7 +132,7 @@ describe('SubtopicView', () => {
     const wrapper = await mountSubtopic()
 
     expect(wrapper.get('[data-test="subtopic-title"]').text()).toBe('Photosynthesis')
-    expect(wrapper.text()).toContain('Biology · Subtopic')
+    expect(wrapper.text()).toContain('Subtopic of Biology')
     expect(wrapper.get('[data-test="level"]').text()).toBe('Growing')
     expect(wrapper.findAll('[data-test="facet"]')).toHaveLength(3)
     expect(wrapper.findAll('[data-test="tab-count"]').map((count) => count.text())).toEqual([
@@ -141,8 +141,8 @@ describe('SubtopicView', () => {
       '2',
       '1',
     ])
-    // Back to the topics page with this topic picked.
-    expect(wrapper.get('[data-test="crumb-topic"]').attributes('href')).toBe('/topics?topic=1')
+    // Back to the topic's own page.
+    expect(wrapper.get('[data-test="crumb-topic"]').attributes('href')).toBe('/topics/1')
   })
 
   it('opens the practice setup with this subtopic, and a mode from the tabs', async () => {
@@ -515,7 +515,7 @@ describe('SubtopicView', () => {
     await openTab(wrapper, 'sessions')
     const [going, done] = wrapper.findAll('[data-test="session"]')
     expect(going?.text()).toContain('Mixed session')
-    expect(going?.text()).toContain('1 card · 1 message')
+    expect(going?.text()).toContain('1 card and 1 message')
     expect(going?.get('[data-test="session-mastery"]').text()).toBe('Mastery 20% → 28%')
     expect(going?.get('[data-test="continue-session"]').attributes('href')).toBe(
       '/practice/session',
@@ -570,7 +570,7 @@ describe('SubtopicView', () => {
         'Your notes',
         'From photosynthesis-notes.txt',
       ])
-      expect(wrapper.findAll('[data-test="source"]')[0]?.text()).toContain('Chat notes · 6 words')
+      expect(wrapper.findAll('[data-test="source"]')[0]?.text()).toContain('Chat notes, 6 words')
 
       await wrapper.findAll('[data-test="show-source"]')[0]?.trigger('click')
       expect(wrapper.get('[data-test="source-content"] strong').text()).toBe('red and blue')
@@ -754,7 +754,7 @@ describe('SubtopicView', () => {
     expect(wrapper.get('dialog').text()).toContain('Notes from the chat and your files stay')
   })
 
-  it('deletes the subtopic after you confirm, and goes back to the topics page', async () => {
+  it('deletes the subtopic after you confirm, and goes back to its topic’s page', async () => {
     const wrapper = await mountSubtopic({
       'DELETE /subtopics/101': noContent,
       'GET /topics': Response.json([]),
@@ -769,7 +769,7 @@ describe('SubtopicView', () => {
     await flushPromises()
 
     expect(calls('DELETE /subtopics/101')).toBe(1)
-    expect(router.currentRoute.value.name).toBe('topics')
+    expect(router.currentRoute.value.fullPath).toBe('/topics/1')
   })
 
   it('shows the not found page when the subtopic was deleted elsewhere', async () => {

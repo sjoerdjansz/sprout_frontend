@@ -43,7 +43,7 @@ const crumbClasses =
     </RouterLink>
     <span aria-hidden="true" class="text-ink-subtle">/</span>
     <RouterLink
-      :to="{ name: 'topics', query: { topic: subtopic.topic.id } }"
+      :to="{ name: 'topic', params: { id: subtopic.topic.id } }"
       :class="crumbClasses"
       data-test="crumb-topic"
     >
@@ -61,7 +61,7 @@ const crumbClasses =
 
     <div class="flex min-w-0 flex-[1_1_300px] flex-col gap-1">
       <span class="text-overline text-ink-subtle uppercase">
-        {{ subtopic.topic.title }} · Subtopic
+        Subtopic of {{ subtopic.topic.title }}
       </span>
       <div class="flex flex-wrap items-center gap-2.5">
         <h1 class="font-display text-title-lg text-ink" data-test="subtopic-title">

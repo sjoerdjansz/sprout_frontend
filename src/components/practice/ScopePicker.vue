@@ -5,7 +5,7 @@ import BaseIcon from '@/components/BaseIcon.vue'
 import FilterChip from '@/components/FilterChip.vue'
 import IconTile from '@/components/IconTile.vue'
 import OptionCard from '@/components/OptionCard.vue'
-import { dueCards, pluralize, subtopicCaption, topicAppearance } from '@/lib/topics'
+import { pluralize, topicAppearance } from '@/lib/topics'
 import type { Topic } from '@/stores/topics'
 
 const { topics, showWholeTopicTip } = defineProps<{
@@ -28,7 +28,6 @@ function pickTopic(id: number): void {
 
 <template>
   <div class="flex flex-col gap-2">
-    <span class="text-label text-ink">Topic</span>
     <div class="flex flex-wrap gap-2">
       <FilterChip
         v-for="each in topics"
@@ -42,25 +41,10 @@ function pickTopic(id: number): void {
       </FilterChip>
     </div>
   </div>
+  <hr class="border-line my-4" />
 
   <div v-if="topic" class="flex flex-col gap-2">
-    <span class="text-label text-ink">Subtopic</span>
     <div class="flex flex-col gap-1.5">
-      <OptionCard
-        :pressed="subtopicId === null"
-        :disabled="topic.subtopics.length === 0"
-        data-test="scope-whole"
-        @toggle="subtopicId = null"
-      >
-        <IconTile icon="shuffle" tint="peach" size="sm" />
-        <span class="flex min-w-0 grow flex-col">
-          <b class="text-body-strong">The whole topic · {{ topic.title }}</b>
-          <span class="text-caption font-normal text-ink-muted">
-            {{ pluralize(topic.subtopics.length, 'subtopic') }} · {{ dueCards(topic) }} due
-          </span>
-        </span>
-      </OptionCard>
-
       <OptionCard
         v-for="subtopic in topic.subtopics"
         :key="subtopic.id"
@@ -74,16 +58,27 @@ function pickTopic(id: number): void {
         >
           {{ subtopic.mastery }}%
         </span>
-        <span class="flex min-w-0 grow flex-col">
-          <b class="text-body-strong">{{ subtopic.title }}</b>
-          <span class="text-caption font-normal text-ink-muted">
-            {{ subtopicCaption(subtopic).text }}
-          </span>
-        </span>
+        <b class="min-w-0 grow text-body-strong">{{ subtopic.title }}</b>
         <BaseBadge v-if="subtopic.slipping" tone="sun" icon="trending-down">Slipping</BaseBadge>
         <BaseBadge v-else-if="subtopic.due_cards > 0" tone="sun" icon="repeat">
           {{ subtopic.due_cards }} due
         </BaseBadge>
+      </OptionCard>
+
+      <hr class="border-line my-4" />
+      <OptionCard
+        :pressed="subtopicId === null"
+        :disabled="topic.subtopics.length === 0"
+        data-test="scope-whole"
+        @toggle="subtopicId = null"
+      >
+        <IconTile icon="layout-grid" tint="canvas" size="sm" />
+        <span class="flex min-w-0 grow flex-col">
+          <b class="text-body-strong">All subtopics from {{ topic.title }}</b>
+          <span class="text-caption font-normal text-ink-muted">
+            {{ pluralize(topic.subtopics.length, 'subtopic') }}
+          </span>
+        </span>
       </OptionCard>
 
       <p v-if="topic.subtopics.length === 0" class="text-body text-ink-muted">

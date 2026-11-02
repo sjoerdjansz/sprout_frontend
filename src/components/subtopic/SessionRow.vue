@@ -61,7 +61,7 @@ const hasChat = computed<boolean>(() => session.done.messages.length > 0)
         {{ capitalize(relativeTime(session.last_activity_at)) }}
       </span>
       <span class="text-caption font-normal text-ink-subtle">
-        {{ sessionMinutes(session) }} min · {{ session.xp_earned }} XP
+        {{ sessionMinutes(session) }} min, {{ session.xp_earned }} XP
       </span>
       <span
         v-if="thisSubtopic"

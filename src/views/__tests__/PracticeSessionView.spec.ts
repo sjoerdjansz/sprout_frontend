@@ -277,7 +277,7 @@ describe('PracticeSessionView', () => {
   it('shows "next up" between the blocks of a mixed session', async () => {
     const { wrapper } = await mountSession(['cards', 'retrieval'])
 
-    expect(wrapper.get('[data-test="session-progress"]').text()).toBe('Block 1 of 2 · 0 of 2')
+    expect(wrapper.get('[data-test="session-progress"]').text()).toBe('Block 1 of 2, 0 of 2')
 
     await click(wrapper, '[data-test="finish-block"]')
     const nextUp = wrapper.get('[data-test="next-up"]')

@@ -1,12 +1,14 @@
 import { ref, type Ref } from 'vue'
-import type { Toast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
 import { useConversationsStore } from '@/stores/conversations'
 import { usePracticeStore } from '@/stores/practice'
 import { useTopicsStore, type Topic } from '@/stores/topics'
 
-/** Deleting a topic from its card's menu, after you confirm it in a dialog. */
-export function useDeleteTopic(showToast: (toast: Toast) => void): {
+/**
+ * Deleting a topic from its card's menu or its own page, after you confirm it in a dialog. The page
+ * says what happens next (a toast, or back to the library).
+ */
+export function useDeleteTopic(onDeleted: (deletedTopic: Topic) => void): {
   /** The topic you're asked to confirm; null while the dialog is closed. */
   topic: Ref<Topic | null>
   deleting: Ref<boolean>
@@ -38,7 +40,7 @@ export function useDeleteTopic(showToast: (toast: Toast) => void): {
     conversationsStore.forgetTopic(deletedTopic.id)
     practiceStore.forgetTopic(deletedTopic.id)
     topic.value = null
-    showToast({ title: `Deleted ${deletedTopic.title}`, tone: 'sky', icon: 'trash-2' })
+    onDeleted(deletedTopic)
   }
 
   async function confirm(): Promise<void> {

@@ -164,6 +164,11 @@ export const useTopicsStore = defineStore('topics', () => {
   const topics = ref<Topic[]>([])
   /** The subtopic the subtopic page shows. */
   const subtopic = ref<SubtopicDetail | null>(null)
+  /**
+   * Whether `topics` holds your whole library. After opening a topic page directly it holds only
+   * that topic, so the forms (which list every topic and category) load the library first.
+   */
+  const libraryLoaded = ref(false)
 
   async function fetchLibrary(): Promise<void> {
     const [fetchedTopics, fetchedCategories] = await Promise.all([
@@ -172,6 +177,23 @@ export const useTopicsStore = defineStore('topics', () => {
     ])
     topics.value = fetchedTopics
     categories.value = fetchedCategories
+    libraryLoaded.value = true
+  }
+
+  /**
+   * One topic with its subtopics, for the topic page. It goes into `topics`, so every change made
+   * through this store (saving, moving, deleting) shows on that page too.
+   */
+  async function fetchTopic(topicId: number): Promise<Topic> {
+    const topic = await api<Topic>(`/topics/${topicId}/subtopics`)
+    const index = topics.value.findIndex((existing) => existing.id === topic.id)
+    if (index === -1) {
+      topics.value.push(topic)
+    } else {
+      topics.value[index] = topic
+    }
+
+    return topic
   }
 
   /** Asks for the library again, e.g. to see whether material in the background is done. */
@@ -348,7 +370,9 @@ export const useTopicsStore = defineStore('topics', () => {
     categories,
     topics,
     subtopic,
+    libraryLoaded,
     fetchLibrary,
+    fetchTopic,
     fetchTopics,
     fetchCategories,
     addTopic,

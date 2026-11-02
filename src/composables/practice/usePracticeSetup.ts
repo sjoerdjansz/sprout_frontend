@@ -8,12 +8,16 @@ import {
   type PracticeModeId,
 } from '@/lib/practiceModes'
 import {
+  availableCounts,
   availableModes,
   buildBlocks,
   builtInDefaults,
   defaultsFromSettings,
+  resolveAmount,
   scopeTitle,
   unavailableReason,
+  type AvailableCounts,
+  type PracticeAmount,
   type PracticeBlock,
   type PracticeOptions,
   type PracticeScope,
@@ -40,8 +44,10 @@ export interface PracticeSetup {
   topicId: Ref<number>
   subtopicId: Ref<number | null>
   modes: Ref<PracticeModeId[]>
-  cardCount: Ref<number>
-  questionCount: Ref<number>
+  cardAmount: Ref<PracticeAmount>
+  questionAmount: Ref<PracticeAmount>
+  /** The scope's cards and questions, for "All"; null until they've loaded. */
+  available: ComputedRef<AvailableCounts | null>
   dueFirst: Ref<boolean>
   interleave: Ref<boolean>
   secondTry: Ref<boolean>
@@ -84,8 +90,8 @@ export function usePracticeSetup(): PracticeSetup {
   const topicId = ref(0)
   const subtopicId = ref<number | null>(null)
   const modes = ref<PracticeModeId[]>(['cards'])
-  const cardCount = ref(builtInDefaults.cardCount)
-  const questionCount = ref(builtInDefaults.questionCount)
+  const cardAmount = ref<PracticeAmount>(builtInDefaults.cardCount)
+  const questionAmount = ref<PracticeAmount>(builtInDefaults.questionCount)
   const dueFirst = ref(true)
   const interleave = ref(builtInDefaults.interleave)
   // Not on the setup page: it comes from your settings ("Hint before the answer").
@@ -108,10 +114,19 @@ export function usePracticeSetup(): PracticeSetup {
     }
   })
 
+  // Like the summary: while another scope loads, the amounts keep the last counts, so they don't jump.
+  const available = computed<AvailableCounts | null>((previous) => {
+    if (materialState.value === 'loaded') {
+      return availableCounts(practiceStore.material)
+    }
+
+    return materialState.value === 'loading' && previous !== undefined ? previous : null
+  })
+
   const options = computed<PracticeOptions>(() => ({
     modes: modes.value,
-    cardCount: cardCount.value,
-    questionCount: questionCount.value,
+    cardCount: resolveAmount(cardAmount.value, available.value?.cards ?? 0),
+    questionCount: resolveAmount(questionAmount.value, available.value?.questions ?? 0),
     dueFirst: dueFirst.value,
     interleave: interleave.value,
     secondTry: secondTry.value,
@@ -140,9 +155,7 @@ export function usePracticeSetup(): PracticeSetup {
       : buildBlocks(scope.value, practiceStore.material, options.value),
   )
 
-  const scopeLabel = computed<string>(() =>
-    scope.value === null ? '' : scopeTitle(scope.value, options.value),
-  )
+  const scopeLabel = computed<string>(() => (scope.value === null ? '' : scopeTitle(scope.value)))
 
   const hasSizedMode = computed<boolean>(() =>
     modes.value.some((mode) => practiceMode(mode).unit !== null),
@@ -157,7 +170,7 @@ export function usePracticeSetup(): PracticeSetup {
       return dueFirst.value ? 'Due first' : 'Shuffled'
     }
 
-    return interleave.value ? `Mixed subtopics, ${due}` : `One subtopic at a time, ${due}`
+    return interleave.value ? `Interleave subtopics, ${due}` : `One subtopic at a time, ${due}`
   })
 
   // Emptying the card while another scope loads made it shrink and jump back a moment later, so
@@ -199,8 +212,8 @@ export function usePracticeSetup(): PracticeSetup {
     try {
       const settings = settingsStore.settings ?? (await settingsStore.fetchSettings())
       const defaults = defaultsFromSettings(settings)
-      cardCount.value = defaults.cardCount
-      questionCount.value = defaults.questionCount
+      cardAmount.value = defaults.cardCount
+      questionAmount.value = defaults.questionCount
       interleave.value = defaults.interleave
       secondTry.value = defaults.secondTry
     } catch (caught) {
@@ -309,8 +322,9 @@ export function usePracticeSetup(): PracticeSetup {
     topicId,
     subtopicId,
     modes,
-    cardCount,
-    questionCount,
+    cardAmount,
+    questionAmount,
+    available,
     dueFirst,
     interleave,
     secondTry,

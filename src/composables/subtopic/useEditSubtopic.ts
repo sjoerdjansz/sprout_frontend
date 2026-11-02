@@ -53,7 +53,7 @@ export function useEditSubtopic(
     error.value = null
 
     // The form lets you move the subtopic, so it needs your topics.
-    if (topicsStore.topics.length === 0) {
+    if (!topicsStore.libraryLoaded) {
       try {
         await topicsStore.fetchLibrary()
       } catch (caught) {

@@ -7,6 +7,7 @@
 import type { BadgeTone } from '@/components/BaseBadge.vue'
 import { practiceMode, practiceModes, type PracticeModeId } from '@/lib/practiceModes'
 import { ratingLabels } from '@/lib/ratings'
+import { listOf } from '@/lib/text'
 import type { Flashcard, Rating } from '@/stores/flashcards'
 import type {
   PracticeMessage,
@@ -97,6 +98,63 @@ function activeCards(material: PracticeMaterial): Flashcard[] {
 // Explain it questions have a block of their own.
 function quizQuestions(material: PracticeMaterial): Question[] {
   return material.questions.filter((question) => question.type !== 'feynman')
+}
+
+/** How many cards and questions a scope has for the sized blocks, before cutting to an amount. */
+export interface AvailableCounts {
+  cards: number
+  questions: number
+}
+
+export function availableCounts(material: PracticeMaterial): AvailableCounts {
+  return { cards: activeCards(material).length, questions: quizQuestions(material).length }
+}
+
+/** The most cards, or questions, the API takes in one session. */
+export const maxBlockSize = 100
+
+/** An amount picked on the setup: a number, or everything the scope has. */
+export type PracticeAmount = number | 'all'
+
+/** "All" follows the scope you pick, up to what one session can hold. */
+export function resolveAmount(amount: PracticeAmount, available: number): number {
+  return amount === 'all' ? Math.min(available, maxBlockSize) : amount
+}
+
+/** One choice in "How many cards?": a size, or `all`. */
+export interface AmountOption {
+  id: string
+  label: string
+}
+
+/**
+ * The amounts worth offering for what the scope has: only the sizes below it, then everything.
+ * With 7 cards, 10 / 20 / 40 would all give the same 7, so "All 7" is the only option left. Past
+ * what one session holds, the last option is that maximum instead of "All".
+ */
+export function amountOptions(sizes: number[], available: number): AmountOption[] {
+  const most = Math.min(available, maxBlockSize)
+  const smaller = sizes
+    .filter((size) => size < most)
+    .map((size) => ({ id: String(size), label: String(size) }))
+  const everything = {
+    id: 'all',
+    label: available > maxBlockSize ? String(maxBlockSize) : `All ${available}`,
+  }
+
+  return [...smaller, everything]
+}
+
+/**
+ * Which option shows as picked. An amount at or above what the scope has (the 20 from your
+ * settings on a scope of 7) gets everything, so it shows as "All" rather than nothing picked.
+ */
+export function selectedAmount(amount: PracticeAmount, available: number): string {
+  if (amount === 'all' || amount >= Math.min(available, maxBlockSize)) {
+    return 'all'
+  }
+
+  return String(amount)
 }
 
 /** Why a mode can't run on this scope, or null when it can. */
@@ -406,13 +464,16 @@ export function estimateMinutes(blocks: PracticeBlock[]): number {
   return Math.max(1, Math.round(total))
 }
 
-/** "Photosynthesis", "Biology · all subtopics" or "Biology · mixed subtopics". */
-export function scopeTitle(scope: PracticeScope, options: PracticeOptions): string {
+/**
+ * "Photosynthesis" or "All subtopics from Biology", as the practice setup calls it. Whether the
+ * subtopics are mixed is the order's business, so the scope only says what's in it.
+ */
+export function scopeTitle(scope: PracticeScope): string {
   if (scope.subtopic !== null) {
     return scope.subtopic.title
   }
 
-  return `${scope.topicTitle} · ${options.interleave ? 'mixed' : 'all'} subtopics`
+  return `All subtopics from ${scope.topicTitle}`
 }
 
 // --- Results -------------------------------------------------------------------------------
@@ -629,7 +690,11 @@ export function resultLine(result: BlockResult): string {
     }
     case 'retrieval': {
       const summary = summariseQuiz(result.answers)
-      return `${summary.right} right · ${summary.almost} almost · ${summary.wrong} wrong`
+      return listOf([
+        `${summary.right} right`,
+        `${summary.almost} almost`,
+        `${summary.wrong} wrong`,
+      ])
     }
     case 'feynman':
       return result.explanations.length > 0 ? 'Explained in your own words' : 'Not explained yet'

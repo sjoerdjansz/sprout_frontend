@@ -20,19 +20,20 @@ const {
   topicId,
   subtopicId,
   modes,
-  cardCount,
-  questionCount,
+  cardAmount,
+  questionAmount,
+  available,
   dueFirst,
   interleave,
   scope,
   current,
 } = setup
 
-// "Photosynthesis" or "Biology · whole topic": what the session you can pick up is about.
+// "Photosynthesis" or "All subtopics from Biology": what the session you can pick up is about.
 const currentTitle = computed<string>(() =>
   current.value === null
     ? ''
-    : (current.value.subtopic?.title ?? `${current.value.topic.title} · whole topic`),
+    : (current.value.subtopic?.title ?? `All subtopics from ${current.value.topic.title}`),
 )
 
 onMounted(() => {
@@ -105,11 +106,12 @@ onMounted(() => {
           data-test="step-amount"
         >
           <AmountPicker
-            v-model:card-count="cardCount"
-            v-model:question-count="questionCount"
+            v-model:card-amount="cardAmount"
+            v-model:question-amount="questionAmount"
             v-model:due-first="dueFirst"
             v-model:interleave="interleave"
             :modes="modes"
+            :available="available"
             :whole-topic="scope?.subtopic === null"
           />
         </SetupStep>

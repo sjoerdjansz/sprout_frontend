@@ -1,23 +1,18 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, useTemplateRef } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseButton from '@/components/BaseButton.vue'
-import type { SelectOption } from '@/components/BaseSelect.vue'
 import BaseToast from '@/components/BaseToast.vue'
 import FormError from '@/components/FormError.vue'
 import DeleteTopicDialog from '@/components/topics/DeleteTopicDialog.vue'
-import DeleteSubtopicDialog from '@/components/subtopic/DeleteSubtopicDialog.vue'
-import SubtopicList from '@/components/topics/SubtopicList.vue'
 import SubtopicSuggestionsDialog from '@/components/topics/SubtopicSuggestionsDialog.vue'
-import TopicFormDialog, {
-  type TopicFormMode,
-  type TopicFormValues,
-} from '@/components/topics/TopicFormDialog.vue'
+import TopicFormDialog from '@/components/topics/TopicFormDialog.vue'
+import LibrarySummary from '@/components/topics/LibrarySummary.vue'
 import TopicLibrary from '@/components/topics/TopicLibrary.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useDeleteSubtopicFromList } from '@/composables/topics/useDeleteSubtopicFromList'
 import { useDeleteTopic } from '@/composables/topics/useDeleteTopic'
 import { useSubtopicSuggestions } from '@/composables/topics/useSubtopicSuggestions'
+import { useTopicForm, type SavedTopicForm } from '@/composables/topics/useTopicForm'
 import { useGenerationPolling } from '@/composables/useGenerationPolling'
 import { useToast } from '@/composables/useToast'
 import { ApiError } from '@/lib/api'
@@ -26,56 +21,33 @@ import {
   librarySummary,
   needsAttention,
   usedCategories,
-  visibleSubtopics,
   type LibraryFilters,
+  type LibraryStat,
 } from '@/lib/topics'
 import { useTopicsStore, type Category, type Topic } from '@/stores/topics'
 
-const route = useRoute()
 const router = useRouter()
 const topicsStore = useTopicsStore()
 const { toast, showToast } = useToast()
 const suggestions = useSubtopicSuggestions(showToast)
-const deleteTopic = useDeleteTopic(showToast)
-const deleteSubtopic = useDeleteSubtopicFromList(showToast)
 
 type LoadState = 'loading' | 'loaded' | 'failed'
 
 const loadState = ref<LoadState>('loading')
 const loadError = ref('')
 
-const query = ref('')
 const categoryId = ref<number | 'all'>('all')
 const showOnlyAttention = ref(false)
 
 const filters = computed<LibraryFilters>(() => ({
-  query: query.value,
   categoryId: categoryId.value,
   needsAttention: showOnlyAttention.value,
 }))
 
 function clearFilters(): void {
-  query.value = ''
   categoryId.value = 'all'
   showOnlyAttention.value = false
 }
-
-/**
- * The topic whose subtopics show under the library. It lives in the URL (`?topic=8`), so going
- * back from a subtopic's page, or reloading, keeps your place. Without one, the first topic.
- */
-const selectedTopicId = computed<number | null>({
-  get: () => {
-    const fromUrl = Number(route.query.topic)
-    const exists = topicsStore.topics.some((topic) => topic.id === fromUrl)
-
-    return exists ? fromUrl : (topicsStore.topics[0]?.id ?? null)
-  },
-  // Replace, not push: picking topics shouldn't fill your back button.
-  set: (topicId) => {
-    void router.replace({ query: topicId === null ? {} : { topic: String(topicId) } })
-  },
-})
 
 async function load(): Promise<void> {
   loadState.value = 'loading'
@@ -92,7 +64,20 @@ async function load(): Promise<void> {
   }
 }
 
+// Deleting a topic on its own page brings you back here; the history entry says which one.
+function showDeletedTopic(): void {
+  const state: unknown = window.history.state
+  if (typeof state === 'object' && state !== null && 'deletedTopic' in state) {
+    if (typeof state.deletedTopic === 'string') {
+      showToast({ title: `Deleted ${state.deletedTopic}`, tone: 'sky', icon: 'trash-2' })
+      // Once: coming back to this entry later shouldn't say it again.
+      window.history.replaceState({ ...state, deletedTopic: null }, '')
+    }
+  }
+}
+
 onMounted(() => {
+  showDeletedTopic()
   void load()
 })
 
@@ -106,37 +91,9 @@ const { error: checkError } = useGenerationPolling(
   topicsStore.fetchTopics,
 )
 
-const subtopicList = useTemplateRef<InstanceType<typeof SubtopicList>>('subtopicList')
-
-/**
- * Picks a topic. On a narrow screen its subtopics sit below all the cards, so scroll them into
- * view; when they're already on screen (a wide screen) nothing moves.
- */
-async function selectTopic(topicId: number): Promise<void> {
-  selectedTopicId.value = topicId
-  await nextTick()
-
-  const list: unknown = subtopicList.value?.$el
-  if (!(list instanceof HTMLElement) || list.getBoundingClientRect().top < window.innerHeight) {
-    return
-  }
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  list.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' })
-}
-
 const filteredTopics = computed<Topic[]>(() => filterTopics(topicsStore.topics, filters.value))
 
-/**
- * The topic whose subtopics show: the one you picked, or, when a filter hides it, the first topic
- * that's still visible. So a search for a subtopic shows that subtopic straight away.
- */
-const shownTopic = computed<Topic | null>(() => {
-  const picked = filteredTopics.value.find((topic) => topic.id === selectedTopicId.value)
-
-  return picked ?? filteredTopics.value[0] ?? null
-})
-
-const summary = computed<string>(() => librarySummary(topicsStore.topics))
+const summary = computed<LibraryStat[]>(() => librarySummary(topicsStore.topics))
 
 const attentionCount = computed<number>(
   () => topicsStore.topics.flatMap((topic) => topic.subtopics).filter(needsAttention).length,
@@ -147,182 +104,43 @@ const filterCategories = computed<Category[]>(() =>
   usedCategories(topicsStore.categories, topicsStore.topics),
 )
 
-const categoryOptions = computed<SelectOption[]>(() =>
-  topicsStore.categories.map((category) => ({ value: String(category.id), label: category.name })),
-)
+// --- Adding, editing and deleting topics
 
-const topicOptions = computed<SelectOption[]>(() =>
-  topicsStore.topics.map((topic) => ({ value: String(topic.id), label: topic.title })),
-)
+function afterSave(saved: SavedTopicForm): void {
+  // Clear the filters so what you just saved is in view.
+  clearFilters()
+  if (saved.mode === 'add-topic') {
+    // A new topic's subtopics live on its own page; Sprout reads its source there.
+    void router.push({
+      name: 'topic',
+      params: { id: saved.topic.id },
+      state: { suggestSubtopics: saved.hasNewSource },
+    })
 
-// --- Adding and editing, in a dialog
-
-interface FormState {
-  mode: TopicFormMode
-  values: TopicFormValues
-  /** The subtopic being edited; null for the other forms. */
-  subtopicId: number | null
-}
-
-// Null while no dialog is open.
-const form = ref<FormState | null>(null)
-const saving = ref(false)
-const saveError = ref<ApiError | null>(null)
-
-function openForm(mode: TopicFormMode, topic: Topic | null): void {
-  saveError.value = null
-  form.value = {
-    mode,
-    values: {
-      title: mode === 'edit-topic' ? (topic?.title ?? '') : '',
-      description: mode === 'edit-topic' ? (topic?.description ?? '') : '',
-      notes: mode === 'edit-topic' ? (topic?.notes ?? '') : '',
-      // The topic's own category, the one you're filtering on, or the first one; with none at
-      // all you make one.
-      categoryId:
-        topic?.category.id ??
-        (categoryId.value === 'all' ? (topicsStore.categories[0]?.id ?? null) : categoryId.value),
-      newCategoryName: '',
-      topicId: topic?.id ?? 0,
-    },
-    subtopicId: null,
-  }
-}
-
-// The library has the subtopic's own notes, so the form opens without asking the API first.
-function editSubtopicById(subtopicId: number): void {
-  const topic = topicsStore.topics.find((candidate) =>
-    candidate.subtopics.some((subtopic) => subtopic.id === subtopicId),
-  )
-  const subtopic = topic?.subtopics.find((candidate) => candidate.id === subtopicId)
-  if (topic === undefined || subtopic === undefined) {
     return
   }
-  saveError.value = null
-  form.value = {
-    mode: 'edit-subtopic',
-    values: {
-      title: subtopic.title,
-      description: subtopic.description ?? '',
-      notes: subtopic.notes ?? '',
-      categoryId: topic.category.id,
-      newCategoryName: '',
-      topicId: topic.id,
-    },
-    subtopicId,
+  if (saved.hasNewSource) {
+    void suggestions.start(saved.topic)
   }
 }
 
-function editTopicById(topicId: number): void {
-  const topic = topicsStore.topics.find((candidate) => candidate.id === topicId) ?? null
-  openForm('edit-topic', topic)
-}
+const topicForm = useTopicForm({
+  showToast,
+  preferredCategoryId: () => (categoryId.value === 'all' ? null : categoryId.value),
+  onSaved: afterSave,
+})
+const { form } = topicForm
 
-/** A topic saved with a new or changed source, for Sprout to split into subtopics next. */
-type SavedSource = Pick<Topic, 'id' | 'title'> | null
-
-async function saveForm(
-  mode: TopicFormMode,
-  values: TopicFormValues,
-  initialNotes: string,
-  subtopicId: number | null,
-): Promise<SavedSource> {
-  if (mode === 'edit-subtopic' && subtopicId !== null) {
-    const result = await topicsStore.updateSubtopic(subtopicId, {
-      topicId: values.topicId,
-      title: values.title,
-      description: values.description,
-      notes: values.notes,
-    })
-    // It may have moved to another topic: show the one it's in now.
-    selectedTopicId.value = result.subtopic.topic_id
-
-    return null
-  }
-
-  if (mode === 'add-subtopic') {
-    const result = await topicsStore.addSubtopic({
-      topicId: values.topicId,
-      title: values.title,
-      description: values.description,
-      notes: values.notes,
-    })
-    selectedTopicId.value = result.subtopic.topic_id
-    // Its row shows the cards are coming; the toast says where they come from.
-    if (result.subtopic.generation_status === 'generating') {
-      showToast({
-        title: `Added ${result.subtopic.title}`,
-        message: 'Sprout is making cards from your notes.',
-        tone: 'sprout',
-        icon: 'sparkles',
-      })
-    }
-
-    return null
-  }
-
-  const topicInput = {
-    title: values.title,
-    description: values.description,
-    notes: values.notes,
-    categoryId: values.categoryId,
-    categoryName: values.newCategoryName,
-  }
-  const topic =
-    mode === 'add-topic'
-      ? await topicsStore.addTopic(topicInput)
-      : await topicsStore.updateTopic(values.topicId, topicInput)
-  selectedTopicId.value = topic.id
-
-  const sourceChanged = mode === 'add-topic' || values.notes !== initialNotes.trim()
-
-  return values.notes !== '' && sourceChanged ? topic : null
-}
-
-async function save(values: TopicFormValues): Promise<void> {
-  if (form.value === null) {
-    return
-  }
-  saving.value = true
-  saveError.value = null
-
-  try {
-    const savedSource = await saveForm(
-      form.value.mode,
-      values,
-      form.value.values.notes,
-      form.value.subtopicId,
-    )
-    // Clear the filters so what you just saved is in view.
-    clearFilters()
-    form.value = null
-    // The topic is saved; splitting its source into subtopics is the next, separate step.
-    if (savedSource !== null) {
-      void suggestions.start(savedSource)
-    }
-  } catch (caught) {
-    if (!(caught instanceof ApiError)) {
-      throw caught
-    }
-    // Nothing was saved; the form keeps your values so you can fix them and try again.
-    saveError.value = caught
-  } finally {
-    saving.value = false
-  }
-}
+const deleteTopic = useDeleteTopic((deletedTopic) => {
+  showToast({ title: `Deleted ${deletedTopic.title}`, tone: 'sky', icon: 'trash-2' })
+})
 </script>
 
 <template>
   <AppLayout>
     <header class="flex flex-none flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
       <h1 class="font-display text-title-lg text-ink">Topics</h1>
-      <p
-        v-if="loadState === 'loaded'"
-        class="text-label font-normal text-ink-muted"
-        data-test="summary"
-      >
-        {{ summary }}
-      </p>
+      <LibrarySummary v-if="loadState === 'loaded'" :stats="summary" />
     </header>
 
     <p v-if="loadState === 'loading'" class="text-ink-muted" aria-live="polite">
@@ -338,18 +156,15 @@ async function save(values: TopicFormValues): Promise<void> {
 
     <template v-else>
       <TopicLibrary
-        v-model:query="query"
         v-model:category-id="categoryId"
         v-model:needs-attention="showOnlyAttention"
         :topics="filteredTopics"
         :library-is-empty="topicsStore.topics.length === 0"
         :filter-categories="filterCategories"
-        :selected-topic-id="shownTopic?.id ?? null"
         :attention-count="attentionCount"
-        @select="selectTopic"
-        @edit-topic="editTopicById"
+        @edit-topic="topicForm.openEditTopic"
         @delete-topic="deleteTopic.open"
-        @add-topic="openForm('add-topic', null)"
+        @add-topic="topicForm.openAddTopic"
         @clear-filters="clearFilters"
       />
 
@@ -358,28 +173,18 @@ async function save(values: TopicFormValues): Promise<void> {
         :message="`${checkError} Sprout keeps checking on your new cards.`"
         data-test="check-error"
       />
-
-      <SubtopicList
-        ref="subtopicList"
-        v-if="shownTopic !== null"
-        :topic="shownTopic"
-        :subtopics="visibleSubtopics(shownTopic, filters)"
-        @add-subtopic="openForm('add-subtopic', shownTopic)"
-        @edit-subtopic="editSubtopicById"
-        @delete-subtopic="deleteSubtopic.open"
-      />
     </template>
 
     <TopicFormDialog
       v-if="form !== null"
       :mode="form.mode"
       :initial-values="form.values"
-      :category-options="categoryOptions"
-      :topic-options="topicOptions"
-      :saving="saving"
-      :error="saveError"
-      @save="save"
-      @close="form = null"
+      :category-options="topicForm.categoryOptions.value"
+      :topic-options="topicForm.topicOptions.value"
+      :saving="topicForm.saving.value"
+      :error="topicForm.saveError.value"
+      @save="topicForm.save"
+      @close="topicForm.close"
     />
 
     <DeleteTopicDialog
@@ -390,15 +195,6 @@ async function save(values: TopicFormValues): Promise<void> {
       :error="deleteTopic.error.value"
       @confirm="deleteTopic.confirm"
       @close="deleteTopic.close"
-    />
-
-    <DeleteSubtopicDialog
-      v-if="deleteSubtopic.subtopic.value !== null"
-      :title="deleteSubtopic.subtopic.value.title"
-      :deleting="deleteSubtopic.deleting.value"
-      :error="deleteSubtopic.error.value"
-      @confirm="deleteSubtopic.confirm"
-      @close="deleteSubtopic.close"
     />
 
     <SubtopicSuggestionsDialog

@@ -59,7 +59,7 @@ const ringOffset = ringCircumference * (1 - 0.64)
           <BaseIcon name="flame" :size="22" />
         </span>
         <div class="min-w-0 flex-1">
-          <p class="text-body-strong text-ink">+20 XP · 6-day streak!</p>
+          <p class="text-body-strong text-ink">+20 XP and a 6-day streak!</p>
           <p class="text-label font-normal text-ink-muted">You reviewed every card that was due.</p>
         </div>
       </div>

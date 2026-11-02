@@ -11,10 +11,10 @@ describe('NotFoundView', () => {
   })
 
   it('catches a URL the app does not know and keeps it in the address bar', async () => {
-    await router.push('/topics/does-not-exist?tab=cards')
+    await router.push('/library/does-not-exist?tab=cards')
 
     expect(router.currentRoute.value.name).toBe('not-found')
-    expect(router.currentRoute.value.fullPath).toBe('/topics/does-not-exist?tab=cards')
+    expect(router.currentRoute.value.fullPath).toBe('/library/does-not-exist?tab=cards')
   })
 
   it('shows the page to signed out visitors too, instead of sending them to log in', async () => {

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseButton from '@/components/BaseButton.vue'
 import FilterChip from '@/components/FilterChip.vue'
-import SearchField from '@/components/SearchField.vue'
 import type { Category } from '@/stores/topics'
 
 const { categories, attentionCount } = defineProps<{
@@ -11,7 +10,6 @@ const { categories, attentionCount } = defineProps<{
   attentionCount: number
 }>()
 
-const query = defineModel<string>('query', { required: true })
 const categoryId = defineModel<number | 'all'>('categoryId', { required: true })
 const needsAttention = defineModel<boolean>('needsAttention', { required: true })
 
@@ -21,20 +19,9 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="flex flex-none flex-col gap-2.5 border-b border-line px-4 pt-3.5 pb-3">
-    <div class="flex items-center gap-2.5">
-      <SearchField v-model="query" label="Search topics" class="flex-auto" />
-      <BaseButton
-        variant="ghost"
-        size="md"
-        icon="plus"
-        data-test="add-topic"
-        @click="emit('addTopic')"
-      >
-        Add topic
-      </BaseButton>
-    </div>
-
+  <div
+    class="flex flex-none flex-wrap items-center justify-between gap-2.5 border-b border-line px-4 py-3"
+  >
     <div role="group" aria-label="Filter" class="flex flex-wrap items-center gap-2">
       <FilterChip
         :pressed="categoryId === 'all'"
@@ -57,11 +44,21 @@ const emit = defineEmits<{
         :pressed="needsAttention"
         tone="sun"
         icon="trending-down"
+        :count="attentionCount"
         data-test="needs-attention"
         @click="needsAttention = !needsAttention"
       >
-        Needs attention · {{ attentionCount }}
+        Needs attention
       </FilterChip>
     </div>
+    <BaseButton
+      variant="ghost"
+      size="md"
+      icon="plus"
+      data-test="add-topic"
+      @click="emit('addTopic')"
+    >
+      Add topic
+    </BaseButton>
   </div>
 </template>

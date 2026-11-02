@@ -68,7 +68,7 @@ const failed = computed<boolean>(() => status === 'failed')
         <span class="flex-none font-normal" :class="failed ? '' : 'text-ink-subtle'">
           {{ formatFileSize(sizeBytes) }}
         </span>
-        <span v-if="look" class="sr-only">· {{ look.label }}</span>
+        <span v-if="look" class="sr-only">, {{ look.label }}</span>
       </span>
       <span v-if="error" class="text-caption" data-test="attachment-error">{{ error }}</span>
     </span>

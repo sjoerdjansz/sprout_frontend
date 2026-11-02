@@ -146,7 +146,7 @@ function stepClasses(index: number): { chip: string; dot: string } {
     <section class="mx-auto flex w-full max-w-190 min-w-0 flex-col gap-4 lg:mx-0">
       <template v-if="step === 2">
         <div class="flex flex-col gap-1.5">
-          <span class="text-overline text-sun-ink">STEP 2 · EXPLAIN IT SIMPLY</span>
+          <span class="text-overline text-sun-ink">STEP 2: EXPLAIN IT SIMPLY</span>
           <h1 class="font-display text-title-lg text-ink" data-test="explain-prompt">
             {{ concept.prompt }}
           </h1>
@@ -164,8 +164,8 @@ function stepClasses(index: number): { chip: string; dot: string } {
           data-test="first-version"
         />
         <p class="text-caption font-normal text-ink-subtle" aria-live="polite">
-          {{ firstWords }} words<template v-if="firstWords < minimumFirst">
-            · a bit more detail helps Sprout find real gaps</template
+          {{ firstWords }} words<template v-if="firstWords < minimumFirst"
+            >. A bit more detail helps Sprout find real gaps.</template
           >
         </p>
         <p v-if="checking" class="text-body text-ink-muted" aria-live="polite">
@@ -187,7 +187,7 @@ function stepClasses(index: number): { chip: string; dot: string } {
 
       <template v-else-if="step === 3 && first">
         <div class="flex flex-col gap-1.5">
-          <span class="text-overline text-sun-ink">STEP 3 · FIND THE GAPS</span>
+          <span class="text-overline text-sun-ink">STEP 3: FIND THE GAPS</span>
           <h1 class="font-display text-title-lg text-ink">
             {{
               first.gaps.length > 0 ? 'Close the gaps before you rewrite.' : 'No gaps this time.'
@@ -205,7 +205,7 @@ function stepClasses(index: number): { chip: string; dot: string } {
 
       <template v-else>
         <div class="flex flex-col gap-1.5">
-          <span class="text-overline text-sun-ink">STEP 4 · SIMPLIFY</span>
+          <span class="text-overline text-sun-ink">STEP 4: SIMPLIFY</span>
           <h1 class="font-display text-title-lg text-ink">
             Now say it again, shorter and with the gaps filled.
           </h1>

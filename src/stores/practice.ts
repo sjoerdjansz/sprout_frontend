@@ -37,7 +37,7 @@ export type SessionPhase = 'block' | 'next' | 'done'
 export interface PracticePlan {
   scope: PracticeScope
   options: PracticeOptions
-  /** "Photosynthesis" or "Biology · mixed subtopics". */
+  /** "Photosynthesis" or "All subtopics from Biology". */
   title: string
   blocks: PracticeBlock[]
 }
@@ -219,7 +219,7 @@ export const usePracticeStore = defineStore('practice', () => {
     })
     current.value = null
 
-    plan.value = { scope, options, title: scopeTitle(scope, options), blocks }
+    plan.value = { scope, options, title: scopeTitle(scope), blocks }
     results.value = blocks.map((block) => emptyResult(block.mode))
     blockIndex.value = 0
     phase.value = 'block'
@@ -281,7 +281,7 @@ export const usePracticeStore = defineStore('practice', () => {
     const blocks = blocksFromPlan(found.plan, scope, material.value)
 
     session.value = found
-    plan.value = { scope, options, title: scopeTitle(scope, options), blocks }
+    plan.value = { scope, options, title: scopeTitle(scope), blocks }
     results.value = resultsFromDone(blocks, found.done, material.value)
     const index = resumeIndex(blocks, results.value)
     blockIndex.value = index ?? Math.max(0, blocks.length - 1)
