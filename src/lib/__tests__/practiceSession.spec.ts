@@ -234,11 +234,8 @@ describe('practice session rules', () => {
   })
 
   it('names the scope', () => {
-    expect(scopeTitle(oneSubtopic(), options())).toBe('Photosynthesis')
-    expect(scopeTitle(wholeTopic(), options())).toBe('Biology · all subtopics')
-    expect(scopeTitle(wholeTopic(), options({ interleave: true }))).toBe(
-      'Biology · mixed subtopics',
-    )
+    expect(scopeTitle(oneSubtopic())).toBe('Photosynthesis')
+    expect(scopeTitle(wholeTopic())).toBe('Biology · all subtopics')
   })
 
   it('counts a card rated again and then good as done, but not from memory', () => {

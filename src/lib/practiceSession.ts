@@ -406,13 +406,16 @@ export function estimateMinutes(blocks: PracticeBlock[]): number {
   return Math.max(1, Math.round(total))
 }
 
-/** "Photosynthesis", "Biology · all subtopics" or "Biology · mixed subtopics". */
-export function scopeTitle(scope: PracticeScope, options: PracticeOptions): string {
+/**
+ * "Photosynthesis" or "Biology · all subtopics". Whether the subtopics are mixed is the order's
+ * business, so the scope only says what's in it.
+ */
+export function scopeTitle(scope: PracticeScope): string {
   if (scope.subtopic !== null) {
     return scope.subtopic.title
   }
 
-  return `${scope.topicTitle} · ${options.interleave ? 'mixed' : 'all'} subtopics`
+  return `${scope.topicTitle} · all subtopics`
 }
 
 // --- Results -------------------------------------------------------------------------------

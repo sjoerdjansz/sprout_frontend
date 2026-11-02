@@ -15,7 +15,7 @@ export interface BlockProgress {
 
 const { mode, title, blockLabel, progress } = defineProps<{
   mode: PracticeModeId
-  /** The scope: "Photosynthesis" or "Biology · mixed subtopics" (say when it's interleaved). */
+  /** The scope: "Photosynthesis" or "Biology · all subtopics". */
   title: string
   /** "Block 2 of 3" in a mixed session. */
   blockLabel: string | null

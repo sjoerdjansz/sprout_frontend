@@ -140,9 +140,7 @@ export function usePracticeSetup(): PracticeSetup {
       : buildBlocks(scope.value, practiceStore.material, options.value),
   )
 
-  const scopeLabel = computed<string>(() =>
-    scope.value === null ? '' : scopeTitle(scope.value, options.value),
-  )
+  const scopeLabel = computed<string>(() => (scope.value === null ? '' : scopeTitle(scope.value)))
 
   const hasSizedMode = computed<boolean>(() =>
     modes.value.some((mode) => practiceMode(mode).unit !== null),
