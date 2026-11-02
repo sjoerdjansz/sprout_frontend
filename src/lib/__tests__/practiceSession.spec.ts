@@ -5,6 +5,8 @@ import {
   blocksFromPlan,
   buildBlocks,
   cardsDone,
+  amountOptions,
+  availableCounts,
   defaultsFromSettings,
   emptyResult,
   estimateMinutes,
@@ -15,10 +17,12 @@ import {
   pickCards,
   pickConcept,
   pickQuestions,
+  resolveAmount,
   resultLine,
   resultsFromDone,
   resumeIndex,
   scopeTitle,
+  selectedAmount,
   sessionPlan,
   slippedItems,
   summariseCards,
@@ -231,6 +235,44 @@ describe('practice session rules', () => {
     const blocks = buildBlocks(oneSubtopic(), noMaterial, options({ modes: ['cards', 'open'] }))
 
     expect(blocks.map((block) => block.mode)).toEqual(['open'])
+  })
+
+  it('counts the cards that aren’t paused and the questions for the quiz', () => {
+    const material: PracticeMaterial = {
+      flashcards: [makeFlashcard({ id: 1 }), makeFlashcard({ id: 2, paused: true })],
+      questions: [
+        makeQuestion({ id: 1 }),
+        makeOpenQuestion({ id: 2 }),
+        makeQuestion({ id: 3, type: 'feynman' }),
+      ],
+    }
+
+    expect(availableCounts(material)).toEqual({ cards: 1, questions: 2 })
+  })
+
+  it('takes everything for "All", up to what one session holds', () => {
+    expect(resolveAmount(20, 7)).toBe(20)
+    expect(resolveAmount('all', 7)).toBe(7)
+    expect(resolveAmount('all', 250)).toBe(100)
+  })
+
+  it('offers only the sizes that make a difference, then everything', () => {
+    const labels = (available: number): string[] =>
+      amountOptions([10, 20, 40], available).map((option) => option.label)
+
+    expect(labels(25)).toEqual(['10', '20', 'All 25'])
+    expect(labels(12)).toEqual(['10', 'All 12'])
+    expect(labels(40)).toEqual(['10', '20', 'All 40'])
+    expect(labels(7)).toEqual(['All 7'])
+    expect(labels(150)).toEqual(['10', '20', '40', '100'])
+    expect(amountOptions([10, 20, 40], 150)[3]?.id).toBe('all')
+  })
+
+  it('shows an amount at or above what the scope has as all of it', () => {
+    expect(selectedAmount('all', 25)).toBe('all')
+    expect(selectedAmount(20, 7)).toBe('all')
+    expect(selectedAmount(10, 25)).toBe('10')
+    expect(selectedAmount(40, 150)).toBe('40')
   })
 
   it('names the scope', () => {

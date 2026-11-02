@@ -99,6 +99,63 @@ function quizQuestions(material: PracticeMaterial): Question[] {
   return material.questions.filter((question) => question.type !== 'feynman')
 }
 
+/** How many cards and questions a scope has for the sized blocks, before cutting to an amount. */
+export interface AvailableCounts {
+  cards: number
+  questions: number
+}
+
+export function availableCounts(material: PracticeMaterial): AvailableCounts {
+  return { cards: activeCards(material).length, questions: quizQuestions(material).length }
+}
+
+/** The most cards, or questions, the API takes in one session. */
+export const maxBlockSize = 100
+
+/** An amount picked on the setup: a number, or everything the scope has. */
+export type PracticeAmount = number | 'all'
+
+/** "All" follows the scope you pick, up to what one session can hold. */
+export function resolveAmount(amount: PracticeAmount, available: number): number {
+  return amount === 'all' ? Math.min(available, maxBlockSize) : amount
+}
+
+/** One choice in "How many cards?": a size, or `all`. */
+export interface AmountOption {
+  id: string
+  label: string
+}
+
+/**
+ * The amounts worth offering for what the scope has: only the sizes below it, then everything.
+ * With 7 cards, 10 / 20 / 40 would all give the same 7, so "All 7" is the only option left. Past
+ * what one session holds, the last option is that maximum instead of "All".
+ */
+export function amountOptions(sizes: number[], available: number): AmountOption[] {
+  const most = Math.min(available, maxBlockSize)
+  const smaller = sizes
+    .filter((size) => size < most)
+    .map((size) => ({ id: String(size), label: String(size) }))
+  const everything = {
+    id: 'all',
+    label: available > maxBlockSize ? String(maxBlockSize) : `All ${available}`,
+  }
+
+  return [...smaller, everything]
+}
+
+/**
+ * Which option shows as picked. An amount at or above what the scope has (the 20 from your
+ * settings on a scope of 7) gets everything, so it shows as "All" rather than nothing picked.
+ */
+export function selectedAmount(amount: PracticeAmount, available: number): string {
+  if (amount === 'all' || amount >= Math.min(available, maxBlockSize)) {
+    return 'all'
+  }
+
+  return String(amount)
+}
+
 /** Why a mode can't run on this scope, or null when it can. */
 export function unavailableReason(
   mode: PracticeModeId,

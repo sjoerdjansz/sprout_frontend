@@ -20,8 +20,9 @@ const {
   topicId,
   subtopicId,
   modes,
-  cardCount,
-  questionCount,
+  cardAmount,
+  questionAmount,
+  available,
   dueFirst,
   interleave,
   scope,
@@ -105,11 +106,12 @@ onMounted(() => {
           data-test="step-amount"
         >
           <AmountPicker
-            v-model:card-count="cardCount"
-            v-model:question-count="questionCount"
+            v-model:card-amount="cardAmount"
+            v-model:question-amount="questionAmount"
             v-model:due-first="dueFirst"
             v-model:interleave="interleave"
             :modes="modes"
+            :available="available"
             :whole-topic="scope?.subtopic === null"
           />
         </SetupStep>
