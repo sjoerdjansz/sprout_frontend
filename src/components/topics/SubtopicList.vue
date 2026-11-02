@@ -22,7 +22,6 @@ const emit = defineEmits<{
     <div class="flex flex-none flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-1">
         <h2 class="font-display text-title text-ink" data-test="subtopics-heading">
-          {{ topic.title }}
           <span class="font-sans text-[14px] font-medium tracking-normal text-ink-subtle">
             · {{ pluralize(topic.subtopics.length, 'subtopic') }}
           </span>

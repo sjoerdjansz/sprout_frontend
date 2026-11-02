@@ -64,6 +64,11 @@ function cardTitles(wrapper: VueWrapper): string[] {
   return wrapper.findAll('[data-test="topic-card"]').map((card) => card.text())
 }
 
+// The topic whose subtopics are shown is the one whose card is pressed.
+function selectedTopic(wrapper: VueWrapper): string {
+  return wrapper.get('[data-test="topic-card"][aria-pressed="true"]').text()
+}
+
 function captions(wrapper: VueWrapper): string[] {
   return wrapper.findAll('[data-test="subtopic-caption"]').map((caption) => caption.text())
 }
@@ -122,7 +127,7 @@ describe('TopicsView', () => {
       '4 topics · 8 subtopics · 1 mastered · 11 cards due today',
     )
     expect(cardTitles(wrapper)).toHaveLength(4)
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
+    expect(selectedTopic(wrapper)).toContain('Biology')
     // Only flashcards have a review schedule, so the count says what it counts.
     expect(wrapper.findAll('[data-test="topic-meta"]')[0]?.text()).toContain('· 9 cards due')
     expect(subtopicTitles(wrapper)).toEqual(['Photosynthesis', 'Cell respiration', 'Chlorophyll'])
@@ -182,7 +187,7 @@ describe('TopicsView', () => {
     await chips[2]?.trigger('click')
     expect(cardTitles(wrapper)).toEqual([expect.stringContaining('Spanish')])
     // Biology is filtered out, so the subtopics of the topic you can see show instead.
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Spanish')
+    expect(selectedTopic(wrapper)).toContain('Spanish')
 
     await wrapper.get('[data-test="category-all"]').trigger('click')
     await wrapper.get('[data-test="needs-attention"]').trigger('click')
@@ -211,11 +216,8 @@ describe('TopicsView', () => {
 
     await wrapper.get('[data-test="search"]').setValue('recursion')
 
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Computer science')
+    expect(selectedTopic(wrapper)).toContain('Computer science')
     expect(subtopicTitles(wrapper)).toEqual(['Recursion'])
-    expect(wrapper.get('[data-test="topic-card"][aria-pressed="true"]').text()).toContain(
-      'Computer science',
-    )
   })
 
   it('shows the subtopics of the topic you pick', async () => {
@@ -223,7 +225,7 @@ describe('TopicsView', () => {
 
     await selectTopic(wrapper, 'Chemistry')
 
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
+    expect(selectedTopic(wrapper)).toContain('Chemistry')
     expect(subtopicTitles(wrapper)).toEqual(['The periodic table', 'Chemical bonds'])
   })
 
@@ -231,7 +233,7 @@ describe('TopicsView', () => {
     await router.push('/topics?topic=2')
     const wrapper = await mountTopics()
 
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry')
+    expect(selectedTopic(wrapper)).toContain('Chemistry')
 
     await selectTopic(wrapper, 'Spanish')
     expect(router.currentRoute.value.query).toEqual({ topic: '4' })
@@ -241,7 +243,7 @@ describe('TopicsView', () => {
     await router.push('/topics?topic=999')
     const wrapper = await mountTopics()
 
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Biology')
+    expect(selectedTopic(wrapper)).toContain('Biology')
   })
 
   it('adds a topic in a dialog and shows it', async () => {
@@ -257,7 +259,7 @@ describe('TopicsView', () => {
 
     expect(wrapper.find('dialog').exists()).toBe(false)
     expect(cardTitles(wrapper)).toHaveLength(5)
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Astronomy')
+    expect(selectedTopic(wrapper)).toContain('Astronomy')
     expect(wrapper.get('[data-test="no-subtopics"]').text()).toBe(
       'No subtopics yet. Add the first one.',
     )
@@ -311,7 +313,7 @@ describe('TopicsView', () => {
     await submitForm(wrapper)
 
     expect(sentBody('PUT /topics/2')).toMatchObject({ title: 'Chemistry basics' })
-    expect(wrapper.get('[data-test="subtopics-heading"]').text()).toContain('Chemistry basics')
+    expect(selectedTopic(wrapper)).toContain('Chemistry basics')
   })
 
   it('adds a subtopic to the topic and says Sprout is making its cards', async () => {
