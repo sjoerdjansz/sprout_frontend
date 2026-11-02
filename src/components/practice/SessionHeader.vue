@@ -32,6 +32,7 @@ const badgeTones: Record<Tint, BadgeTone> = {
   sun: 'sun',
   peach: 'ember',
   gray: 'neutral',
+  canvas: 'sprout',
 }
 
 const badgeTone = computed<BadgeTone>(() => badgeTones[practiceMode(mode).tint])
