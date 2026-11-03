@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import FormError from '@/components/FormError.vue'
 import TextLink from '@/components/TextLink.vue'
@@ -8,7 +8,7 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import AmountPicker from '@/components/practice/AmountPicker.vue'
 import ModePicker from '@/components/practice/ModePicker.vue'
 import ScopePicker from '@/components/practice/ScopePicker.vue'
-import SessionSummary from '@/components/practice/SessionSummary.vue'
+import SessionRecap from '@/components/practice/SessionRecap.vue'
 import SetupWizard from '@/components/practice/SetupWizard.vue'
 import type { WizardStep } from '@/components/practice/SetupStepper.vue'
 import { usePracticeSetup } from '@/composables/practice/usePracticeSetup'
@@ -50,31 +50,27 @@ const modesSummary = computed<string>(() => {
   return rest.length > 0 ? 'Mixed session' : practiceMode(first).name
 })
 
-// One question at a time. Only flashcards and the quiz have an amount to pick, so the last step
-// comes and goes with them.
-const steps = computed<WizardStep[]>(() => {
-  const all: WizardStep[] = [
-    { id: 'how', label: 'How', title: 'How do you want to practise?', summary: modesSummary.value },
-    {
-      id: 'what',
-      label: 'What',
-      title: 'What do you want to practise?',
-      summary: setup.summary.value.scopeLabel,
-    },
-  ]
-  if (setup.hasSizedMode.value) {
-    all.push({ id: 'amount', label: 'How much', title: 'How much?', summary: '' })
+// One question at a time, and always three, so Start session has one place: the last step, after
+// a recap of the session. With only Explain it or the open session there's no amount to pick.
+const steps = computed<WizardStep[]>(() => [
+  { id: 'how', label: 'How', title: 'How do you want to practise?', summary: modesSummary.value },
+  {
+    id: 'what',
+    label: 'What',
+    title: 'What do you want to practise?',
+    summary: setup.summary.value.scopeLabel,
+  },
+  setup.hasSizedMode.value
+    ? { id: 'amount', label: 'How much', title: 'How much?', summary: '' }
+    : { id: 'amount', label: 'Ready', title: 'Ready to start?', summary: '' },
+])
+
+const startLabel = computed<string>(() => {
+  if (setup.materialState.value === 'loading') {
+    return 'Getting your cards…'
   }
 
-  return all
-})
-
-// The amount step can't vanish while you're on it (you change modes in the first step), but if
-// it ever does, stay on the last step that's left rather than on nothing.
-watch(steps, (current) => {
-  if (!current.some((step) => step.id === stepId.value)) {
-    stepId.value = 'what'
-  }
+  return setup.starting.value ? 'Starting…' : 'Start session'
 })
 
 onMounted(() => {
@@ -110,68 +106,78 @@ onMounted(() => {
       <TextLink :to="{ name: 'topics' }" icon-right="arrow-right"> Open your topics </TextLink>
     </div>
 
-    <div v-else class="flex w-full max-w-280 flex-col gap-6 lg:flex-row lg:items-start">
-      <div class="flex min-w-0 grow flex-col gap-5">
-        <div
-          v-if="current"
-          class="rounded-xl border border-line bg-surface px-5 py-4 shadow-sm"
-          data-test="current-session"
-        >
-          <ResumeSession
-            :title="currentTitle"
-            :last-studied="`started ${relativeTime(current.started_at)}`"
-            :to="{ name: 'practice-session' }"
-            icon="play"
-          />
-        </div>
-
-        <SetupWizard v-model="stepId" :steps="steps">
-          <template #how>
-            <ModePicker v-model="modes" :unavailable="setup.unavailable.value" />
-          </template>
-
-          <template #what>
-            <ScopePicker
-              v-model:topic-id="topicId"
-              v-model:subtopic-id="subtopicId"
-              :topics="topics"
-              :show-whole-topic-tip="setup.showWholeTopicTip.value"
-            />
-          </template>
-
-          <template #amount>
-            <AmountPicker
-              v-model:card-amount="cardAmount"
-              v-model:question-amount="questionAmount"
-              v-model:due-first="dueFirst"
-              v-model:interleave="interleave"
-              :modes="modes"
-              :available="available"
-              :whole-topic="scope?.subtopic === null"
-            />
-          </template>
-        </SetupWizard>
-      </div>
-
-      <div class="flex flex-col gap-3 lg:w-90 lg:flex-none">
-        <template v-if="setup.materialState.value === 'failed'">
-          <FormError :message="setup.materialError.value" />
-          <BaseButton variant="secondary" icon="rotate-ccw" @click="setup.loadMaterial">
-            Try again
-          </BaseButton>
-        </template>
-        <FormError v-if="setup.startError.value" :message="setup.startError.value" />
-        <SessionSummary
-          :blocks="setup.summary.value.blocks"
-          :scope="setup.summary.value.scopeLabel"
-          :order="setup.summary.value.orderLabel"
-          :loading="setup.materialState.value === 'loading'"
-          :second-try="setup.secondTry.value"
-          :no-modes="modes.length === 0"
-          :starting="setup.starting.value"
-          @start="setup.start"
+    <div v-else class="flex w-full max-w-200 flex-col gap-5">
+      <div
+        v-if="current"
+        class="rounded-xl border border-line bg-surface px-5 py-4 shadow-sm"
+        data-test="current-session"
+      >
+        <ResumeSession
+          :title="currentTitle"
+          :last-studied="`started ${relativeTime(current.started_at)}`"
+          :to="{ name: 'practice-session' }"
+          icon="play"
         />
       </div>
+
+      <div v-if="setup.materialState.value === 'failed'" class="flex flex-col items-start gap-3">
+        <FormError :message="setup.materialError.value" />
+        <BaseButton variant="secondary" icon="rotate-ccw" @click="setup.loadMaterial">
+          Try again
+        </BaseButton>
+      </div>
+
+      <SetupWizard v-model="stepId" :steps="steps" :can-advance="modes.length > 0">
+        <template #how>
+          <ModePicker v-model="modes" :unavailable="setup.unavailable.value" />
+        </template>
+
+        <template #what>
+          <ScopePicker
+            v-model:topic-id="topicId"
+            v-model:subtopic-id="subtopicId"
+            :topics="topics"
+            :show-whole-topic-tip="setup.showWholeTopicTip.value"
+          />
+        </template>
+
+        <template #amount>
+          <AmountPicker
+            v-if="setup.hasSizedMode.value"
+            v-model:card-amount="cardAmount"
+            v-model:question-amount="questionAmount"
+            v-model:due-first="dueFirst"
+            v-model:interleave="interleave"
+            :modes="modes"
+            :available="available"
+            :whole-topic="scope?.subtopic === null"
+          />
+          <!-- The footer under it draws the second line, so the recap sits between two. -->
+          <hr v-if="setup.hasSizedMode.value" class="my-1 border-line" />
+          <SessionRecap
+            :blocks="setup.summary.value.blocks"
+            :scope="setup.summary.value.scopeLabel"
+            :order="setup.summary.value.orderLabel"
+            :second-try="setup.secondTry.value"
+          />
+          <FormError v-if="setup.startError.value" :message="setup.startError.value" />
+        </template>
+
+        <template #finish>
+          <BaseButton
+            icon-right="arrow-right"
+            :disabled="
+              setup.materialState.value === 'loading' ||
+              setup.starting.value ||
+              setup.summary.value.blocks.length === 0
+            "
+            data-test="start-session"
+            @click="setup.start"
+          >
+            {{ startLabel }}
+          </BaseButton>
+        </template>
+      </SetupWizard>
     </div>
   </AppLayout>
 </template>

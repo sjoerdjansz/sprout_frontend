@@ -5,8 +5,10 @@ import SetupStepper, { type WizardStep } from '@/components/practice/SetupSteppe
 
 type Direction = 'forward' | 'back'
 
-const { steps } = defineProps<{
+const { steps, canAdvance = true } = defineProps<{
   steps: WizardStep[]
+  /** Off while the current step needs an answer before you can move on. */
+  canAdvance?: boolean
 }>()
 
 /** The id of the step you're on; each step's content comes from the slot with that name. */
@@ -160,14 +162,14 @@ function onSettled(): void {
         v-if="next"
         variant="secondary"
         icon-right="arrow-right"
+        :disabled="!canAdvance"
         data-test="wizard-next"
         @click="go(next.id)"
       >
         Next: {{ next.label }}
       </BaseButton>
-      <p v-else class="text-label font-normal text-ink-muted" data-test="wizard-done">
-        All set. Start when you’re ready.
-      </p>
+      <!-- The last step ends in what the wizard is for, e.g. starting the session. -->
+      <slot v-else name="finish" />
     </div>
   </section>
 </template>
