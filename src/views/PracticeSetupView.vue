@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import BaseButton from '@/components/BaseButton.vue'
 import FormError from '@/components/FormError.vue'
 import TextLink from '@/components/TextLink.vue'
@@ -9,8 +9,10 @@ import AmountPicker from '@/components/practice/AmountPicker.vue'
 import ModePicker from '@/components/practice/ModePicker.vue'
 import ScopePicker from '@/components/practice/ScopePicker.vue'
 import SessionSummary from '@/components/practice/SessionSummary.vue'
-import SetupStep from '@/components/practice/SetupStep.vue'
+import SetupWizard from '@/components/practice/SetupWizard.vue'
+import type { WizardStep } from '@/components/practice/SetupStepper.vue'
 import { usePracticeSetup } from '@/composables/practice/usePracticeSetup'
+import { practiceMode } from '@/lib/practiceModes'
 import { relativeTime } from '@/lib/relativeTime'
 
 const setup = usePracticeSetup()
@@ -35,6 +37,45 @@ const currentTitle = computed<string>(() =>
     ? ''
     : (current.value.subtopic?.title ?? `All subtopics from ${current.value.topic.title}`),
 )
+
+/** The wizard's step: 'how', 'what' or 'amount'. */
+const stepId = ref<string>('how')
+
+const modesSummary = computed<string>(() => {
+  const [first, ...rest] = modes.value
+  if (first === undefined) {
+    return ''
+  }
+
+  return rest.length > 0 ? 'Mixed session' : practiceMode(first).name
+})
+
+// One question at a time. Only flashcards and the quiz have an amount to pick, so the last step
+// comes and goes with them.
+const steps = computed<WizardStep[]>(() => {
+  const all: WizardStep[] = [
+    { id: 'how', label: 'How', title: 'How do you want to practise?', summary: modesSummary.value },
+    {
+      id: 'what',
+      label: 'What',
+      title: 'What do you want to practise?',
+      summary: setup.summary.value.scopeLabel,
+    },
+  ]
+  if (setup.hasSizedMode.value) {
+    all.push({ id: 'amount', label: 'How much', title: 'How much?', summary: '' })
+  }
+
+  return all
+})
+
+// The amount step can't vanish while you're on it (you change modes in the first step), but if
+// it ever does, stay on the last step that's left rather than on nothing.
+watch(steps, (current) => {
+  if (!current.some((step) => step.id === stepId.value)) {
+    stepId.value = 'what'
+  }
+})
 
 onMounted(() => {
   void setup.loadLibrary()
@@ -84,37 +125,32 @@ onMounted(() => {
           />
         </div>
 
-        <SetupStep :step="1" title="How do you want to practise?" heading-id="step-how">
-          <ModePicker v-model="modes" :unavailable="setup.unavailable.value" />
-        </SetupStep>
+        <SetupWizard v-model="stepId" :steps="steps">
+          <template #how>
+            <ModePicker v-model="modes" :unavailable="setup.unavailable.value" />
+          </template>
 
-        <SetupStep :step="2" title="What do you want to practise?" heading-id="step-what">
-          <ScopePicker
-            v-model:topic-id="topicId"
-            v-model:subtopic-id="subtopicId"
-            :topics="topics"
-            :show-whole-topic-tip="setup.showWholeTopicTip.value"
-          />
-        </SetupStep>
+          <template #what>
+            <ScopePicker
+              v-model:topic-id="topicId"
+              v-model:subtopic-id="subtopicId"
+              :topics="topics"
+              :show-whole-topic-tip="setup.showWholeTopicTip.value"
+            />
+          </template>
 
-        <!-- Only flashcards and the quiz have something to pick here. -->
-        <SetupStep
-          v-if="setup.hasSizedMode.value"
-          :step="3"
-          title="How much?"
-          heading-id="step-amount"
-          data-test="step-amount"
-        >
-          <AmountPicker
-            v-model:card-amount="cardAmount"
-            v-model:question-amount="questionAmount"
-            v-model:due-first="dueFirst"
-            v-model:interleave="interleave"
-            :modes="modes"
-            :available="available"
-            :whole-topic="scope?.subtopic === null"
-          />
-        </SetupStep>
+          <template #amount>
+            <AmountPicker
+              v-model:card-amount="cardAmount"
+              v-model:question-amount="questionAmount"
+              v-model:due-first="dueFirst"
+              v-model:interleave="interleave"
+              :modes="modes"
+              :available="available"
+              :whole-topic="scope?.subtopic === null"
+            />
+          </template>
+        </SetupWizard>
       </div>
 
       <div class="flex flex-col gap-3 lg:w-90 lg:flex-none">

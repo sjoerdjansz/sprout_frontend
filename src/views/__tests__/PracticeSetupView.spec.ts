@@ -26,7 +26,11 @@ function material(): Routes {
   }
 }
 
-async function mountSetup(url: string, routes: Routes = {}): Promise<VueWrapper> {
+async function mountSetup(
+  url: string,
+  routes: Routes = {},
+  options: { attachTo?: HTMLElement } = {},
+): Promise<VueWrapper> {
   stubApi({
     // The app shell around the page.
     'GET /user': Response.json(makeUser()),
@@ -39,10 +43,15 @@ async function mountSetup(url: string, routes: Routes = {}): Promise<VueWrapper>
     ...routes,
   })
   await router.push(url)
-  const wrapper = mount(PracticeSetupView, { global: { plugins: [router] } })
+  const wrapper = mount(PracticeSetupView, { global: { plugins: [router] }, ...options })
   await flushPromises()
 
   return wrapper
+}
+
+// The setup asks one question at a time; jump to a step through the stepper.
+async function goToStep(wrapper: VueWrapper, step: 'how' | 'what' | 'amount'): Promise<void> {
+  await wrapper.get(`[data-test="stepper-${step}"]`).trigger('click')
 }
 
 function pressed(wrapper: VueWrapper, test: string): boolean {
@@ -59,6 +68,51 @@ describe('PracticeSetupView', () => {
     vi.unstubAllGlobals()
   })
 
+  it('asks one question at a time, with Next and Back between them', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards')
+
+    expect(wrapper.find('[data-test="step-how"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="step-what"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="wizard-back"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="stepper-how"]').attributes('aria-current')).toBe('step')
+
+    await wrapper.get('[data-test="wizard-next"]').trigger('click')
+    expect(wrapper.find('[data-test="step-how"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="step-what"]').text()).toContain('STEP 2 OF 3')
+    expect(wrapper.get('[data-test="wizard-next"]').text()).toBe('Next: How much')
+    // The step you finished says what you picked in it.
+    expect(wrapper.get('[data-test="stepper-summary-how"]').text()).toBe('Flashcards')
+
+    await wrapper.get('[data-test="wizard-next"]').trigger('click')
+    expect(wrapper.find('[data-test="card-amount"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="stepper-summary-what"]').text()).toBe('Photosynthesis')
+
+    await wrapper.get('[data-test="wizard-back"]').trigger('click')
+    expect(wrapper.find('[data-test="step-what"]').exists()).toBe(true)
+  })
+
+  it('takes your focus to the question of the step you move to', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101', {}, { attachTo: document.body })
+
+    await wrapper.get('[data-test="wizard-next"]').trigger('click')
+    await flushPromises()
+
+    expect(document.activeElement?.textContent?.trim()).toBe('What do you want to practise?')
+    wrapper.unmount()
+  })
+
+  it('starts the session from any step, as everything is filled in already', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
+      'POST /practice-sessions': Response.json(makePracticeSession(), { status: 201 }),
+    })
+
+    expect(wrapper.find('[data-test="step-how"]').exists()).toBe(true)
+    await wrapper.get('[data-test="start-session"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('practice-session')
+  })
+
   it('keeps the app navigation around the page', async () => {
     const wrapper = await mountSetup('/practice')
 
@@ -69,9 +123,10 @@ describe('PracticeSetupView', () => {
   it('opens prefilled from the URL', async () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=retrieval')
 
-    expect(pressed(wrapper, 'scope-101')).toBe(true)
     expect(pressed(wrapper, 'mode-retrieval')).toBe(true)
     expect(pressed(wrapper, 'mode-cards')).toBe(false)
+    await goToStep(wrapper, 'what')
+    expect(pressed(wrapper, 'scope-101')).toBe(true)
     expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Retrieval quiz')
     expect(wrapper.text()).toContain('2 questions')
   })
@@ -81,6 +136,7 @@ describe('PracticeSetupView', () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
       'GET /subtopics/101/flashcards': Response.json(cards),
     })
+    await goToStep(wrapper, 'amount')
     const cardAmount = wrapper.get('[data-test="card-amount"]')
 
     expect(cardAmount.get('[data-test="amount-all"]').text()).toBe('All 3 cards')
@@ -93,6 +149,7 @@ describe('PracticeSetupView', () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
       'GET /subtopics/101/flashcards': Response.json(cards),
     })
+    await goToStep(wrapper, 'amount')
     const cardAmount = wrapper.get('[data-test="card-amount"]')
 
     expect(cardAmount.findAll('[role="tab"]').map((tab) => tab.text())).toEqual([
@@ -158,10 +215,16 @@ describe('PracticeSetupView', () => {
   it('only asks how much when flashcards or the quiz is on', async () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=feynman,open')
 
-    expect(wrapper.find('[data-test="step-amount"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="stepper-amount"]').exists()).toBe(false)
+    await goToStep(wrapper, 'what')
+    expect(wrapper.find('[data-test="wizard-next"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="wizard-done"]').text()).toBe(
+      'All set. Start when you’re ready.',
+    )
 
+    await goToStep(wrapper, 'how')
     await wrapper.get('[data-test="mode-cards"]').trigger('click')
-    expect(wrapper.find('[data-test="step-amount"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="stepper-amount"]').exists()).toBe(true)
   })
 
   it('says why a mode can’t run, and offers no mix with only one other mode', async () => {
@@ -185,6 +248,7 @@ describe('PracticeSetupView', () => {
     })
     expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Flashcards')
 
+    await goToStep(wrapper, 'what')
     await wrapper.get('[data-test="scope-102"]').trigger('click')
     await flushPromises()
 
@@ -201,10 +265,12 @@ describe('PracticeSetupView', () => {
   it('loads the cards of the whole topic and offers interleaving', async () => {
     const wrapper = await mountSetup('/practice?topic=1')
 
+    await goToStep(wrapper, 'what')
     expect(pressed(wrapper, 'scope-whole')).toBe(true)
     expect(wrapper.find('[data-test="whole-topic-tip"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="interleave"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('All subtopics from Biology')
+    await goToStep(wrapper, 'amount')
+    expect(wrapper.find('[data-test="interleave"]').exists()).toBe(true)
   })
 
   it('starts the session with the plan and opens it', async () => {
@@ -256,6 +322,7 @@ describe('PracticeSetupView', () => {
       'POST /practice-sessions': Response.json(makePracticeSession(), { status: 201 }),
     })
 
+    await goToStep(wrapper, 'amount')
     expect(
       wrapper.find('[data-test="interleave"] [role="switch"]').attributes('aria-checked'),
     ).toBe('false')
