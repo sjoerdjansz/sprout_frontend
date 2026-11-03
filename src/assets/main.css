@@ -175,6 +175,39 @@
 }
 
 /*
+ * The practice setup's options pop in one after another when a step (or another topic's
+ * subtopics) appears, so the step builds itself. Use it as `motion-safe:stagger-pop` on the
+ * element whose children should pop; past the eighth child they all share the last delay.
+ */
+@utility stagger-pop {
+  & > * {
+    animation: var(--animate-pop) backwards;
+    animation-delay: 320ms;
+  }
+  & > :nth-child(1) {
+    animation-delay: 40ms;
+  }
+  & > :nth-child(2) {
+    animation-delay: 80ms;
+  }
+  & > :nth-child(3) {
+    animation-delay: 120ms;
+  }
+  & > :nth-child(4) {
+    animation-delay: 160ms;
+  }
+  & > :nth-child(5) {
+    animation-delay: 200ms;
+  }
+  & > :nth-child(6) {
+    animation-delay: 240ms;
+  }
+  & > :nth-child(7) {
+    animation-delay: 280ms;
+  }
+}
+
+/*
  * Dark theme: set on <html> by the inline script in index.html (your saved choice, otherwise
  * your system setting) and by the theme store when you toggle it.
  */

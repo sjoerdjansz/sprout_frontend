@@ -23,7 +23,7 @@ const hasQuestions = computed<boolean>(() => modes.includes('retrieval'))
 </script>
 
 <template>
-  <div class="flex flex-wrap items-end gap-x-7 gap-y-4">
+  <div class="flex flex-wrap items-end gap-x-7 gap-y-4 motion-safe:stagger-pop">
     <AmountChoice
       v-if="hasCards"
       v-model="cardAmount"
