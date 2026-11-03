@@ -58,7 +58,12 @@ const title = computed<string>(() => {
       <IconTile v-else-if="first" :icon="first.icon" :tint="first.tint" />
       <div class="flex flex-col">
         <span class="text-overline text-ink-subtle">YOUR SESSION</span>
-        <b class="font-display text-title text-ink" data-test="summary-title">
+        <!-- Keyed on the title, so a new choice pops into place here as you make it. -->
+        <b
+          :key="title"
+          class="font-display text-title text-ink motion-safe:animate-pop"
+          data-test="summary-title"
+        >
           {{ title }}
         </b>
       </div>
