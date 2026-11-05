@@ -45,7 +45,7 @@ function toggleMix(): void {
   <!-- Fixed columns per width, not auto-fit: the mix spans two of them, which only lines up when
        the column count is known. Sized to the container, as the page beside it may be narrow. -->
   <div class="@container">
-    <div class="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @2xl:grid-cols-3">
+    <div class="grid grid-cols-1 gap-2.5 motion-safe:stagger-pop @md:grid-cols-2 @2xl:grid-cols-3">
       <OptionCard
         v-for="mode in practiceModes"
         :key="mode.id"

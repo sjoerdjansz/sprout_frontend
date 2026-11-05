@@ -28,7 +28,7 @@ function pickTopic(id: number): void {
 
 <template>
   <div class="flex flex-col gap-2">
-    <div class="flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2 motion-safe:stagger-pop">
       <FilterChip
         v-for="each in topics"
         :key="each.id"
@@ -44,7 +44,7 @@ function pickTopic(id: number): void {
   <hr class="border-line my-4" />
 
   <div v-if="topic" class="flex flex-col gap-2">
-    <div class="flex flex-col gap-1.5">
+    <div class="flex flex-col gap-1.5 motion-safe:stagger-pop">
       <OptionCard
         v-for="subtopic in topic.subtopics"
         :key="subtopic.id"

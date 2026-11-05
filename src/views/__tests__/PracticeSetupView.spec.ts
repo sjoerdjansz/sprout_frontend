@@ -26,7 +26,11 @@ function material(): Routes {
   }
 }
 
-async function mountSetup(url: string, routes: Routes = {}): Promise<VueWrapper> {
+async function mountSetup(
+  url: string,
+  routes: Routes = {},
+  options: { attachTo?: HTMLElement } = {},
+): Promise<VueWrapper> {
   stubApi({
     // The app shell around the page.
     'GET /user': Response.json(makeUser()),
@@ -39,10 +43,27 @@ async function mountSetup(url: string, routes: Routes = {}): Promise<VueWrapper>
     ...routes,
   })
   await router.push(url)
-  const wrapper = mount(PracticeSetupView, { global: { plugins: [router] } })
+  const wrapper = mount(PracticeSetupView, { global: { plugins: [router] }, ...options })
   await flushPromises()
 
   return wrapper
+}
+
+// The setup asks one question at a time; jump to a step through the stepper.
+async function goToStep(wrapper: VueWrapper, step: 'how' | 'what' | 'amount'): Promise<void> {
+  await wrapper.get(`[data-test="stepper-${step}"]`).trigger('click')
+}
+
+// The last step's recap: each block as "<mode> <amount>", in the order the session runs them.
+async function recap(wrapper: VueWrapper): Promise<string[]> {
+  await goToStep(wrapper, 'amount')
+
+  return wrapper
+    .findAll('[data-test="summary-blocks"] li')
+    .map(
+      (block) =>
+        `${block.get('[data-test="recap-mode"]').text()} ${block.get('[data-test="summary-amount"]').text()}`,
+    )
 }
 
 function pressed(wrapper: VueWrapper, test: string): boolean {
@@ -59,6 +80,75 @@ describe('PracticeSetupView', () => {
     vi.unstubAllGlobals()
   })
 
+  it('asks one question at a time, with Next and Back between them', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards')
+
+    expect(wrapper.find('[data-test="step-how"]').exists()).toBe(true)
+    expect(wrapper.find('[data-test="step-what"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="wizard-back"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="stepper-how"]').attributes('aria-current')).toBe('step')
+
+    await wrapper.get('[data-test="wizard-next"]').trigger('click')
+    expect(wrapper.find('[data-test="step-how"]').exists()).toBe(false)
+    expect(wrapper.get('[data-test="step-what"]').text()).toContain('STEP 2 OF 3')
+    expect(wrapper.get('[data-test="wizard-next"]').text()).toBe('Next: How much')
+    // The step you finished says what you picked in it.
+    expect(wrapper.get('[data-test="stepper-summary-how"]').text()).toBe('Flashcards')
+
+    await wrapper.get('[data-test="wizard-next"]').trigger('click')
+    expect(wrapper.find('[data-test="card-amount"]').exists()).toBe(true)
+    expect(wrapper.get('[data-test="stepper-summary-what"]').text()).toBe('Photosynthesis')
+
+    await wrapper.get('[data-test="wizard-back"]').trigger('click')
+    expect(wrapper.find('[data-test="step-what"]').exists()).toBe(true)
+  })
+
+  it('takes your focus to the question of the step you move to', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101', {}, { attachTo: document.body })
+
+    await wrapper.get('[data-test="wizard-next"]').trigger('click')
+    await flushPromises()
+
+    expect(document.activeElement?.textContent?.trim()).toBe('What do you want to practise?')
+    wrapper.unmount()
+  })
+
+  it('only starts the session in the last step', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards')
+
+    expect(wrapper.find('[data-test="start-session"]').exists()).toBe(false)
+    await goToStep(wrapper, 'what')
+    expect(wrapper.find('[data-test="start-session"]').exists()).toBe(false)
+    await goToStep(wrapper, 'amount')
+    expect(wrapper.get('[data-test="start-session"]').text()).toBe('Start session')
+    expect(wrapper.find('[data-test="wizard-next"]').exists()).toBe(false)
+  })
+
+  it('sums up the session in the last step', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=cards')
+
+    expect(wrapper.find('[data-test="session-recap"]').exists()).toBe(false)
+    expect(await recap(wrapper)).toEqual(['Flashcards 1 card'])
+    expect(wrapper.get('[data-test="summary-scope"]').text()).toBe('Photosynthesis')
+    expect(wrapper.get('[data-test="summary-time"]').text()).toBe('About 1 min')
+    expect(wrapper.find('[data-test="why-this-helps"]').exists()).toBe(true)
+  })
+
+  it('shows what the session does when there is no amount to pick', async () => {
+    const wrapper = await mountSetup('/practice?subtopic=101&modes=feynman,open')
+
+    expect(wrapper.get('[data-test="stepper-amount"]').text()).toContain('Ready')
+    await goToStep(wrapper, 'amount')
+
+    expect(wrapper.get('[data-test="step-amount"]').text()).toContain('Ready to start?')
+    expect(wrapper.find('[data-test="card-amount"]').exists()).toBe(false)
+    expect(await recap(wrapper)).toEqual([
+      'Explain it 1 concept, 4 steps',
+      'Open session As long as you like',
+    ])
+    expect(wrapper.find('[data-test="start-session"]').exists()).toBe(true)
+  })
+
   it('keeps the app navigation around the page', async () => {
     const wrapper = await mountSetup('/practice')
 
@@ -69,11 +159,11 @@ describe('PracticeSetupView', () => {
   it('opens prefilled from the URL', async () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=retrieval')
 
-    expect(pressed(wrapper, 'scope-101')).toBe(true)
     expect(pressed(wrapper, 'mode-retrieval')).toBe(true)
     expect(pressed(wrapper, 'mode-cards')).toBe(false)
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Retrieval quiz')
-    expect(wrapper.text()).toContain('2 questions')
+    await goToStep(wrapper, 'what')
+    expect(pressed(wrapper, 'scope-101')).toBe(true)
+    expect(await recap(wrapper)).toEqual(['Retrieval quiz 2 questions'])
   })
 
   it('says the session gets all the cards when there are fewer than the smallest size', async () => {
@@ -81,6 +171,7 @@ describe('PracticeSetupView', () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
       'GET /subtopics/101/flashcards': Response.json(cards),
     })
+    await goToStep(wrapper, 'amount')
     const cardAmount = wrapper.get('[data-test="card-amount"]')
 
     expect(cardAmount.get('[data-test="amount-all"]').text()).toBe('All 3 cards')
@@ -93,6 +184,7 @@ describe('PracticeSetupView', () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=cards', {
       'GET /subtopics/101/flashcards': Response.json(cards),
     })
+    await goToStep(wrapper, 'amount')
     const cardAmount = wrapper.get('[data-test="card-amount"]')
 
     expect(cardAmount.findAll('[role="tab"]').map((tab) => tab.text())).toEqual([
@@ -116,28 +208,24 @@ describe('PracticeSetupView', () => {
 
     expect(pressed(wrapper, 'mode-mix')).toBe(true)
     expect(pressed(wrapper, 'mode-open')).toBe(false)
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Mixed session')
-    expect(wrapper.findAll('[data-test="summary-blocks"] li').map((item) => item.text())).toEqual([
-      '1Flashcards1 card',
-      '2Retrieval quiz2 questions',
-      '3Explain it1 concept, 4 steps',
+    expect(await recap(wrapper)).toEqual([
+      'Flashcards 1 card',
+      'Retrieval quiz 2 questions',
+      'Explain it 1 concept, 4 steps',
     ])
     // 0.4 + 2 + 12 minutes.
     expect(wrapper.get('[data-test="summary-time"]').text()).toBe('About 14 min')
 
     // The open session goes last, and the mix stays on.
+    await goToStep(wrapper, 'how')
     await wrapper.get('[data-test="mode-open"]').trigger('click')
-    expect(wrapper.findAll('[data-test="summary-blocks"] li')[3]?.text()).toBe(
-      '4Open sessionAs long as you like',
-    )
+    expect((await recap(wrapper))[3]).toBe('Open session As long as you like')
+    await goToStep(wrapper, 'how')
     expect(pressed(wrapper, 'mode-mix')).toBe(true)
 
     // Switching the mix off keeps the first mode and the open session you added.
     await wrapper.get('[data-test="mode-mix"]').trigger('click')
-    expect(wrapper.findAll('[data-test="summary-blocks"] li').map((item) => item.text())).toEqual([
-      '1Flashcards1 card',
-      '2Open sessionAs long as you like',
-    ])
+    expect(await recap(wrapper)).toEqual(['Flashcards 1 card', 'Open session As long as you like'])
   })
 
   it('lets you switch the last mode off and asks you to pick one', async () => {
@@ -146,22 +234,28 @@ describe('PracticeSetupView', () => {
     await wrapper.get('[data-test="mode-cards"]').trigger('click')
 
     expect(pressed(wrapper, 'mode-cards')).toBe(false)
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Pick a way to practise')
+    expect(wrapper.get('[data-test="wizard-next"]').attributes('disabled')).toBeDefined()
+    await goToStep(wrapper, 'amount')
+    expect(wrapper.get('[data-test="session-recap"]').text()).toContain('Pick a way to practise')
     expect(wrapper.get('[data-test="start-session"]').attributes('disabled')).toBeDefined()
 
     // Another scope doesn't pick one for you.
     await router.push('/practice?subtopic=102')
     await flushPromises()
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Pick a way to practise')
+    expect(await recap(wrapper)).toEqual([])
   })
 
   it('only asks how much when flashcards or the quiz is on', async () => {
     const wrapper = await mountSetup('/practice?subtopic=101&modes=feynman,open')
 
-    expect(wrapper.find('[data-test="step-amount"]').exists()).toBe(false)
+    await goToStep(wrapper, 'amount')
+    expect(wrapper.find('[data-test="card-amount"]').exists()).toBe(false)
 
+    await goToStep(wrapper, 'how')
     await wrapper.get('[data-test="mode-cards"]').trigger('click')
-    expect(wrapper.find('[data-test="step-amount"]').exists()).toBe(true)
+    await goToStep(wrapper, 'amount')
+    expect(wrapper.get('[data-test="step-amount"]').text()).toContain('How much?')
+    expect(wrapper.find('[data-test="card-amount"]').exists()).toBe(true)
   })
 
   it('says why a mode can’t run, and offers no mix with only one other mode', async () => {
@@ -170,7 +264,7 @@ describe('PracticeSetupView', () => {
     expect(wrapper.get('[data-test="mode-cards"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-test="mode-cards"]').text()).toContain('No flashcards here yet.')
     // Cards can't run here, so the first mode that can is picked instead.
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Explain it')
+    expect(pressed(wrapper, 'mode-feynman')).toBe(true)
     // Only Explain it and the open session can run, and the mix leaves the open session out.
     expect(wrapper.get('[data-test="mode-mix"]').attributes('disabled')).toBeDefined()
   })
@@ -183,28 +277,31 @@ describe('PracticeSetupView', () => {
           answerCards = resolve
         }),
     })
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Flashcards')
+    expect(await recap(wrapper)).toEqual(['Flashcards 1 card'])
 
+    await goToStep(wrapper, 'what')
     await wrapper.get('[data-test="scope-102"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Flashcards')
+    expect(await recap(wrapper)).toEqual(['Flashcards 1 card'])
     expect(wrapper.get('[data-test="start-session"]').text()).toBe('Getting your cards…')
 
     answerCards(Response.json([]))
     await flushPromises()
 
-    expect(wrapper.get('[data-test="summary-title"]').text()).toBe('Explain it')
+    expect(await recap(wrapper)).toEqual(['Explain it 1 concept, 4 steps'])
     expect(wrapper.get('[data-test="start-session"]').text()).toBe('Start session')
   })
 
   it('loads the cards of the whole topic and offers interleaving', async () => {
     const wrapper = await mountSetup('/practice?topic=1')
 
+    await goToStep(wrapper, 'what')
     expect(pressed(wrapper, 'scope-whole')).toBe(true)
     expect(wrapper.find('[data-test="whole-topic-tip"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="interleave"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('All subtopics from Biology')
+    await goToStep(wrapper, 'amount')
+    expect(wrapper.find('[data-test="interleave"]').exists()).toBe(true)
   })
 
   it('starts the session with the plan and opens it', async () => {
@@ -212,6 +309,7 @@ describe('PracticeSetupView', () => {
       'POST /practice-sessions': Response.json(makePracticeSession(), { status: 201 }),
     })
 
+    await goToStep(wrapper, 'amount')
     await wrapper.get('[data-test="start-session"]').trigger('click')
     await flushPromises()
 
@@ -231,6 +329,7 @@ describe('PracticeSetupView', () => {
       ),
     })
 
+    await goToStep(wrapper, 'amount')
     await wrapper.get('[data-test="start-session"]').trigger('click')
     await flushPromises()
 
@@ -256,9 +355,11 @@ describe('PracticeSetupView', () => {
       'POST /practice-sessions': Response.json(makePracticeSession(), { status: 201 }),
     })
 
+    await goToStep(wrapper, 'amount')
     expect(
       wrapper.find('[data-test="interleave"] [role="switch"]').attributes('aria-checked'),
     ).toBe('false')
+    await goToStep(wrapper, 'amount')
     await wrapper.get('[data-test="start-session"]').trigger('click')
     await flushPromises()
 
@@ -274,6 +375,7 @@ describe('PracticeSetupView', () => {
     const withHint = await mountSetup('/practice?subtopic=101&modes=retrieval', {
       'GET /settings': Response.json(makeSettings({ hint_before_answer: true })),
     })
+    await goToStep(withHint, 'amount')
     expect(withHint.get('[data-test="why-this-helps"]').text()).toContain('second try')
 
     setActivePinia(createPinia())
@@ -281,6 +383,7 @@ describe('PracticeSetupView', () => {
     const withoutHint = await mountSetup('/practice?subtopic=101&modes=retrieval', {
       'GET /settings': Response.json(makeSettings({ hint_before_answer: false })),
     })
+    await goToStep(withoutHint, 'amount')
     expect(withoutHint.get('[data-test="why-this-helps"]').text()).not.toContain('second try')
   })
 
@@ -301,6 +404,7 @@ describe('PracticeSetupView', () => {
     expect(wrapper.get('[data-test="form-error"]').text()).toContain(
       'Can’t reach Sprout right now.',
     )
+    await goToStep(wrapper, 'amount')
     expect(wrapper.get('[data-test="start-session"]').attributes('disabled')).toBeDefined()
   })
 })
