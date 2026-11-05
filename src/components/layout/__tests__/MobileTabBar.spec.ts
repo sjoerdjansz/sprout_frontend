@@ -20,7 +20,12 @@ describe('MobileTabBar', () => {
 
     const tabs = wrapper.findAll('[data-test="tab"]')
     expect(tabs.map((tab) => tab.text())).toEqual(['Home', 'Topics', 'Practice', 'Insights'])
-    expect(tabs.map((tab) => tab.attributes('href'))).toEqual(['/', '/topics', '/practice', '#'])
+    expect(tabs.map((tab) => tab.attributes('href'))).toEqual([
+      '/',
+      '/topics',
+      '/practice',
+      '/insights',
+    ])
     expect(tabs[1]?.attributes('aria-current')).toBe('page')
     expect(tabs[0]?.attributes('aria-current')).toBeUndefined()
   })

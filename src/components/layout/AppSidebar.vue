@@ -59,7 +59,12 @@ const emit = defineEmits<{
       :to="{ name: 'practice' }"
       :collapsed="collapsed"
     />
-    <SidebarNavLink icon="chart-line" label="Insights" :collapsed="collapsed" />
+    <SidebarNavLink
+      icon="chart-line"
+      label="Insights"
+      :to="{ name: 'insights' }"
+      :collapsed="collapsed"
+    />
     <SidebarNavLink
       icon="settings"
       label="Settings"

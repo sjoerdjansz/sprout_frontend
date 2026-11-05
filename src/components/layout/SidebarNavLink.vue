@@ -12,8 +12,7 @@ const {
 } = defineProps<{
   icon: IconName
   label: string
-  /** Leave it out while the page doesn't exist yet: the link then does nothing. */
-  to?: RouteLocationRaw
+  to: RouteLocationRaw
   /** Icon only; the label stays for screen readers and shows as a tooltip. */
   collapsed?: boolean
 }>()
@@ -28,7 +27,6 @@ const linkClasses = computed<string>(
   <!-- RouterLink sets aria-current="page" on the page you're on; the highlight also stays on a
        page's own sub pages (every settings section under Settings). -->
   <RouterLink
-    v-if="to"
     :to="to"
     :title="collapsed ? label : undefined"
     :class="linkClasses"
@@ -37,9 +35,4 @@ const linkClasses = computed<string>(
     <BaseIcon :name="icon" />
     <span :class="{ 'sr-only': collapsed }">{{ label }}</span>
   </RouterLink>
-
-  <a v-else href="#" :title="collapsed ? label : undefined" :class="linkClasses" @click.prevent>
-    <BaseIcon :name="icon" />
-    <span :class="{ 'sr-only': collapsed }">{{ label }}</span>
-  </a>
 </template>

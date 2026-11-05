@@ -32,15 +32,14 @@ const emit = defineEmits<{
 interface DrawerLink {
   icon: IconName
   label: string
-  /** Left out while the page doesn't exist yet: the link then does nothing, as in the sidebar. */
-  to?: RouteLocationRaw
+  to: RouteLocationRaw
 }
 
 const links: DrawerLink[] = [
   { icon: 'house', label: 'Dashboard', to: { name: 'home' } },
   { icon: 'network', label: 'Topics', to: { name: 'topics' } },
   { icon: 'target', label: 'Practice', to: { name: 'practice' } },
-  { icon: 'chart-line', label: 'Insights' },
+  { icon: 'chart-line', label: 'Insights', to: { name: 'insights' } },
   { icon: 'settings', label: 'Settings', to: { name: 'settings' } },
 ]
 
@@ -97,16 +96,16 @@ function onClick(event: MouseEvent): void {
         <span class="min-w-0 truncate text-body-strong">{{ userName }}</span>
       </p>
 
-      <template v-for="link in links" :key="link.label">
-        <RouterLink v-if="link.to" :to="link.to" :class="linkClasses" data-test="drawer-link">
-          <BaseIcon :name="link.icon" />
-          {{ link.label }}
-        </RouterLink>
-        <a v-else href="#" :class="linkClasses" data-test="drawer-link" @click.prevent>
-          <BaseIcon :name="link.icon" />
-          {{ link.label }}
-        </a>
-      </template>
+      <RouterLink
+        v-for="link in links"
+        :key="link.label"
+        :to="link.to"
+        :class="linkClasses"
+        data-test="drawer-link"
+      >
+        <BaseIcon :name="link.icon" />
+        {{ link.label }}
+      </RouterLink>
 
       <!-- Takes the free space and scrolls on its own, so Log out stays at the bottom. -->
       <ChatHistory

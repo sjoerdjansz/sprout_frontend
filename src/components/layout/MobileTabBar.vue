@@ -6,15 +6,14 @@ import type { IconName } from '@/components/icons'
 interface Tab {
   icon: IconName
   label: string
-  /** Left out while the page doesn't exist yet: the tab then does nothing, as in the sidebar. */
-  to?: RouteLocationRaw
+  to: RouteLocationRaw
 }
 
 const tabs: Tab[] = [
   { icon: 'house', label: 'Home', to: { name: 'home' } },
   { icon: 'network', label: 'Topics', to: { name: 'topics' } },
   { icon: 'target', label: 'Practice', to: { name: 'practice' } },
-  { icon: 'chart-line', label: 'Insights' },
+  { icon: 'chart-line', label: 'Insights', to: { name: 'insights' } },
 ]
 
 const emit = defineEmits<{
@@ -30,16 +29,16 @@ const pillClasses =
 
 <template>
   <nav aria-label="Main" class="flex gap-1 border-t border-line bg-surface px-2 pt-1.5 pb-4.5">
-    <template v-for="tab in tabs" :key="tab.label">
-      <RouterLink v-if="tab.to" :to="tab.to" :class="tabClasses" data-test="tab">
-        <span :class="pillClasses"><BaseIcon :name="tab.icon" /></span>
-        {{ tab.label }}
-      </RouterLink>
-      <a v-else href="#" :class="tabClasses" data-test="tab" @click.prevent>
-        <span :class="pillClasses"><BaseIcon :name="tab.icon" /></span>
-        {{ tab.label }}
-      </a>
-    </template>
+    <RouterLink
+      v-for="tab in tabs"
+      :key="tab.label"
+      :to="tab.to"
+      :class="tabClasses"
+      data-test="tab"
+    >
+      <span :class="pillClasses"><BaseIcon :name="tab.icon" /></span>
+      {{ tab.label }}
+    </RouterLink>
 
     <button type="button" :class="tabClasses" data-test="tab-more" @click="emit('more')">
       <span :class="pillClasses"><BaseIcon name="ellipsis" /></span>
