@@ -20,6 +20,7 @@ import DataSettings from '@/views/settings/DataSettings.vue'
 import SubtopicView from '@/views/SubtopicView.vue'
 import PracticeSetupView from '@/views/PracticeSetupView.vue'
 import PracticeSessionView from '@/views/PracticeSessionView.vue'
+import InsightsView from '@/views/InsightsView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -92,6 +93,12 @@ const router = createRouter({
       path: '/practice/session',
       name: 'practice-session',
       component: PracticeSessionView,
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/insights',
+      name: 'insights',
+      component: InsightsView,
       meta: { requiresAuth: true },
     },
     {
